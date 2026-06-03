@@ -1,0 +1,106 @@
+<!-- Article Content Section -->
+<article class="container-luxury section-spacing">
+  {%- if article.image -%}
+    <div style="max-width:900px;margin:0 auto 2rem;border-radius:0.75rem;overflow:hidden;aspect-ratio:16/9;background:#1c1917">
+      <img src="{{ article.image | img_url: '1200x' }}" alt="{{ article.image.alt | escape }}" style="width:100%;height:100%;object-fit:cover" loading="lazy">
+    </div>
+  {%- endif -%}
+
+  <div style="max-width:800px;margin:0 auto">
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs" style="margin-bottom:1.5rem">
+      <a href="{{ routes.root_url }}">Home</a>
+      <span class="separator">/</span>
+      <a href="{{ blog.url }}">{{ blog.title }}</a>
+      <span class="separator">/</span>
+      <span class="current">{{ article.title | truncatewords: 5 }}</span>
+    </nav>
+
+    <!-- Article Meta -->
+    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+      {%- if article.tags.size > 0 -%}
+        {%- for tag in article.tags -%}
+          <a href="{{ blog.url }}/tagged/{{ tag | handleize }}" class="badge badge-gold">{{ tag }}</a>
+        {%- endfor -%}
+      {%- endif -%}
+      <span style="font-size:0.8125rem;color:#a8a29e">
+        {{ article.published_at | date: '%B %d, %Y' }}
+      </span>
+      {%- if article.author -%}
+        <span style="font-size:0.8125rem;color:#a8a29e">by {{ article.author }}</span>
+      {%- endif -%}
+    </div>
+
+    <!-- Article Title -->
+    <h1 style="font-family:var(--font-heading);font-size:2.5rem;font-weight:700;line-height:1.2;margin-bottom:2rem;color:#fef3c7">
+      {{ article.title }}
+    </h1>
+
+    <!-- Article Content -->
+    <div style="color:#d6d3d1;font-size:1.0625rem;line-height:1.8;margin-bottom:3rem">
+      {{ article.content }}
+    </div>
+
+    <!-- Share -->
+    <div style="border-top:1px solid rgba(120,53,15,0.2);padding-top:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+      <span style="font-size:0.875rem;color:#a8a29e">Share this article</span>
+      <div class="footer-social">
+        <a class="footer-social-link" href="https://www.facebook.com/sharer.php?u={{ article.url | url_encode }}" target="_blank" rel="noopener" aria-label="Share on Facebook">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+        </a>
+        <a class="footer-social-link" href="https://twitter.com/intent/tweet?text={{ article.title | url_encode }}&url={{ article.url | url_encode }}" target="_blank" rel="noopener" aria-label="Share on Twitter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+        <a class="footer-social-link" href="https://pinterest.com/pin/create/button/?url={{ article.url | url_encode }}&description={{ article.title | url_encode }}" target="_blank" rel="noopener" aria-label="Share on Pinterest">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.372 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 01.083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.631-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12 0-6.628-5.373-12-12-12z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Comments -->
+    {%- if blog.comments_enabled? -%}
+      <div style="border-top:1px solid rgba(120,53,15,0.2);margin-top:3rem;padding-top:3rem">
+        <h2 style="font-family:var(--font-heading);font-size:1.5rem;font-weight:700;margin-bottom:2rem">
+          {%- if article.comments_count > 0 -%}
+            {{ article.comments_count }} Comment{{ article.comments_count | pluralize: '', 's' }}
+          {%- else -%}
+            Leave a Comment
+          {%- endif -%}
+        </h2>
+
+        {%- if article.comments_count > 0 -%}
+          <div style="margin-bottom:3rem">
+            {%- for comment in article.comments -%}
+              <div style="padding:1.5rem 0;border-bottom:1px solid rgba(120,53,15,0.1)">
+                <div style="display:flex;justify-content:space-between;margin-bottom:0.75rem">
+                  <strong style="color:#fef3c7;font-size:0.9375rem">{{ comment.author }}</strong>
+                  <span style="font-size:0.75rem;color:#a8a29e">{{ comment.created_at | date: '%B %d, %Y' }}</span>
+                </div>
+                <div style="color:#a8a29e;font-size:0.9375rem;line-height:1.7">{{ comment.content }}</div>
+              </div>
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+        <!-- Comment Form -->
+        <div class="card-luxury p-6">
+          {%- form 'new_comment', article -%}
+            <div style="display:grid;grid-template-columns:1fr;gap:1rem;margin-bottom:1rem">
+              <input type="text" name="comment[author]" class="input-luxury" placeholder="Your name" required>
+              <input type="email" name="comment[email]" class="input-luxury" placeholder="Your email" required>
+            </div>
+            <textarea name="comment[body]" class="input-luxury" rows="5" placeholder="Write your comment..." required style="resize:vertical"></textarea>
+            <button type="submit" class="btn btn-primary" style="margin-top:1rem">Post Comment</button>
+          {%- endform -%}
+        </div>
+      </div>
+    {%- endif -%}
+  </div>
+</article>
+
+{% schema %}
+{
+  "name": "Article Content",
+  "settings": []
+}
+{% endschema %}

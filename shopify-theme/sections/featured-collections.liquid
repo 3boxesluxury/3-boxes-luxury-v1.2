@@ -1,0 +1,199 @@
+{%- comment -%}
+  Featured Collections Section — 3 BOXES LUXURY
+  Responsive grid of collection cards with hover glow effects.
+  Uses category-grid / category-card CSS classes from theme.css.
+{%- endcomment -%}
+
+{%- assign heading = section.settings.heading -%}
+{%- assign subheading = section.settings.subheading -%}
+{%- assign columns_desktop = section.settings.columns_desktop -%}
+{%- assign collections_count = 0 -%}
+
+{%- for block in section.blocks -%}
+  {%- if block.settings.collection != blank -%}
+    {%- assign collections_count = collections_count | plus: 1 -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- if collections_count > 0 -%}
+  <section
+    id="featured-collections-{{ section.id }}"
+    class="section-spacing"
+    data-section-id="{{ section.id }}"
+    data-section-type="featured-collections"
+    aria-label="{{ heading | default: 'Featured Collections' | escape }}"
+  >
+    <div class="container-luxury">
+      {%- comment -%} Section Heading {%- endcomment -%}
+      {%- if heading != blank -%}
+        <div class="animate-on-scroll" style="text-align:center; margin-bottom: 3rem;">
+          <h2 class="section-heading" style="margin-bottom: 0.5rem;">
+            {%- comment -%} Gold decorative line above {%- endcomment -%}
+            <span style="display:block; margin-bottom:0.75rem;">
+              <svg width="60" height="4" viewBox="0 0 60 4" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block; vertical-align:middle;">
+                <rect width="60" height="4" rx="2" fill="url(#gold-grad-{{ section.id }})"/>
+                <defs>
+                  <linearGradient id="gold-grad-{{ section.id }}" x1="0" y1="0" x2="60" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#b8860b"/>
+                    <stop offset="50%" stop-color="#d4a437"/>
+                    <stop offset="100%" stop-color="#b8860b"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            {{ heading }}
+            {%- comment -%} Gold decorative line below {%- endcomment -%}
+            <span style="display:block; margin-top:0.75rem;">
+              <svg width="120" height="2" viewBox="0 0 120 2" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block; vertical-align:middle;">
+                <rect width="120" height="2" rx="1" fill="url(#gold-grad-line-{{ section.id }})"/>
+                <defs>
+                  <linearGradient id="gold-grad-line-{{ section.id }}" x1="0" y1="0" x2="120" y2="0" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="transparent"/>
+                    <stop offset="30%" stop-color="#d4a437"/>
+                    <stop offset="70%" stop-color="#d4a437"/>
+                    <stop offset="100%" stop-color="transparent"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+          </h2>
+          {%- if subheading != blank -%}
+            <p class="section-subheading" style="margin-bottom:0;">{{ subheading }}</p>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- comment -%} Collection Cards Grid {%- endcomment -%}
+      <div
+        class="category-grid"
+        style="
+          {%- if columns_desktop == 2 -%}
+            --grid-cols-sm: 2; --grid-cols-md: 2; --grid-cols-lg: 2;
+          {%- elsif columns_desktop == 3 -%}
+            --grid-cols-sm: 2; --grid-cols-md: 3; --grid-cols-lg: 3;
+          {%- elsif columns_desktop == 4 -%}
+            --grid-cols-sm: 2; --grid-cols-md: 3; --grid-cols-lg: 4;
+          {%- else -%}
+            --grid-cols-sm: 2; --grid-cols-md: 3; --grid-cols-lg: 5;
+          {%- endif -%}
+        "
+      >
+        {%- for block in section.blocks -%}
+          {%- assign collection = collections[block.settings.collection] -%}
+          {%- if collection != blank -%}
+            <a
+              href="{{ collection.url }}"
+              class="category-card animate-on-scroll"
+              {{ block.shopify_attributes }}
+              aria-label="{{ collection.title | escape }} — {{ collection.products_count }} products"
+            >
+              {%- comment -%} Collection Image {%- endcomment -%}
+              {%- if collection.image != blank -%}
+                <img
+                  class="category-card-image"
+                  src="{{ collection.image | image_url: width: 600 }}"
+                  alt="{{ collection.title | escape }}"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                >
+              {%- elsif collection.products.first and collection.products.first.featured_image != blank -%}
+                <img
+                  class="category-card-image"
+                  src="{{ collection.products.first.featured_image | image_url: width: 600 }}"
+                  alt="{{ collection.title | escape }}"
+                  width="600"
+                  height="600"
+                  loading="lazy"
+                >
+              {%- else -%}
+                {{ 'collection-1' | placeholder_svg_tag: 'category-card-image' }}
+              {%- endif -%}
+
+              {%- comment -%} Gradient Overlay + Info {%- endcomment -%}
+              <div class="category-card-overlay">
+                <h3 class="category-card-name">{{ collection.title }}</h3>
+                <span class="category-card-count">
+                  {{ collection.products_count }} {{ collection.products_count | pluralize: 'product', 'products' }}
+                </span>
+              </div>
+            </a>
+          {%- else -%}
+            {%- comment -%} Placeholder card for theme editor {%- endcomment -%}
+            <div class="category-card" {{ block.shopify_attributes }}>
+              {{ 'collection-1' | placeholder_svg_tag: 'category-card-image' }}
+              <div class="category-card-overlay">
+                <h3 class="category-card-name">{{ 'onboarding.collection_title' | t }}</h3>
+                <span class="category-card-count">0 products</span>
+              </div>
+            </div>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Featured Collections",
+  "tag": "section",
+  "class": "featured-collections-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Shop by Collection"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Explore our curated categories of luxury gifts"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "Columns on desktop",
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "default": 5,
+      "info": "Mobile: 2 cols, Tablet: 3 cols, Desktop: chosen value"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "collection",
+      "name": "Collection",
+      "limit": 10,
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Collection"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured Collections",
+      "category": "Collection",
+      "settings": {
+        "heading": "Shop by Collection",
+        "subheading": "Explore our curated categories of luxury gifts",
+        "columns_desktop": 5
+      },
+      "blocks": [
+        { "type": "collection" },
+        { "type": "collection" },
+        { "type": "collection" },
+        { "type": "collection" },
+        { "type": "collection" }
+      ]
+    }
+  ]
+}
+{% endschema %}

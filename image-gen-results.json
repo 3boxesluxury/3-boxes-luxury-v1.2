@@ -1,0 +1,123 @@
+[
+  {
+    "id": "cmosai0dm000pqprqx16vvfu5",
+    "filename": "ext-heart-pendant-necklace.jpg",
+    "path": "/images/products/external/ext-heart-pendant-necklace.jpg",
+    "success": true,
+    "size": 94641
+  },
+  {
+    "id": "cmosalz6s000rqprq2p9z7fw7",
+    "filename": "ext-guess-almond-satchel.jpg",
+    "path": "/images/products/external/ext-guess-almond-satchel.jpg",
+    "success": true,
+    "size": 110575
+  },
+  {
+    "id": "cmosamljg000tqprqxo5ij3md",
+    "filename": "ext-guess-white-handbag.jpg",
+    "path": "/images/products/external/ext-guess-white-handbag.jpg",
+    "success": true,
+    "size": 87474
+  },
+  {
+    "id": "cmosbubcp0010qprqavgqwdxe",
+    "filename": "ext-guess-cordelia-satchel.jpg",
+    "path": "/images/products/external/ext-guess-cordelia-satchel.jpg",
+    "success": true,
+    "size": 75769
+  },
+  {
+    "id": "cmosbv9430018qprqiugy871y",
+    "filename": "ext-prihan-pearl-choker.jpg",
+    "path": "/images/products/external/ext-prihan-pearl-choker.jpg",
+    "success": true,
+    "size": 84581
+  },
+  {
+    "id": "cmosbvc9h001aqprqryyblrft",
+    "filename": "ext-taahira-gold-chain.jpg",
+    "path": "/images/products/external/ext-taahira-gold-chain.jpg",
+    "success": true,
+    "size": 167435
+  },
+  {
+    "id": "cmosbwdv8001cqprq34x7p10m",
+    "filename": "ext-yunanwa-mens-watch.jpg",
+    "path": "/images/products/external/ext-yunanwa-mens-watch.jpg",
+    "success": true,
+    "size": 123782
+  },
+  {
+    "id": "cmosbyf9n001eqprq1anndy05",
+    "filename": "ext-guess-noelle-satchel.jpg",
+    "path": "/images/products/external/ext-guess-noelle-satchel.jpg",
+    "success": true,
+    "size": 113592
+  },
+  {
+    "id": "cmou4f36d001horaz8x2vb7ha",
+    "filename": "ext-salty-emerald-set.jpg",
+    "path": "/images/products/external/ext-salty-emerald-set.jpg",
+    "success": true,
+    "size": 193590
+  },
+  {
+    "id": "cmou4fdxk001jorazb2yjtcuu",
+    "filename": "ext-poush-diamond-set.jpg",
+    "path": "/images/products/external/ext-poush-diamond-set.jpg",
+    "success": true,
+    "size": 203847
+  },
+  {
+    "id": "cmou4jwth001xoraz8y0xx2au",
+    "filename": "ext-luxury-satin-saree.jpg",
+    "path": "/images/products/external/ext-luxury-satin-saree.jpg",
+    "success": true,
+    "size": 86199
+  },
+  {
+    "id": "cmou4lru70023oraz1l7jcc4r",
+    "filename": "ext-lh-floral-flutter-dress.jpg",
+    "path": "/images/products/external/ext-lh-floral-flutter-dress.jpg",
+    "success": true,
+    "size": 112941
+  },
+  {
+    "id": "cmou4m3nh0025oraze9qqtgcg",
+    "filename": "ext-lh-top-skirt-set.jpg",
+    "path": "/images/products/external/ext-lh-top-skirt-set.jpg",
+    "success": true,
+    "size": 105996
+  },
+  {
+    "id": "cmou4mnzk0027oraz27vqbeku",
+    "filename": "ext-lh-layered-dress.jpg",
+    "success": false,
+    "error": "API request failed with status 429: {\"error\":\"Too many requests, please try again later\"}"
+  },
+  {
+    "id": "cmou4n8190029oraz2kknljwt",
+    "filename": "ext-lh-fit-flare-dress.jpg",
+    "success": false,
+    "error": "API request failed with status 429: {\"error\":\"Too many requests, please try again later\"}"
+  },
+  {
+    "id": "cmou4nmhu002borazhqwkk424",
+    "filename": "ext-beromt-nail-majesty.jpg",
+    "success": false,
+    "error": "API request failed with status 429: {\"error\":\"Too many requests, please try again later\"}"
+  },
+  {
+    "id": "cmou4o3gy002dorazvjxisapy",
+    "filename": "ext-beromt-nail-finale.jpg",
+    "success": false,
+    "error": "API request failed with status 429: {\"error\":\"Too many requests, please try again later\"}"
+  },
+  {
+    "id": "cmou4ohy3002forazh0uglvmt",
+    "filename": "ext-fashion-lipstick.jpg",
+    "success": false,
+    "error": "API request failed with status 429: {\"error\":\"Too many requests, please try again later\"}"
+  }
+]

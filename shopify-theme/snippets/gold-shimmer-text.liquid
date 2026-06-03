@@ -1,0 +1,6 @@
+<!-- Gold Shimmer Text Snippet -->
+<!-- Usage: {% render 'gold-shimmer-text', text: 'Your Text', tag: 'h1' %} -->
+
+<{%- if tag == 'h1' -%}h1{%- elsif tag == 'h2' -%}h2{%- elsif tag == 'h3' -%}h3{%- elsif tag == 'span' -%}span{%- elsif tag == 'p' -%}p{%- else -%}span{%- endif -%} class="gold-shimmer" style="font-family:var(--font-heading);font-weight:700;letter-spacing:0.05em">
+  {{ text }}
+</{%- if tag == 'h1' -%}h1{%- elsif tag == 'h2' -%}h2{%- elsif tag == 'h3' -%}h3{%- elsif tag == 'span' -%}span{%- elsif tag == 'p' -%}p{%- else -%}span{%- endif -%}>

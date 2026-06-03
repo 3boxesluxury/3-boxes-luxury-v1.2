@@ -1,0 +1,74 @@
+{%- comment -%}
+  Price Display Snippet
+  Accepts:
+    - product (optional): The product object (uses first available variant)
+    - price (optional): Direct price value (overrides product price)
+    - compare_at_price (optional): Direct compare-at price value (overrides product compare_at_price)
+{%- endcomment -%}
+
+{%- liquid
+  if price
+    assign current_price = price
+  elsif product
+    assign current_variant = product.selected_or_first_available_variant
+    assign current_price = current_variant.price
+  else
+    assign current_price = 0
+  endif
+
+  if compare_at_price
+    assign compare_price = compare_at_price
+  elsif product and current_variant.compare_at_price
+    assign compare_price = current_variant.compare_at_price
+  else
+    assign compare_price = nil
+  endif
+
+  assign is_on_sale = false
+  if compare_price and compare_price > current_price
+    assign is_on_sale = true
+  endif
+
+  assign is_sold_out = false
+  if product and product.available == false
+    assign is_sold_out = true
+  endif
+
+  assign savings_percent = 0
+  if is_on_sale
+    assign savings_amount = compare_price | minus: current_price
+    assign savings_percent = savings_amount | times: 100 | divided_by: compare_price
+  endif
+-%}
+
+<div class="price flex flex-wrap items-baseline gap-x-2 gap-y-1">
+  {%- comment -%} Sold Out State {%- endcomment -%}
+  {%- if is_sold_out -%}
+    <span class="price__current text-lg font-bold text-muted-foreground line-through">
+      {{ current_price | money }}
+    </span>
+    <span class="price__badge inline-flex items-center rounded-md bg-red-600/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-red-400">
+      {{ 'products.product.sold_out' | t | default: 'Sold Out' }}
+    </span>
+
+  {%- comment -%} On Sale State {%- endcomment -%}
+  {%- elsif is_on_sale -%}
+    <span class="price__current text-lg font-bold text-gold">
+      {{ current_price | money }}
+    </span>
+    <span class="price__compare text-sm text-muted-foreground line-through decoration-stone-600">
+      {{ compare_price | money }}
+    </span>
+    {%- if savings_percent > 0 -%}
+      <span class="price__savings inline-flex items-center rounded-md bg-emerald-600/15 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-emerald-400">
+        Save {{ savings_percent }}%
+      </span>
+    {%- endif -%}
+
+  {%- comment -%} Regular Price State {%- endcomment -%}
+  {%- else -%}
+    <span class="price__current text-lg font-bold text-gold">
+      {{ current_price | money }}
+    </span>
+  {%- endif -%}
+</div>

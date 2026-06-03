@@ -1,0 +1,53 @@
+{
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "settings": {}
+    },
+    "header": {
+      "type": "header",
+      "settings": {}
+    },
+    "hero-banner": {
+      "type": "hero-banner",
+      "settings": {
+        "subtitle": "CURATED LUXURY",
+        "title": "3 BOXES LUXURY",
+        "description": "Discover extraordinary gifts curated for life's most meaningful moments. From timeless jewelry to bespoke experiences, every gift tells a story of elegance and intention.",
+        "overlay_opacity": 70
+      }
+    },
+    "featured-collections": {
+      "type": "featured-collections",
+      "settings": {}
+    },
+    "featured-products": {
+      "type": "featured-products",
+      "settings": {}
+    },
+    "about-section": {
+      "type": "rich-text",
+      "settings": {
+        "heading": "The Art of Gifting",
+        "subheading": "Where luxury meets intention",
+        "text": "<p>At 3 BOXES LUXURY, every gift tells a story. We curate the finest luxury items from around the world, presenting them in exquisite packaging that transforms giving into an art form. Each box is thoughtfully composed to deliver an unforgettable experience — from the moment it's received to the lasting memories it creates.</p>",
+        "button_label": "Our Story",
+        "button_link": "/pages/about",
+        "width": "standard"
+      }
+    },
+    "footer": {
+      "type": "footer",
+      "settings": {}
+    }
+  },
+  "order": [
+    "announcement-bar",
+    "header",
+    "hero-banner",
+    "featured-collections",
+    "featured-products",
+    "about-section",
+    "footer"
+  ]
+}

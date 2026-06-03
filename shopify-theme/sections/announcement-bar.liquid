@@ -1,0 +1,164 @@
+{%- comment -%}
+  Announcement Bar Section — 3 BOXES LUXURY
+  Gold gradient announcement bar with optional close button and link.
+  Uses announcement-bar CSS class from theme.css.
+{%- endcomment -%}
+
+{%- if section.settings.text != blank -%}
+  <div
+    id="announcement-bar-{{ section.id }}"
+    class="announcement-bar"
+    data-section-id="{{ section.id }}"
+    data-section-type="announcement-bar"
+    role="status"
+    aria-label="Announcement"
+    {% if section.settings.enable_close_button %}
+      style="position: relative;"
+    {% endif %}
+  >
+    {%- comment -%} Optional Link Wrapper {%- endcomment -%}
+    {%- if section.settings.link_url != blank -%}
+      <a
+        href="{{ section.settings.link_url }}"
+        class="announcement-bar__link"
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          color: inherit;
+          text-decoration: none;
+          width: 100%;
+          padding: inherit;
+        "
+      >
+    {%- endif -%}
+
+    {%- comment -%} Announcement Text {%- endcomment -%}
+    <span class="announcement-bar__text" style="display: flex; align-items: center; gap: 0.5rem;">
+      {%- if section.settings.icon != blank -%}
+        <span aria-hidden="true">{{ section.settings.icon }}</span>
+      {%- endif -%}
+      {{ section.settings.text }}
+    </span>
+
+    {%- if section.settings.link_url != blank -%}
+      </a>
+    {%- endif -%}
+
+    {%- comment -%} Close Button {%- endcomment -%}
+    {%- if section.settings.enable_close_button -%}
+      <button
+        type="button"
+        class="announcement-bar__close"
+        data-announcement-close="{{ section.id }}"
+        aria-label="Close announcement"
+        style="
+          position: absolute;
+          right: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: #fef3c7;
+          cursor: pointer;
+          padding: 0.25rem;
+          line-height: 1;
+          opacity: 0.7;
+          transition: opacity 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+        "
+        onmouseover="this.style.opacity='1'"
+        onmouseout="this.style.opacity='0.7'"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    {%- endif -%}
+  </div>
+
+  {%- comment -%} Inline script for close button functionality {%- endcomment -%}
+  {%- if section.settings.enable_close_button -%}
+    <script>
+      (function() {
+        var sectionId = '{{ section.id }}';
+        var bar = document.getElementById('announcement-bar-' + sectionId);
+        var closeBtn = bar ? bar.querySelector('[data-announcement-close="' + sectionId + '"]') : null;
+        var storageKey = 'announcement-bar-' + sectionId + '-closed';
+
+        // Restore closed state from sessionStorage
+        if (sessionStorage.getItem(storageKey) === 'true' && bar) {
+          bar.style.display = 'none';
+        }
+
+        if (closeBtn && bar) {
+          closeBtn.addEventListener('click', function() {
+            bar.style.transition = 'opacity 0.3s ease, max-height 0.3s ease';
+            bar.style.opacity = '0';
+            bar.style.maxHeight = '0';
+            bar.style.overflow = 'hidden';
+            bar.style.padding = '0';
+            sessionStorage.setItem(storageKey, 'true');
+            setTimeout(function() {
+              bar.style.display = 'none';
+            }, 300);
+          });
+        }
+      })();
+    </script>
+  {%- endif -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Announcement Bar",
+  "tag": "section",
+  "class": "announcement-bar-section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text",
+      "label": "Announcement text",
+      "default": "FREE SHIPPING ON ORDERS OVER ₹2,999 — LUXURY GIFTING MADE EFFORTLESS"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "Link URL",
+      "info": "Make the entire announcement clickable. Optional."
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_close_button",
+      "label": "Enable close button",
+      "default": true,
+      "info": "Allows visitors to dismiss the announcement bar. State persists for the session."
+    },
+    {
+      "type": "text",
+      "id": "icon",
+      "label": "Icon (emoji/symbol)",
+      "default": "✦",
+      "info": "Decorative icon before the text. e.g. ✦ → ★"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Announcement Bar",
+      "category": "Promotional",
+      "settings": {
+        "text": "FREE SHIPPING ON ORDERS OVER ₹2,999 — LUXURY GIFTING MADE EFFORTLESS",
+        "link_url": "",
+        "enable_close_button": true,
+        "icon": "✦"
+      }
+    }
+  ]
+}
+{% endschema %}

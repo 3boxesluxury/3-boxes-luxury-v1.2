@@ -1,0 +1,303 @@
+{{ 'component-cart.css' | asset_url | stylesheet_tag }}
+
+<div class="cart-page page-width">
+  {%- if cart.item_count > 0 -%}
+    <h1 class="cart-page__title section-heading">{{ 'sections.cart.title' | t }}</h1>
+
+    <div class="cart-layout">
+      <!-- Cart Items Column -->
+      <div class="cart-items">
+        <form action="{{ routes.cart_url }}" method="post" id="cart">
+          <div class="cart-items__header">
+            <span class="cart-items__header-product">{{ 'sections.cart.headings.product' | t }}</span>
+            <span class="cart-items__header-price">{{ 'sections.cart.headings.price' | t }}</span>
+            <span class="cart-items__header-quantity">{{ 'sections.cart.headings.quantity' | t }}</span>
+            <span class="cart-items__header-total">{{ 'sections.cart.headings.total' | t }}</span>
+          </div>
+
+          {%- for item in cart.items -%}
+            <div class="cart-item" data-item-id="{{ item.key }}">
+              <!-- Item Image -->
+              <div class="cart-item__media">
+                {%- if item.image -%}
+                  <a href="{{ item.url }}" class="cart-item__image-wrapper">
+                    <img
+                      src="{{ item.image | image_url: width: 160 }}"
+                      alt="{{ item.image.alt | escape }}"
+                      loading="lazy"
+                      width="80"
+                      height="{{ 80 | divided_by: item.image.aspect_ratio | round }}"
+                      class="cart-item__image"
+                    >
+                  </a>
+                {%- endif -%}
+              </div>
+
+              <!-- Item Details -->
+              <div class="cart-item__details">
+                <h3 class="cart-item__title">
+                  <a href="{{ item.url }}">{{ item.product.title }}</a>
+                </h3>
+
+                {%- if item.variant.title != 'Default Title' -%}
+                  <p class="cart-item__variant">{{ item.variant.title }}</p>
+                {%- endif -%}
+
+                {%- if item.selling_plan_allocation -%}
+                  <p class="cart-item__selling-plan">{{ item.selling_plan_allocation.selling_plan.name }}</p>
+                {%- endif -%}
+
+                {%- if item.discounts.size > 0 -%}
+                  <ul class="cart-item__discounts" role="list">
+                    {%- for discount in item.discounts -%}
+                      <li class="cart-item__discount">
+                        {%- render 'icon-discount' -%}
+                        {{ discount.title }} (-{{ discount.amount | money }})
+                      </li>
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+
+                {%- if item.properties.size > 0 -%}
+                  <ul class="cart-item__properties" role="list">
+                    {%- for property in item.properties -%}
+                      {%- if property.last != blank and property.first != '_gift_wrap' -%}
+                        <li class="cart-item__property">
+                          <span class="cart-item__property-name">{{ property.first }}:</span>
+                          <span class="cart-item__property-value">
+                            {%- if property.last contains '/uploads/' -%}
+                              <a href="{{ property.last }}">{{ property.last | split: '/' | last }}</a>
+                            {%- else -%}
+                              {{ property.last }}
+                            {%- endif -%}
+                          </span>
+                        </li>
+                      {%- endif -%}
+                    {%- endfor -%}
+                  </ul>
+                {%- endif -%}
+              </div>
+
+              <!-- Item Price -->
+              <div class="cart-item__price">
+                {%- if item.original_price != item.final_price -%}
+                  <span class="cart-item__original-price">{{ item.original_price | money }}</span>
+                  <span class="cart-item__final-price">{{ item.final_price | money }}</span>
+                {%- else -%}
+                  <span class="cart-item__final-price">{{ item.original_price | money }}</span>
+                {%- endif -%}
+              </div>
+
+              <!-- Item Quantity -->
+              <div class="cart-item__quantity">
+                <div class="cart-item__quantity-wrapper">
+                  <quantity-input class="quantity">
+                    <button class="quantity__button quantity__button--minus" name="minus" type="button">
+                      <span class="sr-only">{{ 'products.product.quantity.decrease' | t }}</span>
+                      {% render 'icon-minus' %}
+                    </button>
+                    <input
+                      class="quantity__input"
+                      type="number"
+                      name="updates[]"
+                      value="{{ item.quantity }}"
+                      min="0"
+                      data-quantity-variant-id="{{ item.variant.id }}"
+                      data-index="{{ forloop.index }}"
+                      aria-label="{{ 'products.product.quantity.input_label' | t: product: item.product.title }}"
+                    >
+                    <button class="quantity__button quantity__button--plus" name="plus" type="button">
+                      <span class="sr-only">{{ 'products.product.quantity.increase' | t }}</span>
+                      {% render 'icon-plus' %}
+                    </button>
+                  </quantity-input>
+                </div>
+
+                <cart-remove-button
+                  class="cart-item__remove"
+                  data-index="{{ forloop.index }}"
+                >
+                  <a
+                    href="{{ item.url_to_remove }}"
+                    class="cart-item__remove-link"
+                    aria-label="{{ 'sections.cart.remove_title' | t: title: item.product.title }}"
+                  >
+                    {% render 'icon-remove' %}
+                    <span>{{ 'sections.cart.remove' | t }}</span>
+                  </a>
+                </cart-remove-button>
+              </div>
+
+              <!-- Item Line Total -->
+              <div class="cart-item__total">
+                {%- if item.original_line_price != item.final_line_price -%}
+                  <span class="cart-item__original-total">{{ item.original_line_price | money }}</span>
+                  <span class="cart-item__final-total">{{ item.final_line_price | money }}</span>
+                {%- else -%}
+                  <span class="cart-item__final-total">{{ item.final_line_price | money }}</span>
+                {%- endif -%}
+              </div>
+            </div>
+          {%- endfor -%}
+
+          <!-- Cart Actions -->
+          <div class="cart-items__actions">
+            <button
+              type="submit"
+              class="cart-items__update-button"
+              name="update"
+              form="cart"
+            >
+              {{ 'sections.cart.update' | t }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Cart Summary Sidebar -->
+      <div class="cart-summary">
+        <div class="cart-summary__inner">
+          <h2 class="cart-summary__title">{{ 'sections.cart.order_summary' | t }}</h2>
+
+          <!-- Subtotal -->
+          <div class="cart-summary__subtotal">
+            <span class="cart-summary__subtotal-label">{{ 'sections.cart.subtotal' | t }}</span>
+            <span class="cart-summary__subtotal-value">{{ cart.total_price | money }}</span>
+          </div>
+
+          {%- if cart.cart_level_discount_applications.size > 0 -%}
+            <ul class="cart-summary__discounts" role="list">
+              {%- for discount in cart.cart_level_discount_applications -%}
+                <li class="cart-summary__discount">
+                  {%- render 'icon-discount' -%}
+                  <span class="cart-summary__discount-title">{{ discount.title }}</span>
+                  <span class="cart-summary__discount-amount">-{{ discount.total_allocated_amount | money }}</span>
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+
+          <!-- Shipping Note -->
+          <p class="cart-summary__shipping-note">
+            {{ 'sections.cart.shipping_note' | t }}
+          </p>
+
+          <!-- Gift Wrapping Option -->
+          {%- if section.settings.enable_gift_wrap -%}
+            <div class="cart-summary__gift-wrap">
+              <label class="cart-summary__gift-wrap-label" for="gift-wrap-checkbox">
+                <input
+                  type="checkbox"
+                  id="gift-wrap-checkbox"
+                  name="attributes[_gift_wrap]"
+                  value="yes"
+                  {%- if cart.attributes._gift_wrap == 'yes' -%}checked{%- endif -%}
+                  class="cart-summary__gift-wrap-input"
+                >
+                <span class="cart-summary__gift-wrap-text">
+                  {{ 'sections.cart.gift_wrap' | t }}
+                </span>
+              </label>
+              <p class="cart-summary__gift-wrap-note">
+                {{ 'sections.cart.gift_wrap_note' | t }}
+              </p>
+            </div>
+          {%- endif -%}
+
+          <!-- Discount Code -->
+          {%- if section.settings.enable_discount_code -%}
+            <div class="cart-summary__discount-code">
+              <details class="cart-summary__discount-code-details">
+                <summary class="cart-summary__discount-code-toggle">
+                  {% render 'icon-tag' %}
+                  <span>{{ 'sections.cart.discount_code' | t }}</span>
+                </summary>
+                <div class="cart-summary__discount-code-form">
+                  <form action="{{ routes.cart_url }}" method="post">
+                    <div class="cart-summary__discount-code-input-wrapper">
+                      <input
+                        type="text"
+                        name="discount"
+                        class="cart-summary__discount-code-input"
+                        placeholder="{{ 'sections.cart.discount_code_placeholder' | t }}"
+                        aria-label="{{ 'sections.cart.discount_code' | t }}"
+                      >
+                      <button
+                        type="submit"
+                        class="cart-summary__discount-code-button"
+                      >
+                        {{ 'sections.cart.apply_discount' | t }}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </details>
+            </div>
+          {%- endif -%}
+
+          <!-- Checkout Button -->
+          <div class="cart-summary__checkout">
+            <button
+              type="submit"
+              class="btn btn--primary btn--gold"
+              name="checkout"
+              form="cart"
+            >
+              {{ 'sections.cart.checkout' | t }}
+            </button>
+          </div>
+
+          <!-- Continue Shopping -->
+          <a href="{{ routes.collections_url }}" class="cart-summary__continue-shopping">
+            {{ 'sections.cart.continue_shopping' | t }}
+          </a>
+
+          <!-- Additional Checkout Buttons -->
+          {%- if additional_checkout_buttons -%}
+            <div class="cart-summary__additional-checkout">
+              {{ content_for_additional_checkout_buttons }}
+            </div>
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+  {%- else -%}
+    <!-- Empty Cart State -->
+    <div class="cart-page__empty">
+      <div class="cart-page__empty-icon">
+        {% render 'icon-cart-empty' %}
+      </div>
+      <h1 class="cart-page__empty-title section-heading">{{ 'sections.cart.empty' | t }}</h1>
+      <p class="cart-page__empty-message">{{ 'sections.cart.empty_message' | t }}</p>
+      <a href="{{ routes.collections_url }}" class="btn btn--primary btn--gold cart-page__empty-button">
+        {{ 'sections.cart.continue_shopping' | t }}
+      </a>
+    </div>
+  {%- endif -%}
+</div>
+
+<script src="{{ 'component-cart.js' | asset_url }}" defer="defer"></script>
+
+{% schema %}
+{
+  "name": "Cart",
+  "tag": "section",
+  "class": "section-cart",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable_gift_wrap",
+      "default": true,
+      "label": "Enable gift wrapping option",
+      "info": "Allow customers to add gift wrapping to their order"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_discount_code",
+      "default": true,
+      "label": "Enable discount code input",
+      "info": "Show a discount code field in the cart summary"
+    }
+  ]
+}
+{% endschema %}

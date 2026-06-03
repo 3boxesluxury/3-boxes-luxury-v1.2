@@ -1,0 +1,56 @@
+{
+  "name": "3 BOXES LUXURY - Curated Luxury Gifting",
+  "short_name": "3 BOXES",
+  "description": "Discover timeless elegance. Shop the finest watches, jewelry, leather goods, fragrances, fashion, and home & living collections.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1c1917",
+  "theme_color": "#d4a437",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["shopping", "lifestyle"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Shop All",
+      "short_name": "Shop",
+      "url": "/?action=shop",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Gift Builder",
+      "short_name": "Gifts",
+      "url": "/?action=gifts",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

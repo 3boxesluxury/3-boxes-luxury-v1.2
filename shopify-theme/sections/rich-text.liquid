@@ -1,0 +1,162 @@
+{{ 'component-rich-text.css' | asset_url | stylesheet_tag }}
+
+{%- style -%}
+  .section-{{ section.id }}-padding {
+    padding-top: {{ section.settings.padding_top }}px;
+    padding-bottom: {{ section.settings.padding_bottom }}px;
+  }
+
+  {%- if section.settings.width == 'narrow' -%}
+    .section-{{ section.id }}-padding .rich-text__inner {
+      max-width: 600px;
+    }
+  {%- elsif section.settings.width == 'wide' -%}
+    .section-{{ section.id }}-padding .rich-text__inner {
+      max-width: 1200px;
+    }
+  {%- else -%}
+    .section-{{ section.id }}-padding .rich-text__inner {
+      max-width: 800px;
+    }
+  {%- endif -%}
+{%- endstyle -%}
+
+<div class="rich-text section-{{ section.id }}-padding">
+  <div class="rich-text__inner page-width">
+    {%- if section.settings.heading != blank -%}
+      <h2 class="rich-text__heading section-heading {{ section.settings.heading_size }}">
+        {{ section.settings.heading }}
+      </h2>
+    {%- endif -%}
+
+    {%- if section.settings.subheading != blank -%}
+      <p class="rich-text__subheading">
+        {{ section.settings.subheading }}
+      </p>
+    {%- endif -%}
+
+    {%- if section.settings.text != blank -%}
+      <div class="rich-text__text rte">
+        {{ section.settings.text }}
+      </div>
+    {%- endif -%}
+
+    {%- if section.settings.button_label != blank -%}
+      <div class="rich-text__cta">
+        <a
+          {%- if section.settings.button_link != blank -%}
+            href="{{ section.settings.button_link }}"
+          {%- endif -%}
+          class="btn btn--primary btn--gold rich-text__button"
+          {%- if section.settings.button_link == blank -%}
+            aria-disabled="true"
+          {%- endif -%}
+        >
+          {{ section.settings.button_label }}
+        </a>
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Rich text",
+  "tag": "section",
+  "class": "section-rich-text",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Rich text",
+      "label": "Heading"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "options": [
+        {
+          "value": "h1",
+          "label": "Large"
+        },
+        {
+          "value": "h2",
+          "label": "Medium"
+        },
+        {
+          "value": "h3",
+          "label": "Small"
+        }
+      ],
+      "default": "h2",
+      "label": "Heading size"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "default": "<p>Share information about your brand with your customers. Describe a product, make announcements, or welcome customers to your store.</p>",
+      "label": "Text"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "select",
+      "id": "width",
+      "options": [
+        {
+          "value": "narrow",
+          "label": "Narrow"
+        },
+        {
+          "value": "standard",
+          "label": "Standard"
+        },
+        {
+          "value": "wide",
+          "label": "Wide"
+        }
+      ],
+      "default": "standard",
+      "label": "Content width"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 80
+    }
+  ],
+  "presets": [
+    {
+      "name": "Rich text"
+    }
+  ]
+}
+{% endschema %}

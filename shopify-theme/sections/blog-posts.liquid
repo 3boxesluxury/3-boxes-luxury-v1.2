@@ -1,0 +1,92 @@
+<!-- Blog Posts Section -->
+<div class="container-luxury section-spacing">
+  <div class="text-center mb-12">
+    <h1 class="section-heading">{{ blog.title }}</h1>
+    {%- if blog.description != blank -%}
+      <p class="section-subheading">{{ blog.description }}</p>
+    {%- endif -%}
+  </div>
+
+  {%- paginate blog.articles by 12 -%}
+    <div style="display:grid;grid-template-columns:1fr;gap:2rem">
+      {%- for article in blog.articles -%}
+        <article class="card-luxury overflow-hidden" style="display:grid;grid-template-columns:1fr;gap:0">
+          {%- if article.image -%}
+            <div style="aspect-ratio:16/9;overflow:hidden;background:#1c1917">
+              <a href="{{ article.url }}">
+                <img src="{{ article.image | img_url: '800x' }}" alt="{{ article.image.alt | escape }}" style="width:100%;height:100%;object-fit:cover;transition:transform 500ms" loading="lazy">
+              </a>
+            </div>
+          {%- endif -%}
+          <div class="p-6">
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.75rem">
+              {%- if article.tags.size > 0 -%}
+                {%- for tag in article.tags limit: 2 -%}
+                  <span class="badge badge-gold">{{ tag }}</span>
+                {%- endfor -%}
+              {%- endif -%}
+              <span style="font-size:0.75rem;color:#a8a29e">{{ article.published_at | date: '%B %d, %Y' }}</span>
+            </div>
+            <h2 style="font-family:var(--font-heading);font-size:1.5rem;font-weight:700;margin-bottom:0.75rem">
+              <a href="{{ article.url }}" style="color:#fef3c7;transition:color 0.2s">{{ article.title }}</a>
+            </h2>
+            {%- if article.excerpt -%}
+              <p style="color:#a8a29e;font-size:0.9375rem;line-height:1.7;margin-bottom:1rem">{{ article.excerpt | strip_html | truncatewords: 40 }}</p>
+            {%- endif -%}
+            <div style="display:flex;align-items:center;gap:1rem">
+              <a href="{{ article.url }}" style="font-size:0.875rem;color:#fbbf24;font-weight:500">Read more →</a>
+              {%- if article.comments_count > 0 -%}
+                <span style="font-size:0.8125rem;color:#a8a29e">{{ article.comments_count }} comment{{ article.comments_count | pluralize: '', 's' }}</span>
+              {%- endif -%}
+            </div>
+          </div>
+        </article>
+      {%- endfor -%}
+    </div>
+
+    {%- if paginate.pages > 1 -%}
+      <div class="pagination" style="margin-top:3rem">
+        {%- if paginate.previous -%}
+          <a href="{{ paginate.previous.url }}" class="pagination-btn">←</a>
+        {%- else -%}
+          <span class="pagination-btn disabled">←</span>
+        {%- endif -%}
+
+        {%- for part in paginate.parts -%}
+          {%- if part.is_link -%}
+            <a href="{{ part.url }}" class="pagination-btn">{{ part.title }}</a>
+          {%- else -%}
+            {%- if part.title == paginate.current_page -%}
+              <span class="pagination-btn active">{{ part.title }}</span>
+            {%- else -%}
+              <span class="pagination-btn disabled">{{ part.title }}</span>
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+
+        {%- if paginate.next -%}
+          <a href="{{ paginate.next.url }}" class="pagination-btn">→</a>
+        {%- else -%}
+          <span class="pagination-btn disabled">→</span>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+  {%- endpaginate -%}
+</div>
+
+{% schema %}
+{
+  "name": "Blog Posts",
+  "settings": [
+    {
+      "type": "range",
+      "id": "articles_per_page",
+      "min": 4,
+      "max": 24,
+      "step": 4,
+      "default": 12,
+      "label": "Articles per page"
+    }
+  ]
+}
+{% endschema %}

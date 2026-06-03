@@ -1,0 +1,309 @@
+{%- comment -%}
+  3 BOXES LUXURY — Footer Section
+  5-column luxury footer with brand, shop links, company links, support links,
+  and newsletter + social connections. Responsive grid with gold-accent styling.
+  Uses CSS classes from theme.css: site-footer, footer-grid, footer-column-title,
+  footer-link, footer-bottom, footer-social, footer-social-link, footer-brand-description,
+  footer-copyright, footer-tagline, gold-shimmer, input-luxury, btn-primary, btn-outline,
+  container-luxury
+{%- endcomment -%}
+
+<footer class="site-footer" data-section-id="{{ section.id }}" data-section-type="footer">
+  <div class="container-luxury">
+
+    {%- comment -%} === FOOTER GRID: 5 Columns === {%- endcomment -%}
+    <div class="footer-grid">
+
+      {%- comment -%} Column 1: Brand {%- endcomment -%}
+      <div>
+        <a href="{{ routes.root_url }}" class="header-logo" style="display:inline-flex;margin-bottom:0.75rem;" aria-label="{{ shop.name | escape }}">
+          {%- if section.settings.logo != blank -%}
+            <img
+              src="{{ section.settings.logo | image_url: width: 112 }}"
+              alt="{{ shop.name | escape }}"
+              width="56"
+              height="56"
+              loading="lazy"
+              class="logo-flashy"
+            >
+          {%- else -%}
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect width="56" height="56" rx="8" fill="rgba(120,53,15,0.3)"/>
+              <path d="M16 40V16l12 12L40 16v24" stroke="#d4a437" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 14h28" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M14 42h28" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          {%- endif -%}
+          <span class="header-logo-text gold-shimmer">3 BOXES LUXURY</span>
+        </a>
+        {%- if section.settings.description != blank -%}
+          <p class="footer-brand-description">{{ section.settings.description }}</p>
+        {%- else -%}
+          <p class="footer-brand-description">Curating the finest luxury gifts for every occasion. Where elegance meets exceptional craftsmanship, delivered in signature three-box presentation.</p>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Column 2: Shop (Collection Links) {%- endcomment -%}
+      <div>
+        <h3 class="footer-column-title">Shop</h3>
+        {%- if section.settings.shop_menu != blank -%}
+          {%- for link in linklists[section.settings.shop_menu].links -%}
+            <a href="{{ link.url }}" class="footer-link">{{ link.title }}</a>
+          {%- endfor -%}
+        {%- else -%}
+          <a href="{{ routes.collections_url }}" class="footer-link">All Collections</a>
+          <a href="/collections/new-arrivals" class="footer-link">New Arrivals</a>
+          <a href="/collections/best-sellers" class="footer-link">Best Sellers</a>
+          <a href="/collections/gift-sets" class="footer-link">Gift Sets</a>
+          <a href="/collections/sale" class="footer-link">Sale</a>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Column 3: Company (Page Links) {%- endcomment -%}
+      <div>
+        <h3 class="footer-column-title">Company</h3>
+        {%- if section.settings.company_menu != blank -%}
+          {%- for link in linklists[section.settings.company_menu].links -%}
+            <a href="{{ link.url }}" class="footer-link">{{ link.title }}</a>
+          {%- endfor -%}
+        {%- else -%}
+          <a href="/pages/about-us" class="footer-link">About Us</a>
+          <a href="/pages/our-story" class="footer-link">Our Story</a>
+          <a href="/pages/careers" class="footer-link">Careers</a>
+          <a href="/pages/press" class="footer-link">Press</a>
+          <a href="/pages/sustainability" class="footer-link">Sustainability</a>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Column 4: Support (Page Links) {%- endcomment -%}
+      <div>
+        <h3 class="footer-column-title">Support</h3>
+        {%- if section.settings.support_menu != blank -%}
+          {%- for link in linklists[section.settings.support_menu].links -%}
+            <a href="{{ link.url }}" class="footer-link">{{ link.title }}</a>
+          {%- endfor -%}
+        {%- else -%}
+          <a href="/pages/contact" class="footer-link">Contact Us</a>
+          <a href="/pages/shipping" class="footer-link">Shipping Info</a>
+          <a href="/pages/returns" class="footer-link">Returns & Exchanges</a>
+          <a href="/pages/faq" class="footer-link">FAQ</a>
+          <a href="/pages/track-order" class="footer-link">Track Order</a>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Column 5: Connect (Newsletter + Social) {%- endcomment -%}
+      <div>
+        <h3 class="footer-column-title">Connect</h3>
+
+        {%- if section.settings.enable_newsletter -%}
+          {%- form 'customer', class: 'footer-newsletter-form' -%}
+            <input type="hidden" name="contact[tags]" value="newsletter">
+            <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;">
+              <input
+                type="email"
+                name="contact[email]"
+                class="input-luxury"
+                placeholder="Your email"
+                aria-label="Email for newsletter"
+                required
+                autocomplete="email"
+                style="flex:1;padding:0.5rem 0.75rem;font-size:0.8125rem;"
+              >
+              <button type="submit" class="btn btn-primary btn-sm" aria-label="Subscribe to newsletter">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+              </button>
+            </div>
+          {%- endform -%}
+        {%- endif -%}
+
+        {%- comment -%} Social Links {%- endcomment -%}
+        <div class="footer-social">
+          {%- if section.settings.social_instagram != blank -%}
+            <a href="{{ section.settings.social_instagram }}" class="footer-social-link" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+              </svg>
+            </a>
+          {%- endif -%}
+
+          {%- if section.settings.social_facebook != blank -%}
+            <a href="{{ section.settings.social_facebook }}" class="footer-social-link" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+              </svg>
+            </a>
+          {%- endif -%}
+
+          {%- if section.settings.social_twitter != blank -%}
+            <a href="{{ section.settings.social_twitter }}" class="footer-social-link" aria-label="Twitter / X" target="_blank" rel="noopener noreferrer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4l11.733 16h4.267l-11.733-16z"/>
+                <path d="M4 20l6.768-6.768M20 4l-6.768 6.768"/>
+              </svg>
+            </a>
+          {%- endif -%}
+
+          {%- if section.settings.social_pinterest != blank -%}
+            <a href="{{ section.settings.social_pinterest }}" class="footer-social-link" aria-label="Pinterest" target="_blank" rel="noopener noreferrer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 11.857c0 2.571 1.714 4.286 3.429 4.286.857 0 1.714-.571 2-1.143l.571-2.286c.286-.857.571-1.714.571-2.286C14.571 8.714 13.429 8 12.286 8c-1.714 0-3.143 1.143-3.714 2.857"/>
+                <path d="M10.571 16.143c-.286 1.429-.857 2.857-1.429 3.714"/>
+              </svg>
+            </a>
+          {%- endif -%}
+
+          {%- if section.settings.social_youtube != blank -%}
+            <a href="{{ section.settings.social_youtube }}" class="footer-social-link" aria-label="YouTube" target="_blank" rel="noopener noreferrer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.43z"/>
+                <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+              </svg>
+            </a>
+          {%- endif -%}
+
+          {%- if section.settings.social_tiktok != blank -%}
+            <a href="{{ section.settings.social_tiktok }}" class="footer-social-link" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/>
+              </svg>
+            </a>
+          {%- endif -%}
+        </div>
+      </div>
+
+    </div>
+
+    {%- comment -%} === FOOTER BOTTOM === {%- endcomment -%}
+    <div class="footer-bottom">
+      <p class="footer-copyright">&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. All rights reserved.</p>
+      <p class="footer-tagline">Crafted with <span style="color:#f87171;">&#9829;</span> for Luxury</p>
+      <div class="footer-social" style="margin-left:auto;">
+        {%- if section.settings.social_instagram != blank -%}
+          <a href="{{ section.settings.social_instagram }}" class="footer-social-link" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+            </svg>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.social_facebook != blank -%}
+          <a href="{{ section.settings.social_facebook }}" class="footer-social-link" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+            </svg>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.social_twitter != blank -%}
+          <a href="{{ section.settings.social_twitter }}" class="footer-social-link" aria-label="Twitter / X" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4l11.733 16h4.267l-11.733-16z"/>
+              <path d="M4 20l6.768-6.768M20 4l-6.768 6.768"/>
+            </svg>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.social_pinterest != blank -%}
+          <a href="{{ section.settings.social_pinterest }}" class="footer-social-link" aria-label="Pinterest" target="_blank" rel="noopener noreferrer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M8 11.857c0 2.571 1.714 4.286 3.429 4.286.857 0 1.714-.571 2-1.143l.571-2.286c.286-.857.571-1.714.571-2.286C14.571 8.714 13.429 8 12.286 8c-1.714 0-3.143 1.143-3.714 2.857"/>
+            </svg>
+          </a>
+        {%- endif -%}
+      </div>
+    </div>
+
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Footer",
+  "class": "site-footer-wrapper",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo image"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Brand description",
+      "default": "Curating the finest luxury gifts for every occasion. Where elegance meets exceptional craftsmanship, delivered in signature three-box presentation."
+    },
+    {
+      "type": "header",
+      "content": "Footer Menus"
+    },
+    {
+      "type": "link_list",
+      "id": "shop_menu",
+      "label": "Shop menu",
+      "info": "Collection links for the Shop column"
+    },
+    {
+      "type": "link_list",
+      "id": "company_menu",
+      "label": "Company menu",
+      "info": "Page links for the Company column"
+    },
+    {
+      "type": "link_list",
+      "id": "support_menu",
+      "label": "Support menu",
+      "info": "Page links for the Support column"
+    },
+    {
+      "type": "header",
+      "content": "Newsletter"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_newsletter",
+      "label": "Enable newsletter signup",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Social Media Links"
+    },
+    {
+      "type": "url",
+      "id": "social_instagram",
+      "label": "Instagram"
+    },
+    {
+      "type": "url",
+      "id": "social_facebook",
+      "label": "Facebook"
+    },
+    {
+      "type": "url",
+      "id": "social_twitter",
+      "label": "Twitter / X"
+    },
+    {
+      "type": "url",
+      "id": "social_pinterest",
+      "label": "Pinterest"
+    },
+    {
+      "type": "url",
+      "id": "social_youtube",
+      "label": "YouTube"
+    },
+    {
+      "type": "url",
+      "id": "social_tiktok",
+      "label": "TikTok"
+    }
+  ]
+}
+{% endschema %}

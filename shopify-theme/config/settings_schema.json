@@ -1,0 +1,235 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "3 Boxes Luxury",
+    "theme_version": "1.0.0",
+    "theme_author": "3 Boxes Luxury",
+    "theme_documentation_url": "https://3boxesluxury.com",
+    "theme_support_url": "https://3boxesluxury.com/support"
+  },
+  {
+    "name": "Colors",
+    "settings": [
+      {
+        "type": "color",
+        "id": "color_background",
+        "label": "Background",
+        "default": "#0c0a09"
+      },
+      {
+        "type": "color",
+        "id": "color_text",
+        "label": "Text",
+        "default": "#fef3c7"
+      },
+      {
+        "type": "color",
+        "id": "color_gold",
+        "label": "Gold",
+        "default": "#d4a437"
+      },
+      {
+        "type": "color",
+        "id": "color_gold_light",
+        "label": "Gold light",
+        "default": "#f5e6a3"
+      },
+      {
+        "type": "color",
+        "id": "color_gold_dark",
+        "label": "Gold dark",
+        "default": "#b8860b"
+      },
+      {
+        "type": "color",
+        "id": "color_amber",
+        "label": "Amber",
+        "default": "#d97706"
+      },
+      {
+        "type": "color",
+        "id": "color_card_background",
+        "label": "Card background",
+        "default": "#1c1917"
+      },
+      {
+        "type": "color",
+        "id": "color_muted_text",
+        "label": "Muted text",
+        "default": "#a8a29e"
+      }
+    ]
+  },
+  {
+    "name": "Typography",
+    "settings": [
+      {
+        "type": "font_picker",
+        "id": "font_heading",
+        "label": "Heading font",
+        "default": "playfair_display_n7"
+      },
+      {
+        "type": "font_picker",
+        "id": "font_body",
+        "label": "Body font",
+        "default": "inter_n4"
+      },
+      {
+        "type": "range",
+        "id": "base_font_size",
+        "label": "Base font size (px)",
+        "min": 12,
+        "max": 20,
+        "step": 1,
+        "default": 16,
+        "unit": "px"
+      }
+    ]
+  },
+  {
+    "name": "Logo",
+    "settings": [
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "Logo image"
+      },
+      {
+        "type": "range",
+        "id": "logo_max_width",
+        "label": "Logo max width (desktop)",
+        "min": 50,
+        "max": 300,
+        "step": 5,
+        "default": 180,
+        "unit": "px"
+      },
+      {
+        "type": "range",
+        "id": "logo_mobile_max_width",
+        "label": "Logo max width (mobile)",
+        "min": 50,
+        "max": 200,
+        "step": 5,
+        "default": 120,
+        "unit": "px"
+      }
+    ]
+  },
+  {
+    "name": "Layout",
+    "settings": [
+      {
+        "type": "range",
+        "id": "container_width",
+        "label": "Container width (px)",
+        "min": 960,
+        "max": 1600,
+        "step": 10,
+        "default": 1280,
+        "unit": "px"
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_sticky_header",
+        "label": "Enable sticky header",
+        "default": true
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_cart_drawer",
+        "label": "Enable cart drawer",
+        "default": true
+      }
+    ]
+  },
+  {
+    "name": "Social media",
+    "settings": [
+      {
+        "type": "url",
+        "id": "social_facebook_url",
+        "label": "Facebook"
+      },
+      {
+        "type": "url",
+        "id": "social_instagram_url",
+        "label": "Instagram"
+      },
+      {
+        "type": "url",
+        "id": "social_twitter_url",
+        "label": "Twitter / X"
+      },
+      {
+        "type": "url",
+        "id": "social_pinterest_url",
+        "label": "Pinterest"
+      },
+      {
+        "type": "url",
+        "id": "social_youtube_url",
+        "label": "YouTube"
+      }
+    ]
+  },
+  {
+    "name": "Favicon",
+    "settings": [
+      {
+        "type": "image_picker",
+        "id": "favicon",
+        "label": "Favicon image"
+      }
+    ]
+  },
+  {
+    "name": "Cart",
+    "settings": [
+      {
+        "type": "select",
+        "id": "cart_type",
+        "label": "Cart type",
+        "options": [
+          { "value": "drawer", "label": "Drawer" },
+          { "value": "page", "label": "Page" },
+          { "value": "notification", "label": "Notification" }
+        ],
+        "default": "drawer"
+      },
+      {
+        "type": "checkbox",
+        "id": "enable_gift_wrapping",
+        "label": "Enable gift wrapping",
+        "default": true
+      },
+      {
+        "type": "range",
+        "id": "gift_wrap_price",
+        "label": "Gift wrap price (cents)",
+        "min": 0,
+        "max": 5000,
+        "step": 100,
+        "default": 500,
+        "unit": "¢"
+      }
+    ]
+  },
+  {
+    "name": "SEO",
+    "settings": [
+      {
+        "type": "text",
+        "id": "seo_title_suffix",
+        "label": "Title suffix",
+        "default": "| 3 Boxes Luxury"
+      },
+      {
+        "type": "textarea",
+        "id": "seo_description",
+        "label": "Default meta description"
+      }
+    ]
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "settings": {}
+    },
+    "header": {
+      "type": "header",
+      "settings": {}
+    },
+    "main-product": {
+      "type": "main-product",
+      "settings": {}
+    },
+    "footer": {
+      "type": "footer",
+      "settings": {}
+    }
+  },
+  "order": [
+    "announcement-bar",
+    "header",
+    "main-product",
+    "footer"
+  ]
+}

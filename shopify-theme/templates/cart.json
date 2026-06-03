@@ -1,0 +1,29 @@
+{
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "settings": {}
+    },
+    "header": {
+      "type": "header",
+      "settings": {}
+    },
+    "main-cart": {
+      "type": "main-cart",
+      "settings": {
+        "enable_gift_wrap": true,
+        "enable_discount_code": true
+      }
+    },
+    "footer": {
+      "type": "footer",
+      "settings": {}
+    }
+  },
+  "order": [
+    "announcement-bar",
+    "header",
+    "main-cart",
+    "footer"
+  ]
+}

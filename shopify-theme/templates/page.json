@@ -1,0 +1,26 @@
+{
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "settings": {}
+    },
+    "header": {
+      "type": "header",
+      "settings": {}
+    },
+    "rich-text": {
+      "type": "rich-text",
+      "settings": {}
+    },
+    "footer": {
+      "type": "footer",
+      "settings": {}
+    }
+  },
+  "order": [
+    "announcement-bar",
+    "header",
+    "rich-text",
+    "footer"
+  ]
+}

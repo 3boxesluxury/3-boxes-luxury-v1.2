@@ -1,0 +1,6 @@
+{
+  "buildCommand": "bash vercel-build.sh",
+  "installCommand": "bun install",
+  "framework": "nextjs",
+  "regions": ["bom1"]
+}

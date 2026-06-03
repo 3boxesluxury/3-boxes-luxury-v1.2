@@ -1,0 +1,427 @@
+{%- comment -%}
+  Main Product Section
+  Full product detail page with gallery, info, and add-to-cart form.
+{%- endcomment -%}
+
+{%- liquid
+  assign product = section.settings.product | default: product
+  assign current_variant = product.selected_or_first_available_variant
+  assign enable_gift_wrap = section.settings.enable_gift_wrap
+  assign enable_delivery_estimate = section.settings.enable_delivery_estimate
+  assign enable_wishlist = section.settings.enable_wishlist
+  assign is_sold_out = false
+  unless product.available
+    assign is_sold_out = true
+  endunless
+  assign is_on_sale = false
+  if current_variant.compare_at_price > current_variant.price
+    assign is_on_sale = true
+  endif
+
+  assign featured_image = current_variant.image | default: product.featured_image
+  assign image_index = 0
+  for image in product.images
+    if image.id == featured_image.id
+      assign image_index = forloop.index0
+      break
+    endif
+  endfor
+-%}
+
+<section
+  id="main-product-{{ section.id }}"
+  class="relative py-8 md:py-16"
+  style="background-color: #0c0a09;"
+>
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    {%- form 'product', product, id: 'product-form', class: 'form', novalidate: 'novalidate' -%}
+      <input type="hidden" name="id" value="{{ current_variant.id }}" id="variant-id-{{ section.id }}">
+
+      <div class="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
+        {%- comment -%} ================================ {%- endcomment -%}
+        {%- comment -%} LEFT: Image Gallery               {%- endcomment -%}
+        {%- comment -%} ================================ {%- endcomment -%}
+        <div class="product-gallery">
+          {%- comment -%} Main Image {%- endcomment -%}
+          <div class="product-gallery__main relative aspect-square overflow-hidden rounded-xl border border-border/30 bg-stone-900/50">
+            {%- if featured_image -%}
+              <img
+                id="main-product-image-{{ section.id }}"
+                src="{{ featured_image | image_url: width: 1200 }}"
+                alt="{{ featured_image.alt | escape | default: product.title | escape }}"
+                class="h-full w-full object-cover transition-opacity duration-300"
+                width="1200"
+                height="1200"
+              >
+            {%- else -%}
+              <div class="flex h-full w-full items-center justify-center text-stone-600">
+                {{ 'image' | placeholder_svg_tag: 'h-24 w-24' }}
+              </div>
+            {%- endif -%}
+
+            {%- comment -%} Sale badge on main image {%- endcomment -%}
+            {%- if is_on_sale -%}
+              <span class="absolute left-4 top-4 inline-flex items-center rounded-md bg-emerald-600/90 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                Sale
+              </span>
+            {%- endif -%}
+          </div>
+
+          {%- comment -%} Thumbnail Row {%- endcomment -%}
+          {%- if product.images.size > 1 -%}
+            <div class="product-gallery__thumbnails mt-4 flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+              {%- for image in product.images -%}
+                <button
+                  type="button"
+                  class="product-gallery__thumb relative aspect-square w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-200 {%- if image.id == featured_image.id -%} border-gold ring-1 ring-gold/30 {%- else -%} border-border/30 hover:border-gold/40 {%- endif -%}"
+                  data-image-id="{{ image.id }}"
+                  data-image-url="{{ image | image_url: width: 1200 }}"
+                  data-image-alt="{{ image.alt | escape }}"
+                  onclick="switchMainImage(this, '{{ section.id }}')"
+                  aria-label="View image {{ forloop.index }}"
+                >
+                  <img
+                    src="{{ image | image_url: width: 160 }}"
+                    alt="{{ image.alt | escape | default: product.title | escape }}"
+                    class="h-full w-full object-cover"
+                    loading="lazy"
+                    width="160"
+                    height="160"
+                  >
+                </button>
+              {%- endfor -%}
+            </div>
+          {%- endif -%}
+        </div>
+
+        {%- comment -%} ================================ {%- endcomment -%}
+        {%- comment -%} RIGHT: Product Info               {%- endcomment -%}
+        {%- comment -%} ================================ {%- endcomment -%}
+        <div class="product-info flex flex-col">
+          {%- comment -%} Category / Tag {%- endcomment -%}
+          {%- if product.type != blank -%}
+            <span class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+              {{ product.type }}
+            </span>
+          {%- elsif product.tags.size > 0 -%}
+            <span class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-gold">
+              {{ product.tags.first }}
+            </span>
+          {%- endif -%}
+
+          {%- comment -%} Title {%- endcomment -%}
+          <h1 class="font-heading text-2xl font-bold leading-tight text-foreground sm:text-3xl lg:text-4xl" style="font-family: 'Playfair Display', serif;">
+            {{ product.title }}
+          </h1>
+
+          {%- comment -%} Star Rating {%- endcomment -%}
+          {%- if product.metafields.reviews.rating.value != blank -%}
+            <div class="mt-3 flex items-center gap-2">
+              <div class="flex items-center gap-0.5">
+                {%- liquid
+                  assign rating_decimal = product.metafields.reviews.rating.value.rating | default: 0
+                  assign rating_floor = rating_decimal | floor
+                -%}
+                {%- for i in (1..5) -%}
+                  {%- if i <= rating_floor -%}
+                    <svg class="h-4 w-4 text-gold" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                  {%- else -%}
+                    <svg class="h-4 w-4 text-stone-700" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+              <span class="text-sm text-muted-foreground">
+                {{ product.metafields.reviews.rating.value.rating | default: 0 }} / 5
+                ({{ product.metafields.reviews.rating_count.value | default: 0 }} {{ 'reviews' | t | default: 'reviews' }})
+              </span>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} Price {%- endcomment -%}
+          <div class="mt-4 flex flex-wrap items-baseline gap-3">
+            {%- render 'price', product: product -%}
+          </div>
+
+          {%- comment -%} Description {%- endcomment -%}
+          {%- if product.description != blank -%}
+            <div class="mt-6 prose prose-sm prose-invert max-w-none text-muted-foreground leading-relaxed">
+              {{ product.description }}
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} Variant Selector {%- endcomment -%}
+          {%- unless product.has_only_default_variant -%}
+            <div class="mt-6 space-y-4">
+              {%- for option in product.options_with_values -%}
+                <div class="variant-selector">
+                  <label class="mb-2 block text-sm font-medium text-foreground" for="option-{{ option.name | handleize }}-{{ section.id }}">
+                    {{ option.name }}
+                  </label>
+                  <div class="flex flex-wrap gap-2">
+                    {%- for value in option.values -%}
+                      <button
+                        type="button"
+                        class="variant-option rounded-md border px-4 py-2 text-sm font-medium transition-all duration-200 {%- if option.selected_value == value -%} border-gold bg-gold/10 text-gold {%- else -%} border-border/50 bg-card text-foreground hover:border-gold/40 {%- endif -%}"
+                        data-option-index="{{ forloop.index0 }}"
+                        data-option-name="{{ option.name | handleize }}"
+                        data-option-value="{{ value | escape }}"
+                        onclick="selectVariant(this, '{{ section.id }}')"
+                      >
+                        {{ value }}
+                      </button>
+                    {%- endfor -%}
+                  </div>
+                </div>
+              {%- endfor -%}
+            </div>
+          {%- endunless -%}
+
+          {%- comment -%} Quantity Selector {%- endcomment -%}
+          <div class="mt-6">
+            <label class="mb-2 block text-sm font-medium text-foreground" for="quantity-{{ section.id }}">
+              {{ 'products.product.quantity' | t | default: 'Quantity' }}
+            </label>
+            <div class="inline-flex items-center rounded-lg border border-border/50 bg-card">
+              <button
+                type="button"
+                class="flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                onclick="changeQuantity('{{ section.id }}', -1)"
+                aria-label="Decrease quantity"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>
+              </button>
+              <input
+                type="number"
+                id="quantity-{{ section.id }}"
+                name="quantity"
+                value="1"
+                min="1"
+                class="h-11 w-16 border-0 bg-transparent text-center text-sm font-medium text-foreground focus:outline-none focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              >
+              <button
+                type="button"
+                class="flex h-11 w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                onclick="changeQuantity('{{ section.id }}', 1)"
+                aria-label="Increase quantity"
+              >
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+              </button>
+            </div>
+          </div>
+
+          {%- comment -%} Action Buttons {%- endcomment -%}
+          <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+            {%- if is_sold_out -%}
+              <button
+                type="button"
+                disabled
+                class="flex-1 rounded-lg bg-stone-800 px-8 py-3.5 text-base font-semibold uppercase tracking-wider text-stone-500 cursor-not-allowed"
+              >
+                {{ 'products.product.sold_out' | t | default: 'Sold Out' }}
+              </button>
+            {%- else -%}
+              <button
+                type="submit"
+                name="add"
+                class="flex-1 rounded-lg bg-gradient-to-r from-gold via-amber-500 to-gold px-8 py-3.5 text-base font-semibold uppercase tracking-wider text-stone-950 shadow-lg shadow-gold/20 transition-all duration-300 hover:from-amber-400 hover:via-yellow-500 hover:to-amber-400 hover:shadow-gold/30 active:scale-[0.98]"
+              >
+                {{ 'products.product.add_to_cart' | t | default: 'Add to Cart' }}
+              </button>
+              {%- comment -%} Buy Now redirects to checkout {%- endcomment -%}
+              <button
+                type="submit"
+                name="checkout"
+                formaction="/cart"
+                class="flex-1 rounded-lg border-2 border-gold/50 bg-transparent px-8 py-3.5 text-base font-semibold uppercase tracking-wider text-gold transition-all duration-300 hover:border-gold hover:bg-gold/10 active:scale-[0.98]"
+              >
+                {{ 'products.product.buy_now' | t | default: 'Buy Now' }}
+              </button>
+            {%- endif -%}
+          </div>
+
+          {%- comment -%} Gift Wrapping Option {%- endcomment -%}
+          {%- if enable_gift_wrap -%}
+            <div class="mt-5 flex items-center gap-3 rounded-lg border border-border/40 bg-card p-4">
+              <label class="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  name="properties[Gift Wrapping]"
+                  value="Yes"
+                  class="peer sr-only"
+                  id="gift-wrap-{{ section.id }}"
+                >
+                <div class="h-5 w-9 rounded-full bg-stone-700 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-gold peer-checked:after:translate-x-full peer-focus-visible:ring-2 peer-focus-visible:ring-gold/50"></div>
+              </label>
+              <div class="flex-1">
+                <span class="text-sm font-medium text-foreground">Luxury Gift Wrapping</span>
+                <p class="text-xs text-muted-foreground">Premium box with ribbon &amp; personalized card</p>
+              </div>
+              <svg class="h-5 w-5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} Delivery Estimate {%- endcomment -%}
+          {%- if enable_delivery_estimate -%}
+            <div class="mt-4 flex items-start gap-3 rounded-lg border border-emerald-600/20 bg-emerald-950/20 p-4">
+              <svg class="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H18.75m-7.5-3l.375-4.5M6 11.25h12M3.375 11.25h17.25" />
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-emerald-300">Estimated Delivery</p>
+                <p class="mt-0.5 text-xs text-emerald-400/70">
+                  {%- assign delivery_days = 5 | plus: 2 -%}
+                  Order now for delivery in {{ delivery_days | minus: 2 }}–{{ delivery_days }} business days. Express shipping available at checkout.
+                </p>
+              </div>
+            </div>
+          {%- endif -%}
+
+          {%- comment -%} Wishlist {%- endcomment -%}
+          {%- if enable_wishlist -%}
+            <button
+              type="button"
+              class="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors duration-200 hover:text-gold"
+              onclick="toggleWishlist('{{ product.handle }}')"
+              aria-label="{{ 'products.product.add_to_wishlist' | t | default: 'Add to wishlist' }}"
+            >
+              <svg class="h-4.5 w-4.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+              </svg>
+              <span>Add to Wishlist</span>
+            </button>
+          {%- endif -%}
+
+          {%- comment -%} Product Meta / Accordion {%- endcomment -%}
+          <div class="mt-8 space-y-0 divide-y divide-border/30 border-t border-border/30">
+            {%- if product.metafields.custom.material != blank -%}
+              <details class="group">
+                <summary class="flex cursor-pointer items-center justify-between py-4 text-sm font-medium text-foreground transition-colors hover:text-gold">
+                  <span>Materials</span>
+                  <svg class="h-4 w-4 transition-transform duration-200 group-open:rotate-180 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <div class="pb-4 text-sm text-muted-foreground">
+                  {{ product.metafields.custom.material }}
+                </div>
+              </details>
+            {%- endif -%}
+
+            <details class="group">
+              <summary class="flex cursor-pointer items-center justify-between py-4 text-sm font-medium text-foreground transition-colors hover:text-gold">
+                <span>Shipping &amp; Returns</span>
+                <svg class="h-4 w-4 transition-transform duration-200 group-open:rotate-180 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <div class="pb-4 text-sm text-muted-foreground">
+                <p>Free standard shipping on all orders. Express delivery available at checkout.</p>
+                <p class="mt-2">30-day hassle-free returns. Items must be in original packaging.</p>
+              </div>
+            </details>
+
+            <details class="group">
+              <summary class="flex cursor-pointer items-center justify-between py-4 text-sm font-medium text-foreground transition-colors hover:text-gold">
+                <span>Gift Packaging</span>
+                <svg class="h-4 w-4 transition-transform duration-200 group-open:rotate-180 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <div class="pb-4 text-sm text-muted-foreground">
+                <p>Every order arrives in our signature 3 Boxes Luxury packaging — a premium unboxing experience with curated presentation, tissue wrap, and a handwritten card.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    {%- endform -%}
+  </div>
+</section>
+
+<script>
+  {%- comment -%} Main image switcher {%- endcomment -%}
+  function switchMainImage(thumb, sectionId) {
+    var mainImg = document.getElementById('main-product-image-' + sectionId);
+    var url = thumb.dataset.imageUrl;
+    var alt = thumb.dataset.imageAlt;
+    if (mainImg && url) {
+      mainImg.style.opacity = '0';
+      setTimeout(function() {
+        mainImg.src = url;
+        mainImg.alt = alt;
+        mainImg.style.opacity = '1';
+      }, 150);
+    }
+    {%- comment -%} Update active thumbnail {%- endcomment -%}
+    var thumbs = thumb.parentElement.querySelectorAll('.product-gallery__thumb');
+    thumbs.forEach(function(t) {
+      t.classList.remove('border-gold', 'ring-1', 'ring-gold/30');
+      t.classList.add('border-border/30');
+    });
+    thumb.classList.remove('border-border/30');
+    thumb.classList.add('border-gold', 'ring-1', 'ring-gold/30');
+  }
+
+  {%- comment -%} Quantity selector {%- endcomment -%}
+  function changeQuantity(sectionId, delta) {
+    var input = document.getElementById('quantity-' + sectionId);
+    if (input) {
+      var current = parseInt(input.value) || 1;
+      var newVal = Math.max(1, current + delta);
+      input.value = newVal;
+    }
+  }
+
+  {%- comment -%} Variant selector {%- endcomment -%}
+  function selectVariant(btn, sectionId) {
+    var siblings = btn.parentElement.querySelectorAll('.variant-option');
+    siblings.forEach(function(s) {
+      s.classList.remove('border-gold', 'bg-gold/10', 'text-gold');
+      s.classList.add('border-border/50', 'text-foreground');
+    });
+    btn.classList.remove('border-border/50', 'text-foreground');
+    btn.classList.add('border-gold', 'bg-gold/10', 'text-gold');
+  }
+
+  {%- comment -%} Wishlist toggle {%- endcomment -%}
+  function toggleWishlist(handle) {
+    var key = '3boxes_wishlist';
+    var wishlist = JSON.parse(localStorage.getItem(key) || '[]');
+    var index = wishlist.indexOf(handle);
+    if (index > -1) {
+      wishlist.splice(index, 1);
+    } else {
+      wishlist.push(handle);
+    }
+    localStorage.setItem(key, JSON.stringify(wishlist));
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Product Information",
+  "tag": "section",
+  "class": "main-product",
+  "settings": [
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Product (optional — defaults to current product)"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_gift_wrap",
+      "label": "Enable gift wrapping option",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_delivery_estimate",
+      "label": "Enable delivery estimate",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_wishlist",
+      "label": "Enable wishlist button",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

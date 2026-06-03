@@ -1,0 +1,24 @@
+{
+  "current": {
+    "color_background": "#0c0a09",
+    "color_text": "#fef3c7",
+    "color_gold": "#d4a437",
+    "color_gold_light": "#f5e6a3",
+    "color_gold_dark": "#b8860b",
+    "color_amber": "#d97706",
+    "color_card_background": "#1c1917",
+    "color_muted_text": "#a8a29e",
+    "font_heading": "playfair_display_n7",
+    "font_body": "inter_n4",
+    "base_font_size": 16,
+    "logo_max_width": 180,
+    "logo_mobile_max_width": 120,
+    "container_width": 1280,
+    "enable_sticky_header": true,
+    "enable_cart_drawer": true,
+    "cart_type": "drawer",
+    "enable_gift_wrapping": true,
+    "gift_wrap_price": 500,
+    "seo_title_suffix": "| 3 Boxes Luxury"
+  }
+}

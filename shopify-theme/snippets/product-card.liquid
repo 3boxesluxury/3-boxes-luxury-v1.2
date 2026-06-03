@@ -1,0 +1,182 @@
+{%- comment -%}
+  Product Card Snippet
+  Accepts:
+    - product (required): The product object
+    - show_vendor (optional): Show vendor name. Default: false
+    - show_badges (optional): Show badges. Default: true
+{%- endcomment -%}
+
+{%- liquid
+  assign show_vendor = show_vendor | default: false
+  assign show_badges = show_badges | default: true
+  assign current_variant = product.selected_or_first_available_variant
+  assign is_sold_out = false
+  unless product.available
+    assign is_sold_out = true
+  endunless
+  assign is_on_sale = false
+  if current_variant.compare_at_price > current_variant.price
+    assign is_on_sale = true
+  endif
+  assign savings_percent = 0
+  if is_on_sale
+    assign savings_amount = current_variant.compare_at_price | minus: current_variant.price
+    assign savings_percent = savings_amount | times: 100 | divided_by: current_variant.compare_at_price
+  endif
+  assign featured_image = product.featured_image
+  unless featured_image
+    assign featured_image = product.images[0]
+  endunless
+-%}
+
+<div class="product-card group relative flex flex-col overflow-hidden rounded-lg border border-border/40 bg-card transition-all duration-300 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5">
+  {%- comment -%} Image Wrapper {%- endcomment -%}
+  <div class="product-card__image-wrapper relative aspect-square overflow-hidden bg-stone-900/50">
+    <a href="{{ product.url }}" class="block h-full w-full" aria-label="{{ product.title | escape }}">
+      {%- if featured_image -%}
+        <img
+          src="{{ featured_image | image_url: width: 600 }}"
+          alt="{{ featured_image.alt | escape | default: product.title | escape }}"
+          loading="lazy"
+          class="product-card__image h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+          width="600"
+          height="600"
+        >
+      {%- else -%}
+        <div class="flex h-full w-full items-center justify-center text-muted-foreground">
+          <svg class="h-12 w-12 opacity-30" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+        </div>
+      {%- endif -%}
+    </a>
+
+    {%- comment -%} Badges {%- endcomment -%}
+    {%- if show_badges -%}
+      <div class="product-card__badges absolute left-3 top-3 flex flex-col gap-1.5 z-10">
+        {%- if is_sold_out -%}
+          <span class="inline-flex items-center rounded-md bg-red-600/90 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
+            {{ 'products.product.sold_out' | t | default: 'Sold Out' }}
+          </span>
+        {%- endif -%}
+        {%- if is_on_sale and is_sold_out == false -%}
+          <span class="inline-flex items-center rounded-md bg-emerald-600/90 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-white backdrop-blur-sm">
+            {{ 'products.product.on_sale' | t | default: 'Sale' }}
+          </span>
+        {%- endif -%}
+        {%- if product.tags contains 'featured' or product.tags contains 'Featured' -%}
+          <span class="inline-flex items-center rounded-md bg-gold/90 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-stone-950 backdrop-blur-sm">
+            {{ 'products.product.featured' | t | default: 'Featured' }}
+          </span>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} Wishlist Heart Button {%- endcomment -%}
+    <button
+      type="button"
+      class="product-card__wishlist absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-stone-950/60 text-stone-300 backdrop-blur-sm transition-all duration-200 hover:bg-gold/20 hover:text-gold"
+      aria-label="{{ 'products.product.add_to_wishlist' | t | default: 'Add to wishlist' }}"
+      onclick="toggleWishlist('{{ product.handle }}')"
+    >
+      <svg class="h-4.5 w-4.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+      </svg>
+    </button>
+
+    {%- comment -%} Quick Add Overlay {%- endcomment -%}
+    {%- unless is_sold_out -%}
+      <div class="product-card__quick-add absolute bottom-0 left-0 right-0 translate-y-full opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 z-10 p-3">
+        <form action="/cart/add" method="post" enctype="multipart/form-data">
+          <input type="hidden" name="id" value="{{ current_variant.id }}">
+          <button
+            type="submit"
+            class="product-card__add-to-cart w-full rounded-md bg-gradient-to-r from-gold via-amber-500 to-gold px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-stone-950 shadow-lg transition-all duration-200 hover:from-amber-400 hover:via-yellow-500 hover:to-amber-400 hover:shadow-gold/25"
+          >
+            {{ 'products.product.add_to_cart' | t | default: 'Add to Cart' }}
+          </button>
+        </form>
+      </div>
+    {%- endunless -%}
+  </div>
+
+  {%- comment -%} Info Section {%- endcomment -%}
+  <div class="product-card__info flex flex-1 flex-col gap-2 p-4">
+    {%- comment -%} Category / Tag Label {%- endcomment -%}
+    {%- if product.type != blank -%}
+      <span class="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+        {{ product.type }}
+      </span>
+    {%- elsif product.tags.size > 0 -%}
+      {%- assign first_tag = product.tags.first -%}
+      <span class="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+        {{ first_tag }}
+      </span>
+    {%- endif -%}
+
+    {%- comment -%} Title {%- endcomment -%}
+    <h3 class="product-card__title line-clamp-1 text-sm font-semibold leading-snug text-foreground">
+      <a href="{{ product.url }}" class="transition-colors duration-150 hover:text-gold">
+        {{ product.title }}
+      </a>
+    </h3>
+
+    {%- comment -%} Vendor {%- endcomment -%}
+    {%- if show_vendor and product.vendor != blank -%}
+      <p class="text-xs text-muted-foreground">{{ product.vendor }}</p>
+    {%- endif -%}
+
+    {%- comment -%} Star Rating {%- endcomment -%}
+    {%- if product.metafields.reviews.rating.value != blank -%}
+      <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-0.5">
+          {%- liquid
+            assign rating_decimal = product.metafields.reviews.rating.value.rating | default: 0
+            assign rating_floor = rating_decimal | floor
+            assign rating_ceiling = rating_decimal | ceil
+          -%}
+          {%- for i in (1..5) -%}
+            {%- if i <= rating_floor -%}
+              <svg class="h-3.5 w-3.5 text-gold" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            {%- elsif i == rating_ceiling and rating_decimal > rating_floor -%}
+              <svg class="h-3.5 w-3.5 text-gold" fill="currentColor" viewBox="0 0 20 20" style="clip-path: inset(0 {{ 100 | minus: rating_decimal | modulo: 1 | times: 100 | round }}% 0 0)"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            {%- else -%}
+              <svg class="h-3.5 w-3.5 text-stone-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+        <span class="text-[11px] text-muted-foreground">({{ product.metafields.reviews.rating_count.value | default: 0 }})</span>
+      </div>
+    {%- else -%}
+      <div class="flex items-center gap-0.5">
+        {%- for i in (1..5) -%}
+          <svg class="h-3.5 w-3.5 text-stone-700" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} Price {%- endcomment -%}
+    <div class="product-card__price flex flex-wrap items-baseline gap-2 mt-0.5">
+      {%- render 'price', product: product -%}
+    </div>
+
+    {%- comment -%} Mobile Add to Cart (visible only on touch/no-hover) {%- endcomment -%}
+    {%- if is_sold_out -%}
+      <button
+        type="button"
+        disabled
+        class="mt-2 w-full rounded-md bg-stone-800 px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-stone-500 cursor-not-allowed"
+      >
+        {{ 'products.product.sold_out' | t | default: 'Sold Out' }}
+      </button>
+    {%- else -%}
+      <form action="/cart/add" method="post" enctype="multipart/form-data" class="mt-2 sm:hidden">
+        <input type="hidden" name="id" value="{{ current_variant.id }}">
+        <button
+          type="submit"
+          class="w-full rounded-md bg-gradient-to-r from-gold via-amber-500 to-gold px-4 py-2.5 text-sm font-semibold uppercase tracking-wider text-stone-950 transition-all duration-200 hover:from-amber-400 hover:via-yellow-500 hover:to-amber-400"
+        >
+          {{ 'products.product.add_to_cart' | t | default: 'Add to Cart' }}
+        </button>
+      </form>
+    {%- endif -%}
+  </div>
+</div>

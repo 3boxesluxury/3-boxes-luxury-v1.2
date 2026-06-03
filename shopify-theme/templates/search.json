@@ -1,0 +1,26 @@
+{
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "settings": {}
+    },
+    "header": {
+      "type": "header",
+      "settings": {}
+    },
+    "search-results": {
+      "type": "search-results",
+      "settings": {}
+    },
+    "footer": {
+      "type": "footer",
+      "settings": {}
+    }
+  },
+  "order": [
+    "announcement-bar",
+    "header",
+    "search-results",
+    "footer"
+  ]
+}

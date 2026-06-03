@@ -1,0 +1,306 @@
+{%- comment -%}
+  Main Collection Section
+  Collection page with header, toolbar, product grid, and pagination.
+{%- endcomment -%}
+
+{%- liquid
+  assign collection = section.settings.collection | default: collection
+  assign products_per_row = section.settings.products_per_row | default: 4
+  assign rows_per_page = section.settings.rows_per_page | default: 4
+  assign enable_sort = section.settings.enable_sort
+  assign enable_filters = section.settings.enable_filters
+  assign products_per_page = products_per_row | times: rows_per_page
+
+  case products_per_row
+    when 2
+      assign grid_classes = 'grid-cols-1 sm:grid-cols-2'
+    when 3
+      assign grid_classes = 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
+    when 4
+      assign grid_classes = 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+    else
+      assign grid_classes = 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+  endcase
+
+  assign sort_by = collection.sort_by | default: collection.default_sort_by
+  assign current_sort = sort_by
+-%}
+
+<section
+  id="main-collection-{{ section.id }}"
+  class="relative py-8 md:py-16"
+  style="background-color: #0c0a09;"
+>
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- comment -%} Breadcrumbs                      {%- endcomment -%}
+    {%- comment -%} ================================ {%- endcomment -%}
+    <nav class="mb-6 flex items-center gap-2 text-sm text-muted-foreground" aria-label="Breadcrumb">
+      <a href="/" class="transition-colors hover:text-gold">Home</a>
+      <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+      {%- if collection.handle -%}
+        <span class="text-foreground">{{ collection.title }}</span>
+      {%- else -%}
+        <span>Collection</span>
+      {%- endif -%}
+    </nav>
+
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- comment -%} Collection Header                 {%- endcomment -%}
+    {%- comment -%} ================================ {%- endcomment -%}
+    <div class="collection-title mb-8 md:mb-12">
+      <h1 class="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl" style="font-family: 'Playfair Display', serif;">
+        {{ collection.title | default: 'Collection' }}
+      </h1>
+      {%- if collection.description != blank -%}
+        <p class="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+          {{ collection.description }}
+        </p>
+      {%- endif -%}
+      {%- comment -%} Decorative divider {%- endcomment -%}
+      <div class="mt-6 flex items-center gap-3">
+        <span class="h-px w-12 bg-gradient-to-r from-gold/50 to-transparent"></span>
+        <span class="text-gold text-sm">&#9830;</span>
+        <span class="h-px w-12 bg-gradient-to-l from-gold/50 to-transparent"></span>
+      </div>
+    </div>
+
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- comment -%} Toolbar                          {%- endcomment -%}
+    {%- comment -%} ================================ {%- endcomment -%}
+    <div class="collection-toolbar mb-8 flex flex-col gap-4 border-b border-border/30 pb-6 sm:flex-row sm:items-center sm:justify-between">
+      {%- comment -%} Product count {%- endcomment -%}
+      <p class="collection-count text-sm text-muted-foreground">
+        {%- if collection.products_count -%}
+          {{ collection.products_count }} {{ collection.products_count | pluralize: 'product', 'products' }}
+        {%- else -%}
+          0 products
+        {%- endif -%}
+      </p>
+
+      <div class="flex items-center gap-4">
+        {%- comment -%} Sort Dropdown {%- endcomment -%}
+        {%- if enable_sort -%}
+          <div class="flex items-center gap-2">
+            <label for="sort-by-{{ section.id }}" class="text-sm text-muted-foreground whitespace-nowrap">Sort by:</label>
+            <select
+              id="sort-by-{{ section.id }}"
+              class="rounded-md border border-border/50 bg-card px-3 py-2 text-sm text-foreground transition-colors focus:border-gold focus:outline-none focus:ring-1 focus:ring-gold/50"
+              onchange="changeSortBy(this.value)"
+            >
+              <option value="manual" {% if current_sort == 'manual' %}selected{% endif %}>Featured</option>
+              <option value="best-selling" {% if current_sort == 'best-selling' %}selected{% endif %}>Best Selling</option>
+              <option value="title-ascending" {% if current_sort == 'title-ascending' %}selected{% endif %}>A – Z</option>
+              <option value="title-descending" {% if current_sort == 'title-descending' %}selected{% endif %}>Z – A</option>
+              <option value="price-ascending" {% if current_sort == 'price-ascending' %}selected{% endif %}>Price: Low to High</option>
+              <option value="price-descending" {% if current_sort == 'price-descending' %}selected{% endif %}>Price: High to Low</option>
+              <option value="created-descending" {% if current_sort == 'created-descending' %}selected{% endif %}>Newest</option>
+            </select>
+          </div>
+        {%- endif -%}
+
+        {%- comment -%} Filter Toggle {%- endcomment -%}
+        {%- if enable_filters -%}
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-md border border-border/50 bg-card px-3 py-2 text-sm text-foreground transition-colors hover:border-gold/40 hover:text-gold"
+            onclick="toggleFilters()"
+            aria-label="Toggle filters"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+            </svg>
+            Filters
+          </button>
+        {%- endif -%}
+      </div>
+    </div>
+
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- comment -%} Filter Panel (toggle)             {%- endcomment -%}
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- if enable_filters -%}
+      <div id="filter-panel-{{ section.id }}" class="hidden mb-8 rounded-lg border border-border/30 bg-card/50 p-6">
+        {%- if collection.all_tags.size > 0 -%}
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {%- comment -%} Tag filters {%- endcomment -%}
+            <div>
+              <h3 class="mb-3 text-sm font-semibold uppercase tracking-wider text-foreground">Category</h3>
+              <ul class="space-y-2">
+                {%- for tag in collection.all_tags -%}
+                  <li>
+                    <label class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        class="rounded border-stone-600 bg-stone-800 text-gold focus:ring-gold/50"
+                        value="{{ tag | handleize }}"
+                        onchange="applyTagFilter(this)"
+                      >
+                      {{ tag }}
+                    </label>
+                  </li>
+                {%- endfor -%}
+              </ul>
+            </div>
+          </div>
+        {%- else -%}
+          <p class="text-sm text-muted-foreground">No filters available for this collection.</p>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- comment -%} Product Grid                     {%- endcomment -%}
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- if collection and collection.products.size > 0 -%}
+      <div class="product-grid grid {{ grid_classes }} gap-4 md:gap-6">
+        {%- for product in collection.products -%}
+          {%- render 'product-card', product: product -%}
+        {%- endfor -%}
+      </div>
+    {%- else -%}
+      {%- comment -%} Empty state {%- endcomment -%}
+      <div class="flex flex-col items-center justify-center py-20 text-center">
+        <svg class="mb-6 h-16 w-16 text-stone-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+        </svg>
+        <h2 class="text-xl font-semibold text-foreground">No products found</h2>
+        <p class="mt-2 text-sm text-muted-foreground">Try adjusting your filters or check back soon for new arrivals.</p>
+        <a
+          href="/collections/all"
+          class="mt-6 inline-flex items-center gap-2 rounded-lg border border-gold/50 px-6 py-2.5 text-sm font-semibold uppercase tracking-wider text-gold transition-all duration-200 hover:border-gold hover:bg-gold/10"
+        >
+          Browse All Products
+        </a>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- comment -%} Pagination                       {%- endcomment -%}
+    {%- comment -%} ================================ {%- endcomment -%}
+    {%- if collection.products.size > products_per_page or collection.pagination and collection.pagination.pages > 1 -%}
+      <nav class="mt-12 flex items-center justify-center gap-1" aria-label="Pagination">
+        {%- if collection.previous_page -%}
+          <a
+            href="{{ collection.previous_url }}"
+            class="inline-flex h-10 items-center justify-center rounded-md border border-border/40 px-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
+            aria-label="Previous page"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          </a>
+        {%- endif -%}
+
+        {%- comment -%} Page links {%- endcomment -%}
+        {%- paginate collection.products by products_per_page -%}
+          {%- for part in paginate.parts -%}
+            {%- if part.is_link -%}
+              <a
+                href="{{ part.url }}"
+                class="inline-flex h-10 items-center justify-center rounded-md border border-border/40 px-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
+                aria-label="Page {{ part.title }}"
+              >
+                {{ part.title }}
+              </a>
+            {%- elsif part.title == paginate.current_page -%}
+              <span
+                class="inline-flex h-10 items-center justify-center rounded-md border border-gold bg-gold/10 px-3 text-sm font-semibold text-gold"
+                aria-current="page"
+              >
+                {{ part.title }}
+              </span>
+            {%- else -%}
+              <span class="inline-flex h-10 items-center justify-center px-3 text-sm text-stone-600">
+                {{ part.title }}
+              </span>
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endpaginate -%}
+
+        {%- if collection.next_page -%}
+          <a
+            href="{{ collection.next_url }}"
+            class="inline-flex h-10 items-center justify-center rounded-md border border-border/40 px-3 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:text-gold"
+            aria-label="Next page"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </a>
+        {%- endif -%}
+      </nav>
+    {%- endif -%}
+  </div>
+</section>
+
+<script>
+  function changeSortBy(value) {
+    var url = new URL(window.location.href);
+    url.searchParams.set('sort_by', value);
+    window.location.href = url.toString();
+  }
+
+  function toggleFilters() {
+    var panel = document.getElementById('filter-panel-{{ section.id }}');
+    if (panel) {
+      panel.classList.toggle('hidden');
+    }
+  }
+
+  function applyTagFilter(checkbox) {
+    var url = new URL(window.location.href);
+    var tag = checkbox.value;
+    if (checkbox.checked) {
+      {%- comment -%} Append tag to URL path {%- endcomment -%}
+      var currentPath = url.pathname;
+      if (currentPath.endsWith('/')) {
+        url.pathname = currentPath + tag;
+      } else {
+        url.pathname = currentPath + '/' + tag;
+      }
+    }
+    window.location.href = url.toString();
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Collection Page",
+  "tag": "section",
+  "class": "main-collection",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection (optional — defaults to current collection)"
+    },
+    {
+      "type": "range",
+      "id": "products_per_row",
+      "label": "Products per row",
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "rows_per_page",
+      "label": "Rows per page",
+      "min": 1,
+      "max": 8,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_sort",
+      "label": "Enable sort dropdown",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_filters",
+      "label": "Enable tag filters",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

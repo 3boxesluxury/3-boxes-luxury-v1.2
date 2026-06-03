@@ -1,0 +1,12 @@
+{
+  "name": "ai-proxy",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npx tsx index.ts",
+    "dev:bun": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "z-ai-web-dev-sdk": "^0.0.17",
+    "sharp": "^0.33.2"
+  }
+}

@@ -1,0 +1,51 @@
+# Sensitive Files
+.env
+.env.*
+*.key
+*.pem
+*.p12
+credentials.json
+secrets.json
+serviceAccountKey.json
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build Output
+dist/
+build/
+.next/
+out/
+
+# Cache
+__pycache__/
+*.pyc
+.cache/
+
+# OS Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+*.egg-info/
+.Python
+venv/
+env/
+
+# Misc
+.sass-cache/
+coverage/
+.npm
+yarn-error.log

@@ -1,0 +1,140 @@
+{{ 'component-image-banner.css' | asset_url | stylesheet_tag }}
+
+{%- style -%}
+  .banner-{{ section.id }}::after {
+    opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+  }
+{%- endstyle -%}
+
+{%- if section.settings.image != blank -%}
+  <section class="image-banner banner-{{ section.id }}" role="banner">
+    <div class="image-banner__media">
+      {%- if section.settings.image != blank -%}
+        <img
+          srcset="
+            {{ section.settings.image | image_url: width: 600 }} 600w,
+            {{ section.settings.image | image_url: width: 900 }} 900w,
+            {{ section.settings.image | image_url: width: 1200 }} 1200w,
+            {{ section.settings.image | image_url: width: 1600 }} 1600w,
+            {{ section.settings.image | image_url: width: 2000 }} 2000w
+          "
+          sizes="100vw"
+          src="{{ section.settings.image | image_url: width: 1600 }}"
+          alt="{{ section.settings.image.alt | escape }}"
+          loading="{% if section.index == 0 %}eager{% else %}lazy{% endif %}"
+          fetchpriority="{% if section.index == 0 %}high{% else %}low{% endif %}"
+          class="image-banner__image"
+          width="{{ section.settings.image.width }}"
+          height="{{ section.settings.image.height }}"
+        >
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag: 'image-banner__placeholder' }}
+      {%- endif -%}
+    </div>
+
+    <div class="image-banner__content page-width">
+      <div class="image-banner__box">
+        {%- if section.settings.heading != blank -%}
+          <h2 class="image-banner__heading section-heading {{ section.settings.heading_size }}">
+            {{ section.settings.heading }}
+          </h2>
+        {%- endif -%}
+
+        {%- if section.settings.subheading != blank -%}
+          <p class="image-banner__subheading">
+            {{ section.settings.subheading }}
+          </p>
+        {%- endif -%}
+
+        {%- if section.settings.button_label != blank -%}
+          <div class="image-banner__cta">
+            <a
+              {%- if section.settings.button_link != blank -%}
+                href="{{ section.settings.button_link }}"
+              {%- endif -%}
+              class="btn btn--primary btn--gold image-banner__button"
+              {%- if section.settings.button_link == blank -%}
+                aria-disabled="true"
+              {%- endif -%}
+            >
+              {{ section.settings.button_label }}
+            </a>
+          </div>
+        {%- endif -%}
+      </div>
+    </div>
+  </section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Image banner",
+  "tag": "section",
+  "class": "section-image-banner",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Banner image"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "default": "Image banner",
+      "label": "Heading"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "options": [
+        {
+          "value": "h1",
+          "label": "Large"
+        },
+        {
+          "value": "h2",
+          "label": "Medium"
+        },
+        {
+          "value": "h3",
+          "label": "Small"
+        }
+      ],
+      "default": "h1",
+      "label": "Heading size"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "default": "Give customers details about the banner image(s) or content on the template.",
+      "label": "Subheading"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "default": "Shop now",
+      "label": "Button label"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "label": "Overlay opacity",
+      "default": 40
+    }
+  ],
+  "presets": [
+    {
+      "name": "Image banner"
+    }
+  ]
+}
+{% endschema %}

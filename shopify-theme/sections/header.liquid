@@ -1,0 +1,143 @@
+{%- comment -%}
+  3 BOXES LUXURY — Header Section
+  Sticky header with logo, search, navigation, and action buttons.
+  Uses CSS classes from theme.css: site-header, header-inner, header-logo,
+  header-search, header-actions, header-nav, nav-link, header-action-btn,
+  cart-count, mobile-menu-toggle, header-search-input, header-search-icon,
+  header-logo-text, gold-shimmer, header-search-form
+{%- endcomment -%}
+
+<header class="site-header" data-section-id="{{ section.id }}" data-section-type="header">
+  <div class="header-inner">
+
+    {%- comment -%} === LEFT: Logo === {%- endcomment -%}
+    <a href="{{ routes.root_url }}" class="header-logo" aria-label="{{ shop.name | escape }}">
+      {%- if section.settings.logo != blank -%}
+        <img
+          src="{{ section.settings.logo | image_url: width: 112 }}"
+          alt="{{ shop.name | escape }}"
+          width="56"
+          height="56"
+          loading="eager"
+          class="logo-flashy"
+        >
+      {%- else -%}
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="56" height="56" rx="8" fill="rgba(120,53,15,0.3)"/>
+          <path d="M16 40V16l12 12L40 16v24" stroke="#d4a437" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 14h28" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M14 42h28" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      {%- endif -%}
+      <span class="header-logo-text gold-shimmer">3 BOXES LUXURY</span>
+    </a>
+
+    {%- comment -%} === CENTER: Search (Desktop Only) === {%- endcomment -%}
+    {%- if section.settings.enable_search_bar -%}
+      <div class="header-search">
+        <form action="{{ routes.search_url }}" method="get" class="header-search-form" role="search">
+          <input
+            type="search"
+            name="q"
+            class="header-search-input"
+            placeholder="Search luxury gifts..."
+            aria-label="Search products"
+            autocomplete="off"
+          >
+          <button type="submit" class="header-search-icon" aria-label="Submit search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+          </button>
+          <input type="hidden" name="type" value="product">
+        </form>
+      </div>
+    {%- endif -%}
+
+    {%- comment -%} === CENTER-RIGHT: Desktop Navigation === {%- endcomment -%}
+    {%- if section.settings.menu != blank -%}
+      <nav class="header-nav" aria-label="Main navigation">
+        {%- for link in linklists[section.settings.menu].links -%}
+          <a
+            href="{{ link.url }}"
+            class="nav-link{% if link.active %} active{% endif %}"
+            {% if link.links.size > 0 %}aria-haspopup="true"{% endif %}
+          >
+            {{ link.title }}
+          </a>
+        {%- endfor -%}
+      </nav>
+    {%- endif -%}
+
+    {%- comment -%} === RIGHT: Action Buttons === {%- endcomment -%}
+    <div class="header-actions">
+
+      {%- comment -%} Mobile Search Button {%- endcomment -%}
+      {%- if section.settings.enable_search_bar -%}
+        <a href="{{ routes.search_url }}" class="header-action-btn hide-desktop" aria-label="Search">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+        </a>
+      {%- endif -%}
+
+      {%- comment -%} Account Button {%- endcomment -%}
+      {%- if shop.customer_accounts_enabled -%}
+        <a href="{% if customer %}{{ routes.account_url }}{% else %}{{ routes.account_login_url }}{% endif %}" class="header-action-btn" aria-label="{% if customer %}My Account{% else %}Sign In{% endif %}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </a>
+      {%- endif -%}
+
+      {%- comment -%} Cart Button with Count Badge {%- endcomment -%}
+      <button class="header-action-btn" data-cart-open aria-label="Open shopping cart">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span class="cart-count" aria-label="Cart item count" style="display:none;">{{ cart.item_count }}</span>
+      </button>
+
+      {%- comment -%} Mobile Menu Toggle {%- endcomment -%}
+      <button class="mobile-menu-toggle" data-nav-open aria-label="Open menu" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "Header",
+  "class": "site-header-wrapper",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo image"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Navigation menu",
+      "default": "main-menu"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_search_bar",
+      "label": "Enable search bar",
+      "default": true
+    }
+  ]
+}
+{% endschema %}
