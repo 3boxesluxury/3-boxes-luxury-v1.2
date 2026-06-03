@@ -35,7 +35,6 @@ export function Footer() {
                   width={96}
                   height={96}
                   className="h-24 w-24 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
-                  priority
                 />
               </div>
               <h3 className="gold-shimmer text-lg font-bold tracking-widest">

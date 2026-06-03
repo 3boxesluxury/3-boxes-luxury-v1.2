@@ -143,7 +143,7 @@ export function Header() {
   return (
     <header className={`sticky top-0 z-50 w-full backdrop-blur-md ${appTheme === 'light' ? 'border-b border-amber-200/50 bg-white/95' : 'border-b border-amber-900/30 bg-stone-950/95'}`}>
       <div className="container mx-auto px-4">
-        <div className="flex h-24 items-center justify-between gap-1.5">
+        <div className="flex h-24 items-center justify-between gap-1">
           {/* Logo */}
           <button
             onClick={() => {
@@ -154,13 +154,13 @@ export function Header() {
             }}
             className="flex-shrink-0 flex items-center gap-[22px] group"
           >
-            <div className="relative flex h-[88px] w-[88px] items-center justify-center">
+            <div className="relative flex h-20 w-20 items-center justify-center">
               <Image
                 src="/images/logo-uploaded.png"
                 alt="3 Boxes Luxury Logo"
-                width={88}
-                height={88}
-                className="h-[88px] w-[88px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
+                width={80}
+                height={80}
+                className="h-20 w-20 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
                 priority
               />
             </div>

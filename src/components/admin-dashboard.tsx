@@ -254,7 +254,7 @@ export function AdminDashboard() {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: sidebarCollapsed ? 64 : 240 }}
+        animate={{ width: sidebarCollapsed ? 80 : 260 }}
         transition={{ duration: 0.2 }}
         className={`fixed lg:relative z-50 h-full ${t.sidebarBg} border-r ${t.border} flex flex-col shrink-0 transition-transform duration-300 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -264,7 +264,7 @@ export function AdminDashboard() {
         <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2'} px-3 py-4 border-b ${t.border}`}>
           {!sidebarCollapsed && (
             <>
-              <img src="/images/logo-uploaded.png" alt="3BL" className="h-10 w-10 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)] shrink-0" />
+              <img src="/images/logo-uploaded.png" alt="3BL" className="h-[60px] w-[60px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 drop-shadow-[0_0_10px_rgba(212,164,55,0.6)] shrink-0" />
               <div className="min-w-0">
                 <p className={`text-sm font-bold truncate ${t.text}`}>3 BOXES LUXURY</p>
                 <p className={`text-[10px] truncate ${t.textMuted}`}>Management Console</p>
@@ -272,7 +272,7 @@ export function AdminDashboard() {
             </>
           )}
           {sidebarCollapsed && (
-            <img src="/images/logo-uploaded.png" alt="3BL" className="h-9 w-9 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]" />
+            <img src="/images/logo-uploaded.png" alt="3BL" className="h-[54px] w-[54px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 drop-shadow-[0_0_10px_rgba(212,164,55,0.6)]" />
           )}
           <Button
             variant="ghost"
@@ -355,7 +355,7 @@ export function AdminDashboard() {
             <Menu className={`h-5 w-5 ${t.text}`} />
           </Button>
 
-          <img src="/images/logo-uploaded.png" alt="3BL" className="h-9 w-9 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)] lg:hidden" />
+          <img src="/images/logo-uploaded.png" alt="3BL" className="h-[54px] w-[54px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 drop-shadow-[0_0_10px_rgba(212,164,55,0.6)] lg:hidden" />
 
           <div className="hidden lg:block">
             <h1 className={`text-sm font-semibold ${t.text}`}>3 BOXES LUXURY — Management Console</h1>
