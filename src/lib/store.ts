@@ -48,6 +48,10 @@ interface AppState {
   authPendingEmail: string | null
   giftBuilderView: boolean
 
+  // Scroll-to-products flag: set to true by "Shop Now" or similar buttons
+  // to signal the ProductGrid should scroll into view
+  _scrollToProducts: number
+
   // Multi-currency & i18n
   locale: string
   currency: string
@@ -77,6 +81,7 @@ interface AppState {
   setAuthTwoFAMethod: (method: 'email' | 'totp' | null) => void
   setAuthPendingEmail: (email: string | null) => void
   toggleGiftBuilder: () => void
+  scrollToProducts: () => void
   setLocale: (locale: string) => void
   setCurrency: (code: string) => void
   setCurrencyRates: (rates: Record<string, CurrencyInfo>) => void
@@ -143,6 +148,7 @@ export const useStore = create<AppState>((set, get) => ({
   authTwoFAMethod: null,
   authPendingEmail: null,
   giftBuilderView: false,
+  _scrollToProducts: 0,
 
   // Multi-currency & i18n
   locale: typeof window !== 'undefined' ? loadLocaleFromStorage() : 'en',
@@ -210,6 +216,7 @@ export const useStore = create<AppState>((set, get) => ({
   setAuthTwoFAMethod: (method) => set({ authTwoFAMethod: method }),
   setAuthPendingEmail: (email) => set({ authPendingEmail: email }),
   toggleGiftBuilder: () => set((state) => ({ giftBuilderView: !state.giftBuilderView })),
+  scrollToProducts: () => set((state) => ({ _scrollToProducts: state._scrollToProducts + 1 })),
   setAppTheme: (theme) => {
     try {
       localStorage.setItem('3boxes_theme', theme)

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { X, SlidersHorizontal, Sparkles } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { motion } from 'framer-motion';
 
@@ -162,8 +162,9 @@ function getCategoryDisplayName(slug: string): string {
 }
 
 export function ProductGrid() {
-  const { searchQuery, selectedCategory, setCategory } = useStore();
+  const { searchQuery, selectedCategory, setCategory, _scrollToProducts } = useStore();
   const { t } = useTranslation();
+  const sectionRef = useRef<HTMLElement>(null);
   const [sort, setSort] = useState('featured');
   const [showFilters, setShowFilters] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
@@ -224,8 +225,29 @@ export function ProductGrid() {
 
   const hasActiveFilters = selectedCategory || searchQuery || sourceFilter !== 'all' || platformFilter !== 'all' || occasionFilter !== 'all' || recipientFilter !== 'all' || relationshipFilter !== 'all' || priceRangeFilter !== 'all';
 
+  // Scroll to this section when category changes, search is performed, or Shop Now is clicked
+  // Uses window.scrollTo with header offset calculation instead of scrollIntoView
+  // so the "Search Results" heading is not hidden behind the sticky header
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    if (!(selectedCategory || searchQuery || _scrollToProducts > 0)) return;
+
+    // Delay to allow React to render the content first
+    const timer = setTimeout(() => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      const currentScrollY = window.scrollY;
+      // Calculate sticky header height: main header (~56px mobile, ~96px desktop)
+      // + category nav bar (~40px) + small buffer
+      const headerHeight = 140;
+      const targetScrollY = Math.max(0, currentScrollY + rect.top - headerHeight);
+      window.scrollTo({ top: targetScrollY, behavior: 'smooth' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [selectedCategory, searchQuery, _scrollToProducts]);
+
   return (
-    <section className="relative py-6">
+    <section id="product-grid-section" ref={sectionRef} className="relative py-6">
       {/* Subtle background decoration */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-0 top-0 h-32 w-full bg-gradient-to-b from-amber-900/[0.03] to-transparent" />

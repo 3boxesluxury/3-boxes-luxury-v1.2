@@ -254,7 +254,7 @@ export function AdminDashboard() {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: sidebarCollapsed ? 64 : 240 }}
+        animate={{ width: sidebarCollapsed ? 80 : 260 }}
         transition={{ duration: 0.2 }}
         className={`fixed lg:relative z-50 h-full ${t.sidebarBg} border-r ${t.border} flex flex-col shrink-0 transition-transform duration-300 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -264,7 +264,7 @@ export function AdminDashboard() {
         <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2'} px-3 py-4 border-b ${t.border}`}>
           {!sidebarCollapsed && (
             <>
-              <img src="/images/logo-uploaded.png" alt="3BL" className="h-10 w-10 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)] shrink-0" />
+              <img src="/images/logo-uploaded.png" alt="3BL" className="h-[60px] w-[60px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 drop-shadow-[0_0_10px_rgba(212,164,55,0.6)] shrink-0" />
               <div className="min-w-0">
                 <p className={`text-sm font-bold truncate ${t.text}`}>3 BOXES LUXURY</p>
                 <p className={`text-[10px] truncate ${t.textMuted}`}>Management Console</p>
@@ -272,7 +272,7 @@ export function AdminDashboard() {
             </>
           )}
           {sidebarCollapsed && (
-            <img src="/images/logo-uploaded.png" alt="3BL" className="h-9 w-9 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]" />
+            <img src="/images/logo-uploaded.png" alt="3BL" className="h-[54px] w-[54px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 drop-shadow-[0_0_10px_rgba(212,164,55,0.6)]" />
           )}
           <Button
             variant="ghost"
@@ -355,7 +355,7 @@ export function AdminDashboard() {
             <Menu className={`h-5 w-5 ${t.text}`} />
           </Button>
 
-          <img src="/images/logo-uploaded.png" alt="3BL" className="h-9 w-9 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)] lg:hidden" />
+          <img src="/images/logo-uploaded.png" alt="3BL" className="h-[54px] w-[54px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 drop-shadow-[0_0_10px_rgba(212,164,55,0.6)] lg:hidden" />
 
           <div className="hidden lg:block">
             <h1 className={`text-sm font-semibold ${t.text}`}>3 BOXES LUXURY — Management Console</h1>
@@ -843,7 +843,7 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
 
   const [form, setForm] = useState({
     name: '', description: '', price: '', compareAtPrice: '', costPrice: '', sku: '',
-    categoryId: '', subCategoryId: '', stock: '0', reorderLevel: '5', featured: false, tags: '', vendorId: '',
+    categoryId: '', stock: '0', reorderLevel: '5', featured: false, tags: '', vendorId: '',
   })
   const [images, setImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -852,35 +852,18 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
   const fileRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
 
-  // Get subcategories for the currently selected parent category
-  const selectedCategory = categories.find((c: any) => c.id === form.categoryId)
-  const subcategories = selectedCategory?.children || []
-
   useEffect(() => {
     if (product) {
-      // Determine if the product's category is a subcategory or parent
-      let parentCatId = product.categoryId || ''
-      let subCatId = ''
-      // Check if the product's categoryId matches a subcategory
-      for (const cat of categories) {
-        const match = (cat.children || []).find((ch: any) => ch.id === product.categoryId)
-        if (match) {
-          parentCatId = cat.id
-          subCatId = match.id
-          break
-        }
-      }
       setForm({
         name: product.name || '', description: product.description || '', price: String(product.price || ''),
         compareAtPrice: String(product.compareAtPrice || ''), costPrice: String(product.costPrice || ''),
-        sku: product.sku || '', categoryId: parentCatId, subCategoryId: subCatId,
-        stock: String(product.stock || 0),
+        sku: product.sku || '', categoryId: product.categoryId || '', stock: String(product.stock || 0),
         reorderLevel: String(product.reorderLevel || 5), featured: product.featured || false,
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : '', vendorId: product.vendorId || '',
       })
       setImages(Array.isArray(product.images) ? product.images : [])
     }
-  }, [product, categories])
+  }, [product])
 
   const handleUpload = async (files: FileList) => {
     const remaining = 3 - images.length
@@ -906,23 +889,16 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files?.length) handleUpload(e.target.files) }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.price || !form.categoryId || !form.subCategoryId) { setError('Name, price, category, and sub-category are required'); return }
-    if (!form.description.trim()) { setError('Description is required'); return }
+    if (!form.name || !form.price || !form.categoryId) { setError('Name, price, and category are required'); return }
     setSaving(true); setError('')
     try {
-      // Use subCategoryId as the actual categoryId for the product
-      // so the product is stored in the specific subcategory
       const body = {
-        name: form.name,
-        description: form.description,
+        ...form,
         price: parseFloat(form.price),
         compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : null,
         costPrice: form.costPrice ? parseFloat(form.costPrice) : null,
-        sku: form.sku,
-        categoryId: form.subCategoryId,
         stock: parseInt(form.stock),
         reorderLevel: parseInt(form.reorderLevel),
-        featured: form.featured,
         images,
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         vendorId: form.vendorId === 'none' ? null : form.vendorId || null,
@@ -986,19 +962,10 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
         <div><Label className={lblCls}>Cost Price</Label><Input type="number" className={`${inputCls} mt-1`} value={form.costPrice} onChange={e => setForm(f => ({ ...f, costPrice: e.target.value }))} placeholder="e.g., 3500" /></div>
         <div>
           <Label className={lblCls}>Category *</Label>
-          <Select value={form.categoryId} onValueChange={v => setForm(f => ({ ...f, categoryId: v, subCategoryId: '' }))}>
+          <Select value={form.categoryId} onValueChange={v => setForm(f => ({ ...f, categoryId: v }))}>
             <SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder="Select category" /></SelectTrigger>
             <SelectContent className={selContentCls}>
               {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className={lblCls}>Sub-Category *</Label>
-          <Select value={form.subCategoryId} onValueChange={v => setForm(f => ({ ...f, subCategoryId: v }))} disabled={!form.categoryId || subcategories.length === 0}>
-            <SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder={!form.categoryId ? 'Select category first' : subcategories.length === 0 ? 'No sub-categories' : 'Select sub-category'} /></SelectTrigger>
-            <SelectContent className={selContentCls}>
-              {subcategories.map((sc: any) => <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -1017,7 +984,7 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
         <div><Label className={lblCls}>Tags (comma separated)</Label><Input className={`${inputCls} mt-1`} value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} placeholder="e.g., gold, luxury, necklace" /></div>
       </div>
       <div>
-        <Label className={lblCls}>Description *</Label>
+        <Label className={lblCls}>Description</Label>
         <Textarea className={`${inputCls} mt-1`} rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g., Exquisite 22K gold necklace with traditional design..." />
       </div>
       <div className="flex items-center gap-2">

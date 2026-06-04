@@ -113,17 +113,17 @@
 /* Logo blended glow animation */
 .logo-flashy {
   animation: logoGlow 3s ease-in-out infinite;
-  filter: sepia(0.8) hue-rotate(10deg) saturate(1.8) brightness(1.1) drop-shadow(0 0 14px rgba(212, 164, 55, 0.7)) drop-shadow(0 0 6px rgba(245, 230, 163, 0.5));
+  filter: contrast(1.5) brightness(1.3) saturate(1.3) drop-shadow(0 0 14px rgba(255, 215, 0, 0.7)) drop-shadow(0 0 6px rgba(245, 230, 163, 0.5));
   mix-blend-mode: lighten;
 }
 
 @keyframes logoGlow {
   0%, 100% {
-    filter: sepia(0.8) hue-rotate(10deg) saturate(1.8) brightness(1.1) drop-shadow(0 0 14px rgba(212, 164, 55, 0.7)) drop-shadow(0 0 6px rgba(245, 230, 163, 0.5));
+    filter: contrast(1.5) brightness(1.3) saturate(1.3) drop-shadow(0 0 14px rgba(255, 215, 0, 0.7)) drop-shadow(0 0 6px rgba(245, 230, 163, 0.5));
     transform: scale(1);
   }
   50% {
-    filter: sepia(0.8) hue-rotate(10deg) saturate(2.0) brightness(1.2) drop-shadow(0 0 20px rgba(212, 164, 55, 0.9)) drop-shadow(0 0 10px rgba(245, 230, 163, 0.7)) drop-shadow(0 0 40px rgba(184, 134, 11, 0.4));
+    filter: contrast(1.5) brightness(1.4) saturate(1.4) drop-shadow(0 0 20px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 10px rgba(245, 230, 163, 0.7)) drop-shadow(0 0 40px rgba(212, 164, 55, 0.4));
     transform: scale(1.03);
   }
 }
@@ -225,6 +225,52 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #57534e;
+}
+
+/* Family Shop — horizontal package carousel */
+.pkg-carousel {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  gap: 1rem !important;
+  scroll-behavior: smooth !important;
+  padding-bottom: 0.75rem !important;
+  width: 100% !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pkg-carousel::-webkit-scrollbar {
+  display: none !important;
+  height: 0 !important;
+}
+
+/* 3 cards visible on desktop, 2 on tablet, 1 on mobile */
+.pkg-card {
+  flex: 0 0 calc(33.333% - 0.667rem) !important;
+  min-width: calc(33.333% - 0.667rem) !important;
+  max-width: calc(33.333% - 0.667rem) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+@media (max-width: 1024px) {
+  .pkg-card {
+    flex: 0 0 calc(50% - 0.5rem) !important;
+    min-width: calc(50% - 0.5rem) !important;
+    max-width: calc(50% - 0.5rem) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .pkg-card {
+    flex: 0 0 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 /* Smooth scroll */
@@ -777,7 +823,7 @@ html {
 /* ─── Logo Adjustments for Light Theme ─── */
 [data-theme="light"] .mix-blend-lighten {
   mix-blend-mode: multiply !important;
-  filter: sepia(0.8) hue-rotate(10deg) saturate(1.8) brightness(1.1) drop-shadow(0 0 10px rgba(212, 164, 55, 0.3)) !important;
+  filter: contrast(1.2) brightness(1) saturate(1.5) drop-shadow(0 0 10px rgba(212, 164, 55, 0.3)) !important;
 }
 
 /* ─── Toast Notification Override ─── */
