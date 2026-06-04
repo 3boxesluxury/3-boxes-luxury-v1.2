@@ -109,6 +109,46 @@ const categoryAccentIcon: Record<string, string> = {
   'new-arrivals': 'text-amber-300',
 };
 
+// ─── Hardcoded subcategory fallback ───
+// Ensures all subcategories are shown even if the DB/Shopify is missing some.
+// The header nav always uses these, so the Browse subcategories section should too.
+const HARDCODED_SUBCATEGORIES: Record<string, { name: string; slug: string }[]> = {
+  couple: [
+    { name: 'Couple Friendly', slug: 'couple-friendly' },
+  ],
+  men: [
+    { name: 'Accessories', slug: 'men-accessories' },
+    { name: 'Shirts', slug: 'men-shirts' },
+    { name: 'T-Shirts & Polos', slug: 'men-tshirts' },
+    { name: 'Fragrances', slug: 'men-fragrances' },
+    { name: 'Watches', slug: 'men-watches' },
+    { name: 'Leather Goods', slug: 'men-leather' },
+  ],
+  women: [
+    { name: 'Jewelry', slug: 'women-jewelry' },
+    { name: 'Sarees', slug: 'women-sarees' },
+    { name: 'Fashion', slug: 'women-fashion' },
+    { name: 'Fragrances', slug: 'women-fragrances' },
+    { name: 'Accessories', slug: 'women-accessories' },
+  ],
+  kids: [
+    { name: 'Toys & Games', slug: 'kids-toys' },
+    { name: 'Kids Fashion', slug: 'kids-fashion' },
+    { name: 'Shirts (5-18 yrs)', slug: 'kids-shirts' },
+    { name: 'Dresses (5-18 yrs)', slug: 'kids-dresses' },
+  ],
+  home: [
+    { name: 'Home Décor', slug: 'home-decor' },
+    { name: 'Candles & Fragrances', slug: 'home-candles' },
+    { name: 'Living', slug: 'home-living' },
+  ],
+  office: [
+    { name: 'Corporate Gifts', slug: 'office-corporate-gifts' },
+    { name: 'Desk Accessories', slug: 'office-desk' },
+    { name: 'Stationery', slug: 'office-stationery' },
+  ],
+};
+
 // ─── Component ───
 
 export function CategoryGrid() {
@@ -134,7 +174,25 @@ export function CategoryGrid() {
       )
     : null;
 
-  const subcategories = activeParent?.children ?? [];
+  // Merge API subcategories with hardcoded ones so none are missing
+  const apiSubcategories = activeParent?.children ?? [];
+  const hardcodedSubs = activeParent ? (HARDCODED_SUBCATEGORIES[activeParent.slug] ?? []) : [];
+  const apiSlugs = new Set(apiSubcategories.map((s) => s.slug));
+  const subcategories = [
+    ...apiSubcategories,
+    ...hardcodedSubs
+      .filter((hs) => !apiSlugs.has(hs.slug))
+      .map((hs) => ({
+        id: `hardcoded-${hs.slug}`,
+        name: hs.name,
+        slug: hs.slug,
+        description: null,
+        image: null,
+        productCount: 0,
+        parentId: activeParent?.id ?? null,
+        order: 999,
+      })),
+  ];
 
   // Don't render if no category selected or no subcategories
   if (!selectedCategory || !activeParent || subcategories.length === 0) {
