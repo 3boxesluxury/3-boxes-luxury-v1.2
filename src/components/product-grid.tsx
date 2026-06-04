@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { X, SlidersHorizontal } from 'lucide-react';
+import { X, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { motion } from 'framer-motion';
@@ -124,6 +124,43 @@ const PRICE_RANGE_OPTIONS = [
   { value: '500+', label: '$500+', min: 500, max: null },
 ];
 
+// Proper display names for category slugs (avoids "Men Tshirts" etc.)
+const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  'couple': 'Couple',
+  'couple-friendly': 'Couple Friendly',
+  'men': 'Men',
+  'men-accessories': 'Men Accessories',
+  'men-shirts': 'Men Shirts',
+  'men-tshirts': 'Men T-Shirts & Polos',
+  'men-fragrances': 'Men Fragrances',
+  'men-watches': 'Men Watches',
+  'men-leather': 'Men Leather Goods',
+  'women': 'Women',
+  'women-jewelry': 'Women Jewelry',
+  'women-sarees': 'Women Sarees',
+  'women-fashion': 'Women Fashion',
+  'women-fragrances': 'Women Fragrances',
+  'women-accessories': 'Women Accessories',
+  'kids': 'Kids',
+  'kids-toys': 'Kids Toys & Games',
+  'kids-fashion': 'Kids Fashion',
+  'kids-shirts': 'Kids Shirts',
+  'kids-dresses': 'Kids Dresses',
+  'home': 'Home',
+  'home-decor': 'Home Décor',
+  'home-candles': 'Home Candles & Fragrances',
+  'home-living': 'Home Living',
+  'office': 'Office',
+  'office-corporate-gifts': 'Office Corporate Gifts',
+  'office-desk': 'Office Desk Accessories',
+  'office-stationery': 'Office Stationery',
+  'new-arrivals': 'New Arrivals',
+};
+
+function getCategoryDisplayName(slug: string): string {
+  return CATEGORY_DISPLAY_NAMES[slug] || slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+}
+
 export function ProductGrid() {
   const { searchQuery, selectedCategory, setCategory } = useStore();
   const { t } = useTranslation();
@@ -198,17 +235,40 @@ export function ProductGrid() {
         {/* Header */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-amber-100 sm:text-xl">
-              {searchQuery
-                ? t('products.resultsFor', { query: searchQuery })
-                : selectedCategory
-                ? `${selectedCategory.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}`
-                : t('products.allProducts')}
-            </h2>
-            {!isLoading && (
-              <p className="mt-0.5 text-xs text-amber-200/40">
-                {data?.total ?? 0} {t('categories.items')}
-              </p>
+            {selectedCategory === 'new-arrivals' ? (
+              <div className="flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="text-lg font-bold text-amber-100 sm:text-xl flex items-center gap-2">
+                    New Arrivals
+                    <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 uppercase tracking-wider">
+                      Just In
+                    </span>
+                  </h2>
+                  {!isLoading && (
+                    <p className="mt-0.5 text-xs text-amber-200/40">
+                      {data?.total ?? 0} {t('categories.items')} — Fresh picks just landed
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-amber-100 sm:text-xl">
+                  {searchQuery
+                    ? t('products.resultsFor', { query: searchQuery })
+                    : selectedCategory
+                    ? getCategoryDisplayName(selectedCategory)
+                    : t('products.allProducts')}
+                </h2>
+                {!isLoading && (
+                  <p className="mt-0.5 text-xs text-amber-200/40">
+                    {data?.total ?? 0} {t('categories.items')}
+                  </p>
+                )}
+              </>
             )}
           </div>
 

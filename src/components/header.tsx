@@ -100,7 +100,7 @@ const CATEGORY_NAV: CategoryNavItem[] = [
 ];
 
 export function Header() {
-  const { searchQuery, setSearch, setView, cartItems, setCategory, selectedCategory, authUser, setAuthView, clearAuth, toggleGiftBuilder, appTheme, setAppTheme } = useStore();
+  const { searchQuery, setSearch, setView, currentView, cartItems, setCategory, selectedCategory, authUser, setAuthView, clearAuth, toggleGiftBuilder, appTheme, setAppTheme } = useStore();
   const { t } = useTranslation();
   const { canInstall, promptInstall } = usePWAInstall();
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -450,6 +450,7 @@ export function Header() {
                   <p className="text-[10px] uppercase tracking-wider text-amber-500/50 px-4 pt-1">Features</p>
                   <button
                     onClick={() => {
+                      setCategory(null);
                       setView('social-style');
                       setMobileMenuOpen(false);
                     }}
@@ -461,6 +462,7 @@ export function Header() {
                   </button>
                   <button
                     onClick={() => {
+                      setCategory(null);
                       setView('3box-curate');
                       setMobileMenuOpen(false);
                     }}
@@ -472,6 +474,7 @@ export function Header() {
                   </button>
                   <button
                     onClick={() => {
+                      setCategory(null);
                       setView('family-shopping');
                       setMobileMenuOpen(false);
                     }}
@@ -510,7 +513,7 @@ export function Header() {
       <div className="border-t border-amber-900/20 bg-stone-950/90">
         <div className="container mx-auto px-4">
           {/* Desktop: horizontal row with hover/click dropdowns */}
-          <nav className="hidden md:flex items-center gap-0.5" aria-label="Category navigation">
+          <nav className="hidden md:flex items-center gap-0 flex-nowrap" aria-label="Category navigation">
             {CATEGORY_NAV.map((cat) => {
               const Icon = cat.icon;
               const hasChildren = cat.children.length > 0;
@@ -522,15 +525,15 @@ export function Header() {
                   <button
                     key={cat.slug}
                     onClick={() => { setCategory(cat.slug); }}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors rounded-md ${
+                    className={`flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
                       isActive
                         ? 'bg-amber-900/30 text-amber-300'
                         : 'text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                     {cat.name}
-                    <span className="ml-1 rounded bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                    <span className="ml-0.5 rounded bg-amber-600/20 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400">
                       New
                     </span>
                   </button>
@@ -552,13 +555,13 @@ export function Header() {
                 >
                   <button
                     onClick={() => setCategory(cat.slug)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors rounded-md ${
+                    className={`flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
                       isActive
                         ? 'bg-amber-900/30 text-amber-300'
                         : 'text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                     {cat.name}
                     <ChevronDown className="h-3 w-3 text-amber-500/50 transition-transform group-hover:rotate-180" />
                   </button>
@@ -600,30 +603,42 @@ export function Header() {
             })}
 
             {/* Feature Navigation - Desktop */}
-            <div className="ml-2 border-l border-amber-900/30 pl-2 flex items-center gap-0.5">
+            <div className="ml-1 border-l border-amber-900/30 pl-1 flex items-center gap-0 shrink-0">
               <button
-                onClick={() => { setView('social-style'); }}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300"
+                onClick={() => { setCategory(null); setView('social-style'); }}
+                className={`flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
+                  currentView === 'social-style'
+                    ? 'bg-amber-900/30 text-amber-300'
+                    : 'text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300'
+                }`}
               >
-                <Palette className="h-4 w-4" />
+                <Palette className="h-3.5 w-3.5" />
                 Social Style
-                <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">New</span>
+                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
               </button>
               <button
-                onClick={() => { setView('3box-curate'); }}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300"
+                onClick={() => { setCategory(null); setView('3box-curate'); }}
+                className={`flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
+                  currentView === '3box-curate'
+                    ? 'bg-amber-900/30 text-amber-300'
+                    : 'text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300'
+                }`}
               >
-                <Zap className="h-4 w-4" />
+                <Zap className="h-3.5 w-3.5" />
                 3Box Curate
-                <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">New</span>
+                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
               </button>
               <button
-                onClick={() => { setView('family-shopping'); }}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300"
+                onClick={() => { setCategory(null); setView('family-shopping'); }}
+                className={`flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
+                  currentView === 'family-shopping'
+                    ? 'bg-amber-900/30 text-amber-300'
+                    : 'text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300'
+                }`}
               >
-                <Users className="h-4 w-4" />
+                <Users className="h-3.5 w-3.5" />
                 Family Shop
-                <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">New</span>
+                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
               </button>
             </div>
           </nav>
@@ -650,22 +665,34 @@ export function Header() {
             })}
             {/* Feature Navigation - Mobile scroll */}
             <button
-              onClick={() => { setView('social-style'); }}
-              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-400/90 transition-colors rounded-md whitespace-nowrap hover:bg-amber-900/20"
+              onClick={() => { setCategory(null); setView('social-style'); }}
+              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
+                currentView === 'social-style'
+                  ? 'bg-amber-900/30 text-amber-300'
+                  : 'text-amber-400/90 hover:bg-amber-900/20'
+              }`}
             >
               <Palette className="h-3.5 w-3.5" />
               Social Style
             </button>
             <button
-              onClick={() => { setView('3box-curate'); }}
-              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-400/90 transition-colors rounded-md whitespace-nowrap hover:bg-amber-900/20"
+              onClick={() => { setCategory(null); setView('3box-curate'); }}
+              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
+                currentView === '3box-curate'
+                  ? 'bg-amber-900/30 text-amber-300'
+                  : 'text-amber-400/90 hover:bg-amber-900/20'
+              }`}
             >
               <Zap className="h-3.5 w-3.5" />
               3Box Curate
             </button>
             <button
-              onClick={() => { setView('family-shopping'); }}
-              className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-400/90 transition-colors rounded-md whitespace-nowrap hover:bg-amber-900/20"
+              onClick={() => { setCategory(null); setView('family-shopping'); }}
+              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
+                currentView === 'family-shopping'
+                  ? 'bg-amber-900/30 text-amber-300'
+                  : 'text-amber-400/90 hover:bg-amber-900/20'
+              }`}
             >
               <Users className="h-3.5 w-3.5" />
               Family Shop

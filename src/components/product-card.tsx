@@ -6,7 +6,7 @@ import { useCurrency } from '@/lib/currency';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { Star, ShoppingCart, ExternalLink, Eye } from 'lucide-react';
+import { Star, ShoppingCart, ExternalLink, Eye, Sparkles } from 'lucide-react';
 
 import { useState } from 'react';
 import { getProxiedImageUrl } from '@/lib/image-utils';
@@ -79,7 +79,7 @@ const PLATFORM_DISPLAY_NAMES: Record<string, string> = {
 };
 
 export function ProductCard({ product }: { product: Product }) {
-  const { selectProduct, addItem } = useStore();
+  const { selectProduct, addItem, selectedCategory } = useStore();
   const { trackClick } = useAffiliateClick();
   const { format } = useCurrency();
   const { t } = useTranslation();
@@ -195,6 +195,12 @@ export function ProductCard({ product }: { product: Product }) {
 
         {/* Badges */}
         <div className="absolute left-2 top-2 flex flex-col gap-1">
+          {selectedCategory === 'new-arrivals' && (
+            <span className="rounded-md bg-rose-500/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white backdrop-blur-sm flex items-center gap-0.5">
+              <Sparkles className="h-2 w-2" />
+              New Arrival
+            </span>
+          )}
           {product.featured && (
             <span className="rounded-md bg-amber-600/90 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white backdrop-blur-sm">
               {t('common.featured')}

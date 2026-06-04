@@ -143,7 +143,7 @@ export function Header() {
   return (
     <header className={`sticky top-0 z-50 w-full backdrop-blur-md ${appTheme === 'light' ? 'border-b border-amber-200/50 bg-white/95' : 'border-b border-amber-900/30 bg-stone-950/95'}`}>
       <div className="container mx-auto px-4">
-        <div className="flex h-24 items-center justify-between gap-1.5">
+        <div className="flex h-14 sm:h-24 items-center justify-between gap-1 sm:gap-1.5">
           {/* Logo */}
           <button
             onClick={() => {
@@ -151,16 +151,17 @@ export function Header() {
               setSearch('');
               setLocalSearch('');
               setCategory(null);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex-shrink-0 flex items-center gap-[22px] group"
+            className="flex-shrink-0 flex items-center gap-2 sm:gap-[22px] group"
           >
-            <div className="relative flex h-[88px] w-[88px] items-center justify-center">
+            <div className="relative flex h-12 w-12 sm:h-[88px] sm:w-[88px] items-center justify-center">
               <Image
                 src="/images/logo-uploaded.png"
                 alt="3 Boxes Luxury Logo"
                 width={88}
                 height={88}
-                className="h-[88px] w-[88px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
+                className="h-12 w-12 sm:h-[88px] sm:w-[88px] object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
                 priority
               />
             </div>
@@ -509,7 +510,7 @@ export function Header() {
       <div className="border-t border-amber-900/20 bg-stone-950/90">
         <div className="container mx-auto px-4">
           {/* Desktop: horizontal row with hover/click dropdowns */}
-          <nav className="hidden md:flex items-center gap-0.5" aria-label="Category navigation">
+          <nav className="hidden md:flex items-center gap-0 flex-nowrap" aria-label="Category navigation">
             {CATEGORY_NAV.map((cat) => {
               const Icon = cat.icon;
               const hasChildren = cat.children.length > 0;
@@ -521,15 +522,15 @@ export function Header() {
                   <button
                     key={cat.slug}
                     onClick={() => { setCategory(cat.slug); }}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors rounded-md ${
+                    className={`flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
                       isActive
                         ? 'bg-amber-900/30 text-amber-300'
                         : 'text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                     {cat.name}
-                    <span className="ml-1 rounded bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                    <span className="ml-0.5 rounded bg-amber-600/20 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400">
                       New
                     </span>
                   </button>
@@ -551,13 +552,13 @@ export function Header() {
                 >
                   <button
                     onClick={() => setCategory(cat.slug)}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors rounded-md ${
+                    className={`flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
                       isActive
                         ? 'bg-amber-900/30 text-amber-300'
                         : 'text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300'
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5" />
                     {cat.name}
                     <ChevronDown className="h-3 w-3 text-amber-500/50 transition-transform group-hover:rotate-180" />
                   </button>
@@ -599,30 +600,30 @@ export function Header() {
             })}
 
             {/* Feature Navigation - Desktop */}
-            <div className="ml-2 border-l border-amber-900/30 pl-2 flex items-center gap-0.5">
+            <div className="ml-1 border-l border-amber-900/30 pl-1 flex items-center gap-0 shrink-0">
               <button
                 onClick={() => { setView('social-style'); }}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300"
+                className="flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300 whitespace-nowrap"
               >
-                <Palette className="h-4 w-4" />
+                <Palette className="h-3.5 w-3.5" />
                 Social Style
-                <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">New</span>
+                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
               </button>
               <button
                 onClick={() => { setView('3box-curate'); }}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300"
+                className="flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300 whitespace-nowrap"
               >
-                <Zap className="h-4 w-4" />
+                <Zap className="h-3.5 w-3.5" />
                 3Box Curate
-                <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">New</span>
+                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
               </button>
               <button
                 onClick={() => { setView('family-shopping'); }}
-                className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300"
+                className="flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300 whitespace-nowrap"
               >
-                <Users className="h-4 w-4" />
+                <Users className="h-3.5 w-3.5" />
                 Family Shop
-                <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">New</span>
+                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
               </button>
             </div>
           </nav>
