@@ -151,6 +151,7 @@ export function Header() {
               setSearch('');
               setLocalSearch('');
               setCategory(null);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className="flex-shrink-0 flex items-center gap-2 sm:gap-[22px] group"
           >
