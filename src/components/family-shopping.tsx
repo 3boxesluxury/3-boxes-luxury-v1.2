@@ -2,7 +2,7 @@
 
 /* Family Shopping - curated luxury packages for every occasion */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -29,7 +29,6 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Slider } from '@/components/ui/slider'
 import {
   Select,
   SelectContent,
@@ -38,7 +37,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,6 +92,7 @@ interface FamilyPackage {
   originalPrice: number
   discountPercent: number
   memberType: FamilyMemberType
+  tierName: string
 }
 
 interface FamilyOffer {
@@ -262,6 +261,9 @@ function generateMockPackages(occasion: OccasionId, details: FamilyDetails): Fam
   }
   typesToInclude.push('home')
 
+  const tierNames = ['Classic Essentials', 'Premium Collection', 'Royal Edition']
+  const tierDiscounts = [0, 5, 10] // extra tier discounts
+
   for (const memberType of typesToInclude) {
     if (memberType === 'men' && details.adults === 0) continue
     if (memberType === 'kids' && details.kids === 0) continue
@@ -269,7 +271,7 @@ function generateMockPackages(occasion: OccasionId, details: FamilyDetails): Fam
     const pool = productPool[memberType]
     // pick products that fit budget and preferences
     const filtered = pool.filter((p) => {
-      const inBudget = p.price <= perPersonBudget * 2
+      const inBudget = p.price <= perPersonBudget * 3
       const inPref =
         details.giftPreferences.length === 0 ||
         details.giftPreferences.some((pref) => {
@@ -286,27 +288,40 @@ function generateMockPackages(occasion: OccasionId, details: FamilyDetails): Fam
       return inBudget && inPref
     })
 
-    const selected = filtered.length > 0 ? filtered.slice(0, 3) : pool.slice(0, 2)
-    const totalOriginal = selected.reduce((s, p) => s + p.price, 0)
-    const totalDiscounted = discount > 0 ? Math.floor(totalOriginal * (1 - discount / 100)) : totalOriginal
+    const availableProducts = filtered.length > 0 ? filtered : pool
 
-    packages.push({
-      id: `fp-${occasion}-${memberType}-${pkgIndex++}`,
-      occasion,
-      products: selected.map((p, i) => ({
-        id: `prod-${occasion}-${memberType}-${i}`,
-        name: p.name,
-        price: discount > 0 ? Math.floor(p.price * (1 - discount / 100)) : p.price,
-        originalPrice: p.price,
-        image: `/images/products/placeholder-${memberType}-${i}.jpg`,
+    // Generate 3 packages per member type (Classic, Premium, Royal)
+    for (let tier = 0; tier < 3; tier++) {
+      // Pick different products per tier: tier 0 picks first 2-3, tier 1 picks middle, tier 2 picks expensive
+      const startIdx = tier === 0 ? 0 : tier === 1 ? 2 : 4
+      const count = tier === 2 ? 3 : tier === 1 ? 3 : 2
+      const selected = availableProducts.slice(startIdx, startIdx + count).length >= count
+        ? availableProducts.slice(startIdx, startIdx + count)
+        : availableProducts.slice(0, count)
+
+      const totalOriginal = selected.reduce((s, p) => s + p.price, 0)
+      const tierDiscount = discount + tierDiscounts[tier]
+      const totalDiscounted = tierDiscount > 0 ? Math.floor(totalOriginal * (1 - tierDiscount / 100)) : totalOriginal
+
+      packages.push({
+        id: `fp-${occasion}-${memberType}-${pkgIndex++}`,
+        occasion,
+        products: selected.map((p, i) => ({
+          id: `prod-${occasion}-${memberType}-${tier}-${i}`,
+          name: p.name,
+          price: tierDiscount > 0 ? Math.floor(p.price * (1 - tierDiscount / 100)) : p.price,
+          originalPrice: p.price,
+          image: `/images/products/placeholder-${memberType}-${tier}-${i}.jpg`,
+          memberType,
+          category: p.category,
+        })),
+        totalPrice: totalDiscounted,
+        originalPrice: totalOriginal,
+        discountPercent: tierDiscount,
         memberType,
-        category: p.category,
-      })),
-      totalPrice: totalDiscounted,
-      originalPrice: totalOriginal,
-      discountPercent: discount,
-      memberType,
-    })
+        tierName: tierNames[tier],
+      })
+    }
   }
 
   return packages
@@ -356,6 +371,9 @@ export function FamilyShopping() {
   const [packages, setPackages] = useState<FamilyPackage[]>([])
   const [loading, setLoading] = useState(false)
   const [addedPackages, setAddedPackages] = useState<Set<string>>(new Set())
+
+  // Carousel ref for scroll control
+  const carouselRef = useRef<HTMLDivElement>(null)
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -505,21 +523,22 @@ export function FamilyShopping() {
                 initial="hidden"
                 animate="show"
                 className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5"
+                style={{ gridAutoRows: '1fr' }}
               >
                 {OCCASIONS.map((occ) => (
-                  <motion.div key={occ.id} variants={itemVariants}>
+                  <motion.div key={occ.id} variants={itemVariants} className="flex">
                     <Card
                       onClick={() => handleSelectOccasion(occ.id)}
-                      className={`cursor-pointer border transition-all duration-200 ${
+                      className={`flex w-full cursor-pointer border transition-all duration-200 ${
                         selectedOccasion === occ.id
                           ? 'border-amber-500 bg-amber-900/30 shadow-lg shadow-amber-900/20'
                           : 'border-amber-900/30 bg-stone-900/80 hover:border-amber-700/50 hover:bg-stone-900'
                       }`}
                     >
-                      <CardContent className="flex flex-col items-center gap-2 p-4 text-center">
+                      <CardContent className="flex h-full w-full flex-col items-center justify-center gap-2 p-4 text-center">
                         <span className="text-3xl sm:text-4xl">{occ.emoji}</span>
                         <span className="text-sm font-semibold text-amber-100">{occ.name}</span>
-                        <span className="text-[10px] leading-tight text-amber-200/50 sm:text-xs">
+                        <span className="line-clamp-2 text-[10px] leading-tight text-amber-200/50 sm:text-xs">
                           {occ.description}
                         </span>
                       </CardContent>
@@ -847,135 +866,154 @@ export function FamilyShopping() {
                 )}
               </div>
 
-              {/* Package Groups by Member Type */}
-              <ScrollArea className="max-h-[60vh] pr-2">
-                <div className="space-y-8">
-                  {(['men', 'women', 'kids', 'home'] as FamilyMemberType[]).map((memberType) => {
-                    const typePkgs = packages.filter((p) => p.memberType === memberType)
-                    if (typePkgs.length === 0) return null
-                    if (memberType === 'kids' && familyDetails.kids === 0) return null
+              {/* ALL Packages in ONE Horizontal Carousel */}
+              <div className="flex items-center gap-3 w-full">
+                {/* Left Arrow */}
+                <button
+                  onClick={() => {
+                    if (carouselRef.current) {
+                      const cardWidth = carouselRef.current.querySelector('.pkg-card')?.getBoundingClientRect().width ?? 320
+                      carouselRef.current.scrollBy({ left: -(cardWidth + 16), behavior: 'smooth' })
+                    }
+                  }}
+                  className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full border border-amber-500/40 bg-stone-900/95 text-amber-300 shadow-lg transition-all hover:bg-amber-600 hover:text-stone-950"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
 
-                    const TypeIcon = MEMBER_TYPE_ICONS[memberType]
-                    const typeColor = MEMBER_TYPE_COLORS[memberType]
-
-                    return (
-                      <motion.div
-                        key={memberType}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                      >
-                        <div className="mb-3 flex items-center gap-2">
-                          <TypeIcon className={`h-5 w-5 ${typeColor}`} />
-                          <h4 className={`text-base font-semibold ${typeColor}`}>
-                            {MEMBER_TYPE_LABELS[memberType]}
-                          </h4>
-                          <Separator className="flex-1 bg-amber-900/20" />
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {typePkgs.map((pkg) => {
-                            const isAdded = addedPackages.has(pkg.id)
-                            return (
-                              <motion.div
-                                key={pkg.id}
-                                variants={itemVariants}
-                                initial="hidden"
-                                animate="show"
+                {/* Scrollable container with ALL packages */}
+                <div
+                  ref={carouselRef}
+                  className="pkg-carousel flex-1"
+                >
+                {packages.map((pkg) => {
+                  const isAdded = addedPackages.has(pkg.id)
+                  const MemberIcon = MEMBER_TYPE_ICONS[pkg.memberType]
+                  const memberColor = MEMBER_TYPE_COLORS[pkg.memberType]
+                  return (
+                    <div
+                      key={pkg.id}
+                      className="pkg-card"
+                    >
+                      <Card className="h-full w-full flex flex-col border-amber-900/30 bg-stone-900/80 transition-all hover:border-amber-800/50">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <MemberIcon className={`h-3.5 w-3.5 ${memberColor}`} />
+                              <Badge
+                                variant="outline"
+                                className="border-amber-700/40 text-[10px] text-amber-300"
                               >
-                                <Card className="border-amber-900/30 bg-stone-900/80 transition-all hover:border-amber-800/50">
-                                  <CardHeader className="pb-2">
-                                    <div className="flex items-center justify-between">
-                                      <Badge
-                                        variant="outline"
-                                        className="border-amber-700/40 text-[10px] text-amber-300"
-                                      >
-                                        {pkg.products.length} items
-                                      </Badge>
-                                      {pkg.discountPercent > 0 && (
-                                        <Badge className="bg-amber-600 text-[10px] text-stone-950">
-                                          {pkg.discountPercent}% OFF
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </CardHeader>
-                                  <CardContent className="space-y-3">
-                                    {/* Product List */}
-                                    <ul className="space-y-1.5">
-                                      {pkg.products.map((prod) => (
-                                        <li
-                                          key={prod.id}
-                                          className="flex items-start justify-between text-xs"
-                                        >
-                                          <span className="flex-1 text-amber-100/80">
-                                            {prod.name}
-                                          </span>
-                                          <span className="ml-2 shrink-0 text-amber-200/50">
-                                            <IndianRupee className="inline h-3 w-3" />
-                                            {prod.price.toLocaleString('en-IN')}
-                                          </span>
-                                        </li>
-                                      ))}
-                                    </ul>
+                                {MEMBER_TYPE_LABELS[pkg.memberType]}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Badge
+                                variant="outline"
+                                className="border-amber-700/40 text-[10px] text-amber-300"
+                              >
+                                {pkg.tierName}
+                              </Badge>
+                              {pkg.discountPercent > 0 && (
+                                <Badge className="bg-amber-600 text-[10px] text-stone-950">
+                                  {pkg.discountPercent}% OFF
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="flex flex-1 flex-col space-y-3">
+                          {/* Product List */}
+                          <ul className="space-y-1.5">
+                            {pkg.products.map((prod) => (
+                              <li
+                                key={prod.id}
+                                className="flex items-start justify-between text-xs"
+                              >
+                                <span className="flex-1 text-amber-100/80">
+                                  {prod.name}
+                                </span>
+                                <span className="ml-2 shrink-0 text-amber-200/50">
+                                  <IndianRupee className="inline h-3 w-3" />
+                                  {prod.price.toLocaleString('en-IN')}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
 
-                                    <Separator className="bg-amber-900/20" />
+                          <Separator className="bg-amber-900/20" />
 
-                                    {/* Pricing */}
-                                    <div className="flex items-end justify-between">
-                                      <div>
-                                        <p className="text-xs text-amber-200/50">Package Total</p>
-                                        <div className="flex items-baseline gap-2">
-                                          <span className="text-lg font-bold text-amber-100">
-                                            <IndianRupee className="inline h-4 w-4" />
-                                            {pkg.totalPrice.toLocaleString('en-IN')}
-                                          </span>
-                                          {pkg.originalPrice > pkg.totalPrice && (
-                                            <span className="text-xs text-amber-200/40 line-through">
-                                              <IndianRupee className="inline h-3 w-3" />
-                                              {pkg.originalPrice.toLocaleString('en-IN')}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <span className="text-[10px] text-amber-200/40">
-                                        Save <IndianRupee className="inline h-2.5 w-2.5" />
-                                        {(pkg.originalPrice - pkg.totalPrice).toLocaleString('en-IN')}
-                                      </span>
-                                    </div>
+                          {/* Pricing */}
+                          <div className="flex items-end justify-between">
+                            <div>
+                              <p className="text-xs text-amber-200/50">Package Total</p>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-lg font-bold text-amber-100">
+                                  <IndianRupee className="inline h-4 w-4" />
+                                  {pkg.totalPrice.toLocaleString('en-IN')}
+                                </span>
+                                {pkg.originalPrice > pkg.totalPrice && (
+                                  <span className="text-xs text-amber-200/40 line-through">
+                                    <IndianRupee className="inline h-3 w-3" />
+                                    {pkg.originalPrice.toLocaleString('en-IN')}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {pkg.originalPrice > pkg.totalPrice && (
+                              <span className="text-[10px] text-amber-200/40">
+                                Save <IndianRupee className="inline h-2.5 w-2.5" />
+                                {(pkg.originalPrice - pkg.totalPrice).toLocaleString('en-IN')}
+                              </span>
+                            )}
+                          </div>
 
-                                    {/* Add to Cart */}
-                                    <Button
-                                      onClick={() => handleAddPackageToCart(pkg)}
-                                      disabled={isAdded}
-                                      className={`w-full ${
-                                        isAdded
-                                          ? 'bg-emerald-700 text-emerald-100 hover:bg-emerald-700'
-                                          : 'bg-amber-600 text-stone-950 hover:bg-amber-500'
-                                      }`}
-                                    >
-                                      {isAdded ? (
-                                        <>
-                                          <CheckCircle2 className="mr-1 h-4 w-4" />
-                                          Added to Cart
-                                        </>
-                                      ) : (
-                                        <>
-                                          <ShoppingBag className="mr-1 h-4 w-4" />
-                                          Add Package to Cart
-                                        </>
-                                      )}
-                                    </Button>
-                                  </CardContent>
-                                </Card>
-                              </motion.div>
-                            )
-                          })}
-                        </div>
-                      </motion.div>
-                    )
-                  })}
+                          {/* Add to Cart — always at the bottom */}
+                          <div className="mt-auto pt-2">
+                            <Button
+                              onClick={() => handleAddPackageToCart(pkg)}
+                              disabled={isAdded}
+                              className={`w-full ${
+                                isAdded
+                                  ? 'bg-emerald-700 text-emerald-100 hover:bg-emerald-700'
+                                  : 'bg-amber-600 text-stone-950 hover:bg-amber-500'
+                              }`}
+                            >
+                              {isAdded ? (
+                                <>
+                                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                                  Added to Cart
+                                </>
+                              ) : (
+                                <>
+                                  <ShoppingBag className="mr-1 h-4 w-4" />
+                                  Add Package to Cart
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )
+                })}
                 </div>
-              </ScrollArea>
+
+                {/* Right Arrow */}
+                <button
+                  onClick={() => {
+                    if (carouselRef.current) {
+                      const cardWidth = carouselRef.current.querySelector('.pkg-card')?.getBoundingClientRect().width ?? 320
+                      carouselRef.current.scrollBy({ left: cardWidth + 16, behavior: 'smooth' })
+                    }
+                  }}
+                  className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full border border-amber-500/40 bg-stone-900/95 text-amber-300 shadow-lg transition-all hover:bg-amber-600 hover:text-stone-950"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
 
               {/* Family Offers Section */}
               <div className="mt-10">

@@ -503,7 +503,7 @@ export function AuthDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={`border-amber-900/30 bg-stone-950 text-amber-50 max-h-[90vh] overflow-y-auto ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
+        className={`border-amber-900/30 bg-stone-950 text-amber-50 ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
         onOpenAutoFocus={handleDialogMount}
       >
         {/* 2FA Verification Step */}
@@ -994,7 +994,7 @@ export function AuthDialog() {
 
                 {/* ============ Register Form ============ */}
                 <TabsContent value="register">
-                  <form onSubmit={handleRegister} className="space-y-3">
+                  <form onSubmit={handleRegister} className="space-y-4">
                     {/* Role badge */}
                     <div className="flex items-center gap-2 mb-2">
                       {selectedLoginRole === 'user' && (
@@ -1119,7 +1119,7 @@ export function AuthDialog() {
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="space-y-3 border-t border-amber-900/30 pt-3"
+                        className="space-y-4 border-t border-amber-900/30 pt-4"
                       >
                         <p className="text-xs text-amber-500/60 font-medium uppercase tracking-wider">
                           Corporate Details
@@ -1235,7 +1235,7 @@ export function AuthDialog() {
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="space-y-3 border-t border-purple-900/30 pt-3"
+                        className="space-y-4 border-t border-purple-900/30 pt-4"
                       >
                         <p className="text-xs text-purple-400/60 font-medium uppercase tracking-wider">
                           Team / Agent Details
