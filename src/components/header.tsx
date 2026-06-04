@@ -100,7 +100,7 @@ const CATEGORY_NAV: CategoryNavItem[] = [
 ];
 
 export function Header() {
-  const { searchQuery, setSearch, setView, currentView, cartItems, setCategory, selectedCategory, authUser, setAuthView, clearAuth, toggleGiftBuilder, appTheme, setAppTheme } = useStore();
+  const { searchQuery, setSearch, setView, currentView, cartItems, setCategory, selectedCategory, authUser, setAuthView, clearAuth, toggleGiftBuilder, appTheme, setAppTheme, scrollToProducts } = useStore();
   const { t } = useTranslation();
   const { canInstall, promptInstall } = usePWAInstall();
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -110,11 +110,14 @@ export function Header() {
   const handleSearch = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
+      if (!localSearch.trim()) return;
       setSearch(localSearch);
       setCategory(null);
       setView('home');
+      // Trigger scroll-to-products after a short delay to allow view change + render
+      setTimeout(() => scrollToProducts(), 50);
     },
-    [localSearch, setSearch, setCategory, setView]
+    [localSearch, setSearch, setCategory, setView, scrollToProducts]
   );
 
   useEffect(() => {

@@ -225,19 +225,26 @@ export function ProductGrid() {
 
   const hasActiveFilters = selectedCategory || searchQuery || sourceFilter !== 'all' || platformFilter !== 'all' || occasionFilter !== 'all' || recipientFilter !== 'all' || relationshipFilter !== 'all' || priceRangeFilter !== 'all';
 
-  // Scroll to this section when category changes or Shop Now is clicked
+  // Scroll to this section when category changes, search is performed, or Shop Now is clicked
+  // Uses window.scrollTo with header offset calculation instead of scrollIntoView
+  // so the "Search Results" heading is not hidden behind the sticky header
   useEffect(() => {
-    if (sectionRef.current) {
-      // Scroll if category is selected, or if scrollToProducts flag was toggled
-      if (selectedCategory || _scrollToProducts > 0) {
-        // Small delay to allow React to render the content first
-        const timer = setTimeout(() => {
-          sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [selectedCategory, _scrollToProducts]);
+    if (!sectionRef.current) return;
+    if (!(selectedCategory || searchQuery || _scrollToProducts > 0)) return;
+
+    // Delay to allow React to render the content first
+    const timer = setTimeout(() => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      const currentScrollY = window.scrollY;
+      // Calculate sticky header height: main header (~56px mobile, ~96px desktop)
+      // + category nav bar (~40px) + small buffer
+      const headerHeight = 140;
+      const targetScrollY = Math.max(0, currentScrollY + rect.top - headerHeight);
+      window.scrollTo({ top: targetScrollY, behavior: 'smooth' });
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [selectedCategory, searchQuery, _scrollToProducts]);
 
   return (
     <section id="product-grid-section" ref={sectionRef} className="relative py-6">
