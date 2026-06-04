@@ -29,66 +29,11 @@ import { FamilyShopping } from '@/components/family-shopping';
 import { WikiSection } from '@/components/wiki-section';
 import { ToastContainer } from '@/hooks/use-toast-notification';
 import { AnimatePresence, motion } from 'framer-motion';
-import React, { useEffect } from 'react';
-
-// Wrapper for FamilyShopping that scrolls to top on internal step changes
-// Detects step transitions by observing significant DOM content changes
-function FamilyShoppingWrapper() {
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const lastScrollTime = React.useRef(0);
-
-  useEffect(() => {
-    // Scroll to top when FamilyShopping first mounts
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Throttled scroll: only scroll once per 500ms to avoid spamming
-    const throttledScroll = () => {
-      const now = Date.now();
-      if (now - lastScrollTime.current > 500) {
-        lastScrollTime.current = now;
-        window.scrollTo({ top: 0, behavior: 'smooth' as ScrollBehavior });
-      }
-    };
-
-    // Observe childList changes which happen on step transitions
-    const observer = new MutationObserver((mutations) => {
-      // Only react to significant structural changes (not just attribute changes)
-      const significant = mutations.some(
-        (m) => m.type === 'childList' && (m.addedNodes.length > 0 || m.removedNodes.length > 0)
-      );
-      if (significant) {
-        throttledScroll();
-      }
-    });
-
-    observer.observe(container, {
-      childList: true,
-      subtree: true,
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={containerRef}>
-      <FamilyShopping />
-    </div>
-  );
-}
+import React from 'react';
 
 function AppContent() {
   const view = useStore((s) => s.view);
   const appTheme = useStore((s) => s.appTheme);
-
-  // Scroll to top whenever the view changes
-  // This fixes: feature pages opening at bottom, product detail at bottom,
-  // cart page at bottom, footer navigation not scrolling up, etc.
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-  }, [view]);
 
   const renderView = () => {
     switch (view) {
@@ -128,7 +73,7 @@ function AppContent() {
       case '3box-curate':
         return <ThreeBoxCurate />;
       case 'family-shopping':
-        return <FamilyShoppingWrapper />;
+        return <FamilyShopping />;
       case 'wiki':
         return <WikiSection />;
       default:

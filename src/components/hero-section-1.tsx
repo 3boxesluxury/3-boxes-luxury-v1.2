@@ -17,7 +17,7 @@ const HERO_IMAGES = [
 const SLIDE_INTERVAL = 5000; // 5 seconds per image
 
 export function HeroSection() {
-  const { setView, setCategory, toggleGiftBuilder, scrollToProducts } = useStore();
+  const { setView, setCategory, toggleGiftBuilder } = useStore();
   const { t } = useTranslation();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -127,16 +127,6 @@ export function HeroSection() {
               onClick={() => {
                 setCategory(null);
                 setView('home');
-                // Scroll to "All Products" heading section after a short delay
-                // Subtract sticky header height so the heading is visible below the header
-                setTimeout(() => {
-                  const section = document.getElementById('product-grid-section');
-                  if (section) {
-                    const headerOffset = 140; // sticky header (~96px) + category nav (~44px)
-                    const top = section.getBoundingClientRect().top + window.scrollY - headerOffset;
-                    window.scrollTo({ top, behavior: 'smooth' });
-                  }
-                }, 150);
               }}
               className="bg-amber-600 text-stone-950 hover:bg-amber-500 transition-all duration-300 hover:shadow-lg hover:shadow-amber-600/25 gap-2 h-9 px-4 text-sm"
             >
