@@ -94,16 +94,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Auto-generate productNumber: PRD-XXXXX
-    const lastProduct = await db.product.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { productNumber: true },
-    });
-    let nextNum = 10001;
-    if (lastProduct?.productNumber) {
-      const lastNum = parseInt(lastProduct.productNumber.replace('PRD-', ''));
-      nextNum = lastNum + 1;
+    // Find the highest existing productNumber to avoid unique constraint violations
+    let productNumber = '';
+    let attempts = 0;
+    while (attempts < 10) {
+      const allProducts = await db.product.findMany({
+        select: { productNumber: true },
+        orderBy: { productNumber: 'desc' },
+        take: 1,
+      });
+      let nextNum = 10001;
+      if (allProducts.length > 0 && allProducts[0].productNumber) {
+        const lastNum = parseInt(allProducts[0].productNumber.replace('PRD-', ''));
+        if (!isNaN(lastNum)) nextNum = lastNum + 1;
+      }
+      productNumber = `PRD-${nextNum}`;
+      // Verify it doesn't already exist
+      const exists = await db.product.findUnique({ where: { productNumber } });
+      if (!exists) break;
+      nextNum++;
+      attempts++;
     }
-    const productNumber = `PRD-${nextNum}`;
+    if (!productNumber) {
+      return NextResponse.json({ error: 'Failed to generate unique product number' }, { status: 500 });
+    }
 
     // Auto-generate slug from name
     const baseSlug = name
