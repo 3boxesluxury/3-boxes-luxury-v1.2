@@ -14,6 +14,9 @@ const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL
   ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/facebook/callback`
   : 'https://3boxes-luxury-v12.vercel.app/api/auth/facebook/callback';
 
+// Use the public URL for redirects (Vercel request.url can be internal)
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://3boxes-luxury-v12.vercel.app';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -23,12 +26,12 @@ export async function GET(request: NextRequest) {
     // User denied permission
     if (error) {
       console.log('[Facebook Auth] User denied permission:', error);
-      return NextResponse.redirect(new URL('/?auth=denied', request.url));
+      return NextResponse.redirect(`${APP_URL}/?auth=denied`);
     }
 
     if (!code) {
       console.log('[Facebook Auth] No authorization code received');
-      return NextResponse.redirect(new URL('/?auth=error', request.url));
+      return NextResponse.redirect(`${APP_URL}/?auth=error`);
     }
 
     // Step 1: Exchange code for access token
@@ -41,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.error) {
       console.error('[Facebook Auth] Token exchange error:', tokenData.error);
-      return NextResponse.redirect(new URL('/?auth=error', request.url));
+      return NextResponse.redirect(`${APP_URL}/?auth=error`);
     }
 
     const accessToken = tokenData.access_token;
@@ -56,14 +59,14 @@ export async function GET(request: NextRequest) {
 
     if (profileData.error) {
       console.error('[Facebook Auth] Profile fetch error:', profileData.error);
-      return NextResponse.redirect(new URL('/?auth=error', request.url));
+      return NextResponse.redirect(`${APP_URL}/?auth=error`);
     }
 
     const { id: facebookId, name, email, picture } = profileData;
 
     if (!facebookId) {
       console.error('[Facebook Auth] No Facebook ID in profile');
-      return NextResponse.redirect(new URL('/?auth=error', request.url));
+      return NextResponse.redirect(`${APP_URL}/?auth=error`);
     }
 
     const avatar = picture?.data?.url || null;
@@ -99,15 +102,15 @@ export async function GET(request: NextRequest) {
     // If user exists
     if (user) {
       if (!user.isActive) {
-        return NextResponse.redirect(new URL('/?auth=deactivated', request.url));
+        return NextResponse.redirect(`${APP_URL}/?auth=deactivated`);
       }
 
       if (user.approvalStatus === 'pending') {
-        return NextResponse.redirect(new URL('/?auth=pending', request.url));
+        return NextResponse.redirect(`${APP_URL}/?auth=pending`);
       }
 
       if (user.approvalStatus === 'rejected') {
-        return NextResponse.redirect(new URL('/?auth=rejected', request.url));
+        return NextResponse.redirect(`${APP_URL}/?auth=rejected`);
       }
 
       // Update avatar if missing
@@ -149,7 +152,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Redirect to home with token
-      const redirectUrl = new URL('/', request.url);
+      const redirectUrl = new URL(APP_URL);
       redirectUrl.searchParams.set('token', jwtToken);
       redirectUrl.searchParams.set('userId', user.id);
       redirectUrl.searchParams.set('userName', encodeURIComponent(user.name));
@@ -225,7 +228,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Redirect to home with token
-    const redirectUrl = new URL('/', request.url);
+    const redirectUrl = new URL(APP_URL);
     redirectUrl.searchParams.set('token', jwtToken);
     redirectUrl.searchParams.set('userId', newUser.id);
     redirectUrl.searchParams.set('userName', encodeURIComponent(newUser.name));
@@ -237,6 +240,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('[Facebook Auth] Callback error:', error);
-    return NextResponse.redirect(new URL('/?auth=error', request.url));
+    return NextResponse.redirect(`${APP_URL}/?auth=error`);
   }
 }
