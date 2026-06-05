@@ -80,15 +80,22 @@ const defCls = 'bg-stone-600/20 text-stone-400 border-stone-600/30'
 const authH = (t: string | null) => t ? { Authorization: `Bearer ${t}` } : {}
 
 async function apiFetch(url: string, opts: RequestInit = {}, token?: string | null) {
-  const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', ...authH(token), ...opts.headers } })
-  if (res.status === 401) {
-    // Only auto-logout if user was actually authenticated (had a token)
-    // Prevents race condition during hydration where token hasn't loaded from localStorage yet
-    if (token) { window.dispatchEvent(new Event('auth:unauthorized')) }
-    throw new Error('Unauthorized')
+  try {
+    const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', ...authH(token), ...opts.headers } })
+    if (res.status === 401) {
+      // Only logout if it's a genuine auth failure, not a DB cold-start issue
+      const data = await res.json().catch(() => ({}))
+      if (data.error?.includes('expired') || data.error?.includes('Authorization header required') || data.error?.includes('Invalid')) {
+        window.dispatchEvent(new Event('auth:unauthorized'))
+      }
+      throw new Error(data.error || 'Unauthorized')
+    }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Error ${res.status}`) }
+    return res.json()
+  } catch (e: any) {
+    if (e.message === 'Unauthorized') throw e
+    throw e
   }
-  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Error ${res.status}`) }
-  return res.json()
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
@@ -133,14 +140,20 @@ export function AdminDashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const activeItemRef = useRef<HTMLButtonElement>(null)
 
+  // Hydration guard: wait until client-side mount before rendering
+  // This prevents SSR/client mismatch and ensures localStorage auth is loaded
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   const t = theme === 'dark' ? darkTheme : lightTheme
 
-  // 401 auto-logout
+  // 401 auto-logout — only after mount (prevents hydration race condition)
   useEffect(() => {
+    if (!mounted) return
     const handler = () => { clearAuth(); setAuthView('login') }
     window.addEventListener('auth:unauthorized', handler)
     return () => window.removeEventListener('auth:unauthorized', handler)
-  }, [clearAuth, setAuthView])
+  }, [clearAuth, setAuthView, mounted])
 
   // Close mobile menu on resize
   useEffect(() => {
@@ -163,6 +176,18 @@ export function AdminDashboard() {
   useEffect(() => {
     activeItemRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [activeTab])
+
+  // Show loading spinner during hydration (before localStorage auth is loaded)
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-stone-950">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
+          <p className="text-sm text-amber-200/60">Loading admin console...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!authUser || authUser.role !== 'admin') {
     return (
@@ -897,7 +922,7 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
       const fd = new FormData()
       toUpload.forEach(f => fd.append('files', f))
       const res = await fetch('/api/upload', { method: 'POST', headers: authH(token), body: fd })
-      if (res.status === 401) { if (token) { window.dispatchEvent(new Event('auth:unauthorized')) }; return }
+      if (res.status === 401) { if (token) { /* smart logout: only if genuine auth failure */ try { const d = await res.json(); if (d.error?.includes('expired') || d.error?.includes('Invalid')) { window.dispatchEvent(new Event('auth:unauthorized')) } } catch {} }; return }
       const data = await res.json()
       if (data.urls) setImages(prev => [...prev, ...data.urls].slice(0, 3))
       else throw new Error(data.error || 'Upload failed')
