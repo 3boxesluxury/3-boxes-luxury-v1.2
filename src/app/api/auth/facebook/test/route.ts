@@ -3,15 +3,16 @@ import { NextResponse } from 'next/server';
 // ============================================================
 // Facebook Auth Test Endpoint
 // ============================================================
-// Visit /api/auth/facebook/test to verify the route is deployed
-// If you see JSON response, the route is working.
-// If you see 404, the route files are not deployed correctly.
+// Visit /api/auth/facebook/test to verify the route is deployed.
+// If you see JSON response = route is working.
+// If you see 404 = route files are NOT deployed correctly.
 // ============================================================
 
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
     message: 'Facebook Auth routes are deployed and working!',
+    version: 'v3',
     timestamp: new Date().toISOString(),
     appId: process.env.FACEBOOK_APP_ID ? 'configured (env)' : 'using default',
     appSecret: process.env.FACEBOOK_APP_SECRET ? 'configured (env)' : 'using default',
