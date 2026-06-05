@@ -4,9 +4,9 @@ import { fetchShopifyCategories } from '@/lib/shopify'
 
 export async function GET() {
   // ─── Check data source preference ───
-  // On Vercel serverless, SQLite DB is not accessible, so always use Shopify
+  // With Supabase PostgreSQL, the DB is accessible from Vercel serverless too
   const dataSource = process.env.DATA_SOURCE // 'shopify' to skip DB, 'database' for DB-first (default)
-  const preferShopify = dataSource === 'shopify' || !!process.env.VERCEL
+  const preferShopify = dataSource === 'shopify'
 
   // ─── Shopify-only path (no DB, no duplication) ───
   if (preferShopify) {

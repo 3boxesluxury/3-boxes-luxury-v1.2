@@ -358,7 +358,7 @@ async function handleLocalAIGeneration(body: any, isVercel: boolean) {
     return NextResponse.json({ error: 'Invalid image format' }, { status: 400 })
   }
 
-  // Resolve product info
+  // Resolve product info — DB works on both local and Vercel with Supabase PostgreSQL
   interface TryOnProduct {
     id: string
     name: string
@@ -367,23 +367,21 @@ async function handleLocalAIGeneration(body: any, isVercel: boolean) {
   }
   let product: TryOnProduct | null = null
 
-  if (!isVercel) {
-    try {
-      const dbProduct = await db.product.findUnique({
-        where: { id: productId },
-        include: { category: true },
-      })
-      if (dbProduct) {
-        product = {
-          id: dbProduct.id,
-          name: dbProduct.name,
-          images: dbProduct.images,
-          category: { name: dbProduct.category.name, slug: dbProduct.category.slug },
-        }
+  try {
+    const dbProduct = await db.product.findUnique({
+      where: { id: productId },
+      include: { category: true },
+    })
+    if (dbProduct) {
+      product = {
+        id: dbProduct.id,
+        name: dbProduct.name,
+        images: dbProduct.images,
+        category: { name: dbProduct.category.name, slug: dbProduct.category.slug },
       }
-    } catch (dbError) {
-      console.log('[try-on] Database unavailable, trying other sources...')
     }
+  } catch (dbError) {
+    console.log('[try-on] Database unavailable, trying other sources...')
   }
 
   if (!product && clientProductName && clientCategorySlug) {
@@ -448,11 +446,22 @@ async function handleLocalAIGeneration(body: any, isVercel: boolean) {
     }, { status: 400 })
   }
 
-  // Fetch AI suggestions in parallel
+  // Fetch AI suggestions in parallel — DB works on both local and Vercel with Supabase
   const pairingCategories = getPairingCategory(product.category?.slug || '')
   let suggestionsPromise: Promise<any[]>
 
-  if (isVercel) {
+  try {
+    suggestionsPromise = db.product.findMany({
+      where: {
+        category: { slug: { in: pairingCategories } },
+        id: { not: productId },
+        stock: { gt: 0 },
+      },
+      include: { category: true },
+      take: 4,
+      orderBy: { rating: 'desc' },
+    })
+  } catch {
     suggestionsPromise = (async () => {
       try {
         const { fetchShopifyProducts } = await import('@/lib/shopify')
@@ -471,38 +480,6 @@ async function handleLocalAIGeneration(body: any, isVercel: boolean) {
         return []
       }
     })()
-  } else {
-    try {
-      suggestionsPromise = db.product.findMany({
-        where: {
-          category: { slug: { in: pairingCategories } },
-          id: { not: productId },
-          stock: { gt: 0 },
-        },
-        include: { category: true },
-        take: 4,
-        orderBy: { rating: 'desc' },
-      })
-    } catch {
-      suggestionsPromise = (async () => {
-        try {
-          const { fetchShopifyProducts } = await import('@/lib/shopify')
-          const allProducts = await fetchShopifyProducts()
-          return allProducts
-            .filter(p => pairingCategories.includes(p.categorySlug) && p.id !== productId)
-            .slice(0, 4)
-            .map(p => ({
-              id: p.id,
-              name: p.name,
-              price: p.price,
-              images: JSON.stringify(p.images),
-              category: { name: p.category, slug: p.categorySlug },
-            }))
-        } catch {
-          return []
-        }
-      })()
-    }
   }
 
   const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`

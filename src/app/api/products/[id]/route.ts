@@ -44,13 +44,10 @@ export async function GET(
   try {
     const { id } = await params
 
-    // On Vercel serverless, SQLite DB is not accessible — skip DB and go straight to Shopify
-    const isVercel = !!process.env.VERCEL
-
-    // Try database first (skip on Vercel)
+    // Supabase PostgreSQL is accessible from Vercel serverless
+    // Try database first
     let product: ProductResult | null = null
-    if (!isVercel) {
-      try {
+    try {
         const dbProduct = await db.product.findUnique({
           where: { id },
           include: { category: true },
@@ -77,12 +74,11 @@ export async function GET(
             affiliateUrl: dbProduct.affiliateUrl,
           }
         }
-      } catch (dbError) {
-        console.warn('[Product API] Database unavailable, trying Shopify fallback for id:', id)
-      }
+    } catch (dbError) {
+      console.warn('[Product API] Database unavailable, trying Shopify fallback for id:', id)
     }
 
-    // If not in DB (or on Vercel), try Shopify fallback
+    // If not in DB, try Shopify fallback
     if (!product) {
       try {
         const shopifyProducts = await fetchShopifyProducts()

@@ -16,14 +16,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
-    // On Vercel serverless, SQLite DB is not accessible — use Shopify directly
-    const isVercel = !!process.env.VERCEL;
-
-    if (isVercel) {
-      return await searchFromShopify(q, category, minPrice, maxPrice, occasion, recipient, sort, page, limit);
-    }
-
-    // ─── DB-first path (local dev) with Shopify fallback ───
+    // ─── DB-first path (works on both local and Vercel with Supabase PostgreSQL) with Shopify fallback ───
     try {
       const where: Record<string, unknown>[] = [];
 

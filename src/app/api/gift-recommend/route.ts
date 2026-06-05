@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Shopify-only path (Vercel) ────────────────────────────────────
-    const preferShopify = process.env.DATA_SOURCE === 'shopify' || !!process.env.VERCEL
+    // ── DB-first path (works on both local and Vercel with Supabase PostgreSQL) ──
+    const preferShopify = process.env.DATA_SOURCE === 'shopify'
 
     if (preferShopify) {
       try {
