@@ -1,6 +1,6 @@
 'use client';
 
-import { useStore, type View } from '@/lib/store';
+import { useStore, type View, type AuthUser } from '@/lib/store';
 import { QueryProvider } from '@/lib/query-provider';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
@@ -27,7 +27,7 @@ import { SocialStyleIntegration } from '@/components/social-style-integration';
 import { ThreeBoxCurate } from '@/components/threebox-curate';
 import { FamilyShopping } from '@/components/family-shopping';
 import { WikiSection } from '@/components/wiki-section';
-import { ToastContainer } from '@/hooks/use-toast-notification';
+import { ToastContainer, showToast } from '@/hooks/use-toast-notification';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useEffect } from 'react';
 
@@ -82,6 +82,55 @@ function FamilyShoppingWrapper() {
 function AppContent() {
   const view = useStore((s) => s.view);
   const appTheme = useStore((s) => s.appTheme);
+  const setAuth = useStore((s) => s.setAuth);
+  const setAuthView = useStore((s) => s.setAuthView);
+
+  // Handle Facebook OAuth callback redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const userId = params.get('userId');
+    const userName = params.get('userName');
+    const userEmail = params.get('userEmail');
+    const userRole = params.get('userRole');
+    const authProvider = params.get('authProvider');
+    const authError = params.get('auth');
+
+    if (token && userId && authProvider === 'facebook') {
+      const user: AuthUser = {
+        id: userId,
+        email: userEmail || '',
+        name: userName ? decodeURIComponent(userName) : 'Facebook User',
+        role: userRole || 'user',
+      };
+      setAuth(user, token);
+      showToast('success', `Welcome, ${user.name}! Signed in with Facebook.`);
+
+      // Clean up URL
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('token');
+      cleanUrl.searchParams.delete('userId');
+      cleanUrl.searchParams.delete('userName');
+      cleanUrl.searchParams.delete('userEmail');
+      cleanUrl.searchParams.delete('userRole');
+      cleanUrl.searchParams.delete('authProvider');
+      cleanUrl.searchParams.delete('isNewUser');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    } else if (authError) {
+      const messages: Record<string, string> = {
+        denied: 'Facebook login was cancelled.',
+        error: 'Facebook login failed. Please try again.',
+        deactivated: 'Your account has been deactivated.',
+        pending: 'Your account is pending approval.',
+        rejected: 'Your account has been rejected.',
+      };
+      showToast('error', messages[authError] || 'Authentication failed.');
+      // Clean up URL
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('auth');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }
+  }, [setAuth, setAuthView]);
 
   // Scroll to top whenever the view changes
   // This fixes: feature pages opening at bottom, product detail at bottom,
