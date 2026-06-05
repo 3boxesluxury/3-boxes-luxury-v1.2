@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import Image from 'next/image'
 import { useStore } from '@/lib/store'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -82,7 +81,12 @@ const authH = (t: string | null) => t ? { Authorization: `Bearer ${t}` } : {}
 
 async function apiFetch(url: string, opts: RequestInit = {}, token?: string | null) {
   const res = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', ...authH(token), ...opts.headers } })
-  if (res.status === 401) { window.dispatchEvent(new Event('auth:unauthorized')); throw new Error('Unauthorized') }
+  if (res.status === 401) {
+    // Only auto-logout if user was actually authenticated (had a token)
+    // Prevents race condition during hydration where token hasn't loaded from localStorage yet
+    if (token) { window.dispatchEvent(new Event('auth:unauthorized')) }
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || `Error ${res.status}`) }
   return res.json()
 }
@@ -255,7 +259,7 @@ export function AdminDashboard() {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: sidebarCollapsed ? 80 : 260 }}
+        animate={{ width: sidebarCollapsed ? 64 : 240 }}
         transition={{ duration: 0.2 }}
         className={`fixed lg:relative z-50 h-full ${t.sidebarBg} border-r ${t.border} flex flex-col shrink-0 transition-transform duration-300 ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
@@ -265,7 +269,7 @@ export function AdminDashboard() {
         <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2'} px-3 py-4 border-b ${t.border}`}>
           {!sidebarCollapsed && (
             <>
-              <Image src="/images/logo-uploaded.png" alt="3 Boxes Luxury Logo" width={80} height={80} className="h-20 w-20 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)] shrink-0" priority />
+              <img src="/images/logo-uploaded.png" alt="3BL" className="h-10 w-10 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)] shrink-0" />
               <div className="min-w-0">
                 <p className={`text-sm font-bold truncate ${t.text}`}>3 BOXES LUXURY</p>
                 <p className={`text-[10px] truncate ${t.textMuted}`}>Management Console</p>
@@ -273,7 +277,7 @@ export function AdminDashboard() {
             </>
           )}
           {sidebarCollapsed && (
-            <Image src="/images/logo-uploaded.png" alt="3 Boxes Luxury Logo" width={56} height={56} className="h-14 w-14 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]" priority />
+            <img src="/images/logo-uploaded.png" alt="3BL" className="h-9 w-9 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)]" />
           )}
           <Button
             variant="ghost"
@@ -356,7 +360,7 @@ export function AdminDashboard() {
             <Menu className={`h-5 w-5 ${t.text}`} />
           </Button>
 
-          <Image src="/images/logo-uploaded.png" alt="3 Boxes Luxury Logo" width={56} height={56} className="h-14 w-14 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)] lg:hidden" priority />
+          <img src="/images/logo-uploaded.png" alt="3BL" className="h-9 w-9 object-contain contrast-150 brightness-130 saturate-130 drop-shadow-[0_0_10px_rgba(255,215,0,0.6)] lg:hidden" />
 
           <div className="hidden lg:block">
             <h1 className={`text-sm font-semibold ${t.text}`}>3 BOXES LUXURY — Management Console</h1>
@@ -462,10 +466,10 @@ function DashboardTab({ token, theme }: { token: string | null; theme: 'dark' | 
   const tooltipBorder = theme === 'dark' ? '#44403c' : '#e7e5e4'
   const tooltipText = theme === 'dark' ? '#fef3c7' : '#1c1917'
 
-  const { data: productsData } = useQuery({ queryKey: ['admin-products'], queryFn: () => apiFetch('/api/admin/products?limit=1', undefined, token) })
-  const { data: usersData } = useQuery({ queryKey: ['admin-users'], queryFn: () => apiFetch('/api/admin/users?limit=1', undefined, token) })
-  const { data: ordersData } = useQuery({ queryKey: ['admin-orders'], queryFn: () => apiFetch('/api/admin/orders?limit=1', undefined, token) })
-  const { data: accountingData } = useQuery({ queryKey: ['accounting-summary'], queryFn: () => apiFetch('/api/accounting?limit=1', undefined, token) })
+  const { data: productsData } = useQuery({ queryKey: ['admin-products'], queryFn: () => apiFetch('/api/admin/products?limit=1', undefined, token), enabled: !!token })
+  const { data: usersData } = useQuery({ queryKey: ['admin-users'], queryFn: () => apiFetch('/api/admin/users?limit=1', undefined, token), enabled: !!token })
+  const { data: ordersData } = useQuery({ queryKey: ['admin-orders'], queryFn: () => apiFetch('/api/admin/orders?limit=1', undefined, token), enabled: !!token })
+  const { data: accountingData } = useQuery({ queryKey: ['accounting-summary'], queryFn: () => apiFetch('/api/accounting?limit=1', undefined, token), enabled: !!token })
 
   const totalProducts = productsData?.pagination?.total || 0
   const totalUsers = usersData?.pagination?.total || 0
@@ -708,6 +712,7 @@ function ProductsTab({ token, onMutate }: { token: string | null; onMutate: () =
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', search, page],
     queryFn: () => apiFetch(`/api/admin/products?search=${search}&page=${page}&limit=20`, undefined, token),
+    enabled: !!token,
   })
 
   const deleteMut = useMutation({
@@ -836,8 +841,8 @@ function ProductsTab({ token, onMutate }: { token: string | null; onMutate: () =
 
 /* ─── Product Form ─── */
 function ProductForm({ token, product, onClose, onSaved }: { token: string | null; product: any; onClose: () => void; onSaved: () => void }) {
-  const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: () => apiFetch('/api/categories', undefined, token) })
-  const { data: vendorsData } = useQuery({ queryKey: ['vendors'], queryFn: () => apiFetch('/api/vendors', undefined, token) })
+  const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: () => apiFetch('/api/categories', undefined, token), enabled: !!token })
+  const { data: vendorsData } = useQuery({ queryKey: ['vendors'], queryFn: () => apiFetch('/api/vendors', undefined, token), enabled: !!token })
 
   const categories = categoriesData?.categories || []
   const vendors = vendorsData?.vendors || []
@@ -853,18 +858,35 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
   const fileRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
 
+  // Get subcategories for the currently selected parent category
+  const selectedCategory = categories.find((c: any) => c.id === form.categoryId)
+  const subcategories = selectedCategory?.children || []
+
   useEffect(() => {
     if (product) {
+      // Determine if the product's category is a subcategory or parent
+      let parentCatId = product.categoryId || ''
+      let subCatId = ''
+      // Check if the product's categoryId matches a subcategory
+      for (const cat of categories) {
+        const match = (cat.children || []).find((ch: any) => ch.id === product.categoryId)
+        if (match) {
+          parentCatId = cat.id
+          subCatId = match.id
+          break
+        }
+      }
       setForm({
         name: product.name || '', description: product.description || '', price: String(product.price || ''),
         compareAtPrice: String(product.compareAtPrice || ''), costPrice: String(product.costPrice || ''),
-        sku: product.sku || '', categoryId: product.categoryId || '', subCategoryId: product.subCategoryId || product.categoryId || '', stock: String(product.stock || 0),
+        sku: product.sku || '', categoryId: parentCatId, subCategoryId: subCatId,
+        stock: String(product.stock || 0),
         reorderLevel: String(product.reorderLevel || 5), featured: product.featured || false,
         tags: Array.isArray(product.tags) ? product.tags.join(', ') : '', vendorId: product.vendorId || '',
       })
       setImages(Array.isArray(product.images) ? product.images : [])
     }
-  }, [product])
+  }, [product, categories])
 
   const handleUpload = async (files: FileList) => {
     const remaining = 3 - images.length
@@ -875,7 +897,7 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
       const fd = new FormData()
       toUpload.forEach(f => fd.append('files', f))
       const res = await fetch('/api/upload', { method: 'POST', headers: authH(token), body: fd })
-      if (res.status === 401) { window.dispatchEvent(new Event('auth:unauthorized')); return }
+      if (res.status === 401) { if (token) { window.dispatchEvent(new Event('auth:unauthorized')) }; return }
       const data = await res.json()
       if (data.urls) setImages(prev => [...prev, ...data.urls].slice(0, 3))
       else throw new Error(data.error || 'Upload failed')
@@ -889,26 +911,27 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files) }
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files?.length) handleUpload(e.target.files) }
 
-  // Derive subcategories for the selected main category
-  const selectedCategoryData = categories.find((c: any) => c.id === form.categoryId)
-  const subcategories = selectedCategoryData?.children || []
-
   const handleSubmit = async () => {
     if (!form.name || !form.price || !form.categoryId || !form.subCategoryId) { setError('Name, price, category, and sub-category are required'); return }
     if (!form.description.trim()) { setError('Description is required'); return }
     setSaving(true); setError('')
     try {
+      // Use subCategoryId as the actual categoryId for the product
+      // so the product is stored in the specific subcategory
       const body = {
-        ...form,
+        name: form.name,
+        description: form.description,
         price: parseFloat(form.price),
         compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : null,
         costPrice: form.costPrice ? parseFloat(form.costPrice) : null,
+        sku: form.sku,
+        categoryId: form.subCategoryId,
         stock: parseInt(form.stock),
         reorderLevel: parseInt(form.reorderLevel),
+        featured: form.featured,
         images,
         tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         vendorId: form.vendorId === 'none' ? null : form.vendorId || null,
-        categoryId: form.subCategoryId || form.categoryId,
       }
       if (product) {
         await apiFetch(`/api/admin/products/${product.id}`, { method: 'PUT', body: JSON.stringify(body) }, token)
@@ -979,7 +1002,7 @@ function ProductForm({ token, product, onClose, onSaved }: { token: string | nul
         <div>
           <Label className={lblCls}>Sub-Category *</Label>
           <Select value={form.subCategoryId} onValueChange={v => setForm(f => ({ ...f, subCategoryId: v }))} disabled={!form.categoryId || subcategories.length === 0}>
-            <SelectTrigger className={`${selCls} mt-1 ${!form.categoryId ? 'opacity-50' : ''}`}><SelectValue placeholder={form.categoryId ? (subcategories.length === 0 ? 'No sub-categories' : 'Select sub-category') : 'Select category first'} /></SelectTrigger>
+            <SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder={!form.categoryId ? 'Select category first' : subcategories.length === 0 ? 'No sub-categories' : 'Select sub-category'} /></SelectTrigger>
             <SelectContent className={selContentCls}>
               {subcategories.map((sc: any) => <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>)}
             </SelectContent>
@@ -1030,9 +1053,10 @@ function InventoryTab({ token, onMutate }: { token: string | null; onMutate: () 
   const { data, isLoading } = useQuery({
     queryKey: ['inventory', page, typeFilter],
     queryFn: () => apiFetch(`/api/inventory?page=${page}&limit=20${typeFilter ? `&type=${typeFilter}` : ''}`, undefined, token),
+    enabled: !!token,
   })
 
-  const { data: productsData } = useQuery({ queryKey: ['admin-products-low'], queryFn: () => apiFetch('/api/admin/products?limit=50', undefined, token) })
+  const { data: productsData } = useQuery({ queryKey: ['admin-products-low'], queryFn: () => apiFetch('/api/admin/products?limit=50', undefined, token), enabled: !!token })
   const lowStockProducts = (productsData?.products || []).filter((p: any) => p.stock <= (p.reorderLevel || 5))
 
   const logs = data?.logs || []
@@ -1133,7 +1157,7 @@ function InventoryTab({ token, onMutate }: { token: string | null; onMutate: () 
 }
 
 function StockAdjustForm({ token, onClose, onSaved }: { token: string | null; onClose: () => void; onSaved: () => void }) {
-  const { data: productsData } = useQuery({ queryKey: ['admin-products-all'], queryFn: () => apiFetch('/api/admin/products?limit=100', undefined, token) })
+  const { data: productsData } = useQuery({ queryKey: ['admin-products-all'], queryFn: () => apiFetch('/api/admin/products?limit=100', undefined, token), enabled: !!token })
   const products = productsData?.products || []
   const [form, setForm] = useState({ productId: '', type: 'in', quantity: '', note: '' })
   const [saving, setSaving] = useState(false)
@@ -1196,6 +1220,7 @@ function OrdersTab({ token, onMutate }: { token: string | null; onMutate: () => 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-orders', page, statusFilter],
     queryFn: () => apiFetch(`/api/admin/orders?page=${page}&limit=20${statusFilter ? `&status=${statusFilter}` : ''}`, undefined, token),
+    enabled: !!token,
   })
 
   const orders = data?.orders || []
@@ -1425,6 +1450,7 @@ function InvoicesTab({ token, onMutate }: { token: string | null; onMutate: () =
   const { data, isLoading } = useQuery({
     queryKey: ['invoices', page, statusFilter],
     queryFn: () => apiFetch(`/api/invoices?page=${page}&limit=20${statusFilter ? `&status=${statusFilter}` : ''}`, undefined, token),
+    enabled: !!token,
   })
 
   const invoices = data?.invoices || []
@@ -1514,7 +1540,7 @@ function InvoicesTab({ token, onMutate }: { token: string | null; onMutate: () =
 }
 
 function InvoiceForm({ token, onClose, onSaved }: { token: string | null; onClose: () => void; onSaved: () => void }) {
-  const { data: vendorsData } = useQuery({ queryKey: ['vendors'], queryFn: () => apiFetch('/api/vendors', undefined, token) })
+  const { data: vendorsData } = useQuery({ queryKey: ['vendors'], queryFn: () => apiFetch('/api/vendors', undefined, token), enabled: !!token })
   const vendors = vendorsData?.vendors || []
   const [form, setForm] = useState({ vendorId: '', amount: '', tax: '0', dueDate: '', notes: '', status: 'draft' })
   const [items, setItems] = useState([{ description: '', quantity: '1', unitPrice: '' }])
@@ -1600,6 +1626,7 @@ function AccountingTab({ token, onMutate }: { token: string | null; onMutate: ()
   const { data, isLoading } = useQuery({
     queryKey: ['accounting', page, typeFilter, catFilter],
     queryFn: () => apiFetch(`/api/accounting?page=${page}&limit=20${typeFilter ? `&type=${typeFilter}` : ''}${catFilter ? `&category=${catFilter}` : ''}`, undefined, token),
+    enabled: !!token,
   })
 
   const entries = data?.entries || []
@@ -1782,6 +1809,7 @@ function VendorsTab({ token, onMutate }: { token: string | null; onMutate: () =>
   const { data, isLoading } = useQuery({
     queryKey: ['vendors', search],
     queryFn: () => apiFetch(`/api/vendors?search=${search}&limit=50`, undefined, token),
+    enabled: !!token,
   })
 
   const vendors = data?.vendors || []
@@ -1923,6 +1951,7 @@ function UsersPermsTab({ token, onMutate }: { token: string | null; onMutate: ()
   const { data, isLoading } = useQuery({
     queryKey: ['admin-users', search, page],
     queryFn: () => apiFetch(`/api/admin/users?search=${search}&page=${page}&limit=20`, undefined, token),
+    enabled: !!token,
   })
 
   const users = data?.users || []
@@ -2029,6 +2058,7 @@ function PermissionMatrix({ token, user, onSaved }: { token: string | null; user
   const { data, isLoading } = useQuery({
     queryKey: ['permissions', user.id],
     queryFn: () => apiFetch(`/api/admin/permissions?userId=${user.id}`, undefined, token),
+    enabled: !!token,
   })
 
   const modules = ['products', 'orders', 'inventory', 'invoices', 'accounting', 'vendors', 'users', 'content', 'offers']
@@ -2156,11 +2186,13 @@ function KnowledgeHubTab({ token, onMutate }: { token: string | null; onMutate: 
   const { data, isLoading } = useQuery({
     queryKey: ['wiki-docs', showUnpublished],
     queryFn: () => apiFetch(`/api/wiki?all=${showUnpublished}`, undefined, token),
+    enabled: !!token,
   })
 
   const { data: viewDocData, isLoading: viewDocLoading } = useQuery({
     queryKey: ['wiki-doc-detail', viewDoc?.id],
     queryFn: () => apiFetch(`/api/wiki/${viewDoc.id}`, undefined, token),
+    enabled: !!token,
     enabled: !!viewDoc,
   })
 
@@ -2675,12 +2707,13 @@ function KnowledgeHubTab({ token, onMutate }: { token: string | null; onMutate: 
    ════════════════════════════════════════════ */
 function ShareDocsTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
   const qc = useQueryClient()
-  const { data: usersData } = useQuery({ queryKey: ['admin-users-agents'], queryFn: () => apiFetch('/api/admin/users?role=agent&limit=100', undefined, token) })
+  const { data: usersData } = useQuery({ queryKey: ['admin-users-agents'], queryFn: () => apiFetch('/api/admin/users?role=agent&limit=100', undefined, token), enabled: !!token })
   const agents = (usersData?.users || []).filter((u: any) => u.role === 'agent')
 
   const { data: sharesData, isLoading: sharesLoading } = useQuery({
     queryKey: ['admin-share-docs'],
     queryFn: () => apiFetch('/api/admin/share-doc', undefined, token),
+    enabled: !!token,
   })
   const shares = sharesData?.shares || []
 
@@ -2777,6 +2810,7 @@ function OffersTab({ token, onMutate }: { token: string | null; onMutate: () => 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-offers'],
     queryFn: () => apiFetch('/api/offers?limit=50', undefined, token),
+    enabled: !!token,
   })
 
   const offers = data?.offers || []
@@ -2973,6 +3007,7 @@ function CategoriesTab({ token, onMutate }: { token: string | null; onMutate: ()
   const { data, isLoading } = useQuery({
     queryKey: ['admin-categories'],
     queryFn: () => apiFetch('/api/admin/categories', undefined, token),
+    enabled: !!token,
   })
 
   const categories = data?.categories || []
@@ -3109,11 +3144,13 @@ function ReportsTab({ token }: { token: string | null }) {
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['admin-orders-report'],
     queryFn: () => apiFetch('/api/admin/orders?limit=200', undefined, token),
+    enabled: !!token,
   })
 
   const { data: productsData, isLoading: productsLoading } = useQuery({
     queryKey: ['admin-products-report'],
     queryFn: () => apiFetch('/api/admin/products?limit=200', undefined, token),
+    enabled: !!token,
   })
 
   const orders: any[] = ordersData?.orders || []
@@ -3327,8 +3364,8 @@ function ImportTab({ token, onMutate }: { token: string | null; onMutate: () => 
   const [showImport, setShowImport] = useState(false)
   const [error, setError] = useState('')
 
-  const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: () => apiFetch('/api/categories', undefined, token) })
-  const { data: vendorsData } = useQuery({ queryKey: ['vendors-import'], queryFn: () => apiFetch('/api/vendors', undefined, token) })
+  const { data: categoriesData } = useQuery({ queryKey: ['categories'], queryFn: () => apiFetch('/api/categories', undefined, token), enabled: !!token })
+  const { data: vendorsData } = useQuery({ queryKey: ['vendors-import'], queryFn: () => apiFetch('/api/vendors', undefined, token), enabled: !!token })
   const categories = categoriesData?.categories || []
   const vendors = vendorsData?.vendors || []
 
@@ -3539,7 +3576,7 @@ function ImportProductForm({ token, product, sourceUrl, platform, categories, ve
   categories: any[]; vendors: any[]; onClose: () => void; onSaved: () => void
 }) {
   const [form, setForm] = useState({
-    name: '', description: '', price: '', compareAtPrice: '', categoryId: '', subCategoryId: '',
+    name: '', description: '', price: '', compareAtPrice: '', categoryId: '',
     stock: '10', costPrice: '', vendorId: '', sku: '',
   })
   const [saving, setSaving] = useState(false)
@@ -3553,7 +3590,6 @@ function ImportProductForm({ token, product, sourceUrl, platform, categories, ve
         price: String(product.price || ''),
         compareAtPrice: String(product.compareAtPrice || ''),
         categoryId: '',
-        subCategoryId: '',
         stock: '10',
         costPrice: '',
         vendorId: '',
@@ -3562,13 +3598,8 @@ function ImportProductForm({ token, product, sourceUrl, platform, categories, ve
     }
   }, [product])
 
-  // Derive subcategories for the selected main category
-  const selectedCategoryData = categories.find((c: any) => c.id === form.categoryId)
-  const importSubcategories = selectedCategoryData?.children || []
-
   const handleImport = async () => {
-    if (!form.name || !form.price || !form.categoryId || !form.subCategoryId) { setError('Name, price, category, and sub-category are required'); return }
-    if (!form.description.trim()) { setError('Description is required'); return }
+    if (!form.name || !form.price || !form.categoryId) { setError('Name, price, and category are required'); return }
     setSaving(true); setError('')
     try {
       await apiFetch('/api/product-import/import', {
@@ -3579,7 +3610,7 @@ function ImportProductForm({ token, product, sourceUrl, platform, categories, ve
           price: parseFloat(form.price),
           compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : null,
           costPrice: form.costPrice ? parseFloat(form.costPrice) : null,
-          categoryId: form.subCategoryId || form.categoryId,
+          categoryId: form.categoryId,
           stock: parseInt(form.stock),
           images: product.images || [],
           tags: product.tags || [],
@@ -3610,19 +3641,10 @@ function ImportProductForm({ token, product, sourceUrl, platform, categories, ve
         <div><Label className={lblCls}>Cost Price</Label><Input type="number" className={`${inputCls} mt-1`} value={form.costPrice} onChange={e => setForm(f => ({ ...f, costPrice: e.target.value }))} /></div>
         <div>
           <Label className={lblCls}>Category *</Label>
-          <Select value={form.categoryId} onValueChange={v => setForm(f => ({ ...f, categoryId: v, subCategoryId: '' }))}>
+          <Select value={form.categoryId} onValueChange={v => setForm(f => ({ ...f, categoryId: v }))}>
             <SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder="Select category" /></SelectTrigger>
             <SelectContent className={selContentCls}>
               {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className={lblCls}>Sub-Category *</Label>
-          <Select value={form.subCategoryId} onValueChange={v => setForm(f => ({ ...f, subCategoryId: v }))} disabled={!form.categoryId || importSubcategories.length === 0}>
-            <SelectTrigger className={`${selCls} mt-1 ${!form.categoryId ? 'opacity-50' : ''}`}><SelectValue placeholder={form.categoryId ? (importSubcategories.length === 0 ? 'No sub-categories' : 'Select sub-category') : 'Select category first'} /></SelectTrigger>
-            <SelectContent className={selContentCls}>
-              {importSubcategories.map((sc: any) => <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -3639,7 +3661,7 @@ function ImportProductForm({ token, product, sourceUrl, platform, categories, ve
         </div>
         <div><Label className={lblCls}>SKU</Label><Input className={`${inputCls} mt-1`} value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} /></div>
       </div>
-      <div><Label className={lblCls}>Description *</Label><Textarea className={`${inputCls} mt-1`} rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
+      <div><Label className={lblCls}>Description</Label><Textarea className={`${inputCls} mt-1`} rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></div>
 
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" className={btnOutline} onClick={onClose}>Cancel</Button>
@@ -3664,11 +3686,13 @@ function IntegrationsTab({ token, onMutate }: { token: string | null; onMutate: 
   const { data, isLoading } = useQuery({
     queryKey: ['integrations'],
     queryFn: () => apiFetch('/api/integrations', undefined, token),
+    enabled: !!token,
   })
 
   const { data: integrationDetail } = useQuery({
     queryKey: ['integration-detail', selectedIntegration],
     queryFn: () => apiFetch(`/api/integrations/${selectedIntegration}`, undefined, token),
+    enabled: !!token,
     enabled: !!selectedIntegration,
   })
 
@@ -4113,6 +4137,7 @@ function CorporateTab({ token, onMutate }: { token: string | null; onMutate: () 
   const { data: accountsData, isLoading: accountsLoading } = useQuery({
     queryKey: ['admin-corporate', accountSearch, accountStatusFilter, accountPage],
     queryFn: () => apiFetch(`/api/admin/corporate?search=${accountSearch}&approvalStatus=${accountStatusFilter}&page=${accountPage}&limit=20`, undefined, token),
+    enabled: !!token,
   })
 
   const accounts = accountsData?.accounts || []
@@ -4122,6 +4147,7 @@ function CorporateTab({ token, onMutate }: { token: string | null; onMutate: () 
   const { data: campaignsData, isLoading: campaignsLoading } = useQuery({
     queryKey: ['admin-campaigns', campaignStatusFilter, campaignPage],
     queryFn: () => apiFetch(`/api/admin/campaigns?status=${campaignStatusFilter}&page=${campaignPage}&limit=20`, undefined, token),
+    enabled: !!token,
   })
 
   const campaigns = campaignsData?.campaigns || []
@@ -4131,6 +4157,7 @@ function CorporateTab({ token, onMutate }: { token: string | null; onMutate: () 
   const { data: campaignDetail } = useQuery({
     queryKey: ['admin-campaign-detail', expandedCampaign],
     queryFn: () => apiFetch(`/api/admin/campaigns/${expandedCampaign}`, undefined, token),
+    enabled: !!token,
     enabled: !!expandedCampaign,
   })
 
@@ -5343,6 +5370,7 @@ function AIInfluencerTab({ token, onMutate }: { token: string | null; onMutate: 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['style-gallery', statusFilter],
     queryFn: () => apiFetch(`/api/style-gallery?status=${statusFilter}&limit=100`, undefined, token),
+    enabled: !!token,
   })
 
   const images = (data as any)?.images || []
