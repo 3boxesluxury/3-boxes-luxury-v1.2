@@ -84,6 +84,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Verify the category exists before creating product ──
+    const categoryExists = await db.category.findUnique({ where: { id: categoryId } });
+    if (!categoryExists) {
+      return NextResponse.json(
+        { error: `Category not found (id: ${categoryId}). Please select a valid category.` },
+        { status: 400 }
+      );
+    }
+
     // Auto-generate productNumber: PRD-XXXXX
     const lastProduct = await db.product.findFirst({
       orderBy: { createdAt: 'desc' },
@@ -108,26 +117,39 @@ export async function POST(request: NextRequest) {
       slugCounter++;
     }
 
+    // ── Build product data with safe defaults ──
+    const productData: Record<string, any> = {
+      productNumber,
+      name,
+      slug,
+      description,
+      price: parseFloat(price),
+      compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : null,
+      costPrice: costPrice ? parseFloat(costPrice) : null,
+      sku: sku || null,
+      images: images ? JSON.stringify(images) : '[]',
+      categoryId,
+      stock: stock ? parseInt(stock) : 0,
+      reorderLevel: reorderLevel ? parseInt(reorderLevel) : 5,
+      featured: featured || false,
+      tags: tags ? JSON.stringify(tags) : null,
+    };
+
+    // Only add vendorId if it's a valid non-empty string
+    if (vendorId && vendorId !== 'none') {
+      // Verify vendor exists
+      const vendorExists = await db.vendor.findUnique({ where: { id: vendorId } });
+      if (vendorExists) {
+        productData.vendorId = vendorId;
+      }
+    }
+
+    // Only add optional fields if they have values
+    if (sourceUrl) productData.sourceUrl = sourceUrl;
+    if (platform) productData.platform = platform;
+
     const product = await db.product.create({
-      data: {
-        productNumber,
-        name,
-        slug,
-        description,
-        price: parseFloat(price),
-        compareAtPrice: compareAtPrice ? parseFloat(compareAtPrice) : null,
-        costPrice: costPrice ? parseFloat(costPrice) : null,
-        sku: sku || null,
-        images: images ? JSON.stringify(images) : '[]',
-        categoryId,
-        stock: stock ? parseInt(stock) : 0,
-        reorderLevel: reorderLevel ? parseInt(reorderLevel) : 5,
-        featured: featured || false,
-        tags: tags ? JSON.stringify(tags) : null,
-        vendorId: vendorId || null,
-        sourceUrl: sourceUrl || null,
-        platform: platform || null,
-      },
+      data: productData,
       include: {
         category: true,
         vendor: true,
@@ -142,8 +164,14 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json(productResponse, { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error creating product:', err);
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
+
+    // Return the ACTUAL error message so we can debug
+    const errorMessage = err?.message || 'Failed to create product';
+    const prismaError = err?.meta?.cause || '';
+    const fullError = prismaError ? `${errorMessage}: ${prismaError}` : errorMessage;
+
+    return NextResponse.json({ error: fullError }, { status: 500 });
   }
 }
