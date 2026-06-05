@@ -1,6 +1,7 @@
 /**
  * Shared utility for resolving product image URLs.
  * Shopify CDN images are used directly (publicly accessible, no proxy needed).
+ * Supabase Storage public URLs are also used directly.
  * Other external images are proxied to bypass CORS/hotlink protection.
  */
 
@@ -12,6 +13,8 @@ const DIRECT_ACCESS_DOMAINS = [
   'public.blob.vercel-storage.com',
   'vercel.app',
   'vercel-storage.com',
+  'supabase.co',          // Supabase Storage public URLs
+  'supabase.in',          // Supabase India region
 ];
 
 function isDirectAccessUrl(url: string): boolean {
@@ -36,7 +39,7 @@ export function getProxiedImageUrl(url: string, platform?: string): string {
   }
   // HTTP/HTTPS URLs
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    // Shopify CDN and other public CDNs - use directly
+    // Shopify CDN, Supabase Storage, and other public CDNs - use directly
     if (isDirectAccessUrl(url)) return url;
     // Other external URLs - proxy them
     return `/api/image-proxy?url=${encodeURIComponent(url)}&platform=${platform || ''}`;
