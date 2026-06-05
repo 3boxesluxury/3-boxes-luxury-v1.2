@@ -447,7 +447,7 @@ export function AuthDialog() {
         const redirectUri = encodeURIComponent(
           typeof window !== 'undefined' && window.location.hostname === 'localhost'
             ? 'http://localhost:3000/api/auth/facebook/callback'
-            : 'https://3boxes-luxury-v12.vercel.app/api/auth/facebook/callback'
+            : 'https://3-boxes-luxury-v1-2.vercel.app/api/auth/facebook/callback'
         )
         const state = Math.random().toString(36).substring(2, 15)
         const facebookAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&state=${state}&scope=email,public_profile&response_type=code`

@@ -49,3 +49,5 @@ env/
 coverage/
 .npm
 yarn-error.log
+.vercel
+.env*
