@@ -6,7 +6,10 @@ import { createSession } from '@/lib/sessions';
 import { setOtp } from '@/lib/demo-otp-store';
 import { send2FAEmailWithDetails } from '@/lib/email';
 
-const JWT_SECRET = process.env.JWT_SECRET || '3boxes-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : '3boxes-dev-secret-key');
+if (process.env.NODE_ENV === 'production' && !JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required in production. Set it in Vercel → Settings → Environment Variables');
+}
 
 // Demo users for when the database is unavailable (e.g., Vercel without Postgres)
 const DEMO_USERS: Record<string, { name: string; role: string; password: string; permissions: string[]; twoFactorRequired: boolean }> = {
@@ -156,8 +159,8 @@ export async function POST(request: NextRequest) {
           method: 'email',
           email: user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3'), // masked email
           message: 'A verification code has been sent to your email',
-          // In demo/dev mode, include the OTP for testing
-          ...(process.env.NODE_ENV !== 'production' ? { _otp: otp } : {}),
+          // Show OTP for admin login (email not configured for real delivery yet)
+          _otp: otp,
         });
       }
 
@@ -247,8 +250,8 @@ export async function POST(request: NextRequest) {
           method: 'email',
           email: normalizedEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3'), // masked email
           message: 'A verification code has been sent to your email',
-          // In demo/dev mode, include the OTP for testing
-          ...(process.env.NODE_ENV !== 'production' ? { _otp: otp } : {}),
+          // Show OTP for admin login (email not configured for real delivery yet)
+          _otp: otp,
           _demo: true,
         });
       }

@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
       success: true,
       message: `A verification code has been sent to ${maskedEmail}`,
       email: maskedEmail,
-      // In demo/dev mode, include the OTP for testing
-      ...(process.env.NODE_ENV !== 'production' ? { _otp: otp } : {}),
+      // Show OTP for admin login (email not configured for real delivery yet)
+      _otp: otp,
     });
   } catch (error) {
     console.error('Email OTP send error:', error);

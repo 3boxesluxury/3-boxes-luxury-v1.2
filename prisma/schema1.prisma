@@ -3,10 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-  relationMode = "prisma"
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model Category {
@@ -16,7 +14,7 @@ model Category {
   description String?
   image       String?
   parentId    String?
-  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   order       Int       @default(0)
   createdAt   DateTime  @default(now())
@@ -36,7 +34,7 @@ model Product {
   sku            String?
   images         String    // JSON array of image URLs
   categoryId     String
-  category       Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  category       Category  @relation(fields: [categoryId], references: [id])
   stock          Int       @default(0)
   stockStatus    String    @default("in_stock") // in_stock, low_stock, out_of_stock, preorder
   reorderLevel   Int       @default(5)
@@ -49,7 +47,7 @@ model Product {
   relationships  String?   // JSON array: spouse, parent, sibling, friend, colleague, boss
   deliveryEstimate String? // e.g. "3-5 business days"
   vendorId       String?
-  vendor         Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  vendor         Vendor?   @relation(fields: [vendorId], references: [id])
   sourceUrl      String?
   platform       String?   // myntra, nykaa, amazon, caratlane, tanishq, bluestone, voylla, flipkart, etc.
   affiliateUrl   String?   // affiliate/tracking link for external products
@@ -76,7 +74,7 @@ model Product {
 model ProductVariant {
   id          String   @id @default(cuid())
   productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   name        String   // e.g. "Red / Large", "Gold Plated"
   sku         String?  // variant-specific SKU
   price       Float    // variant price (overrides product price if > 0)
@@ -93,7 +91,7 @@ model ProductVariant {
 model ProductImage {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   alt       String?
   sort      Int      @default(0)
@@ -127,7 +125,7 @@ model PlatformIntegration {
 model SyncLog {
   id              String    @id @default(cuid())
   integrationId   String
-  integration     PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  integration     PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   type            String    // full, incremental, category
   status          String    // started, completed, failed
   productsFound   Int       @default(0)
@@ -152,9 +150,9 @@ model Cart {
 model CartItem {
   id             String  @id @default(cuid())
   cartId         String
-  cart           Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  cart           Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId      String
-  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product        Product @relation(fields: [productId], references: [id])
   quantity       Int     @default(1)
   variantId      String? // selected product variant
   giftWrapping   Boolean @default(false)
@@ -211,9 +209,9 @@ model Order {
 model OrderItem {
   id          String  @id @default(cuid())
   orderId     String
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId   String
-  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product     Product @relation(fields: [productId], references: [id])
   name        String
   price       Float
   quantity    Int
@@ -228,7 +226,7 @@ model OrderItem {
 model OrderTrackingEvent {
   id          String   @id @default(cuid())
   orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   status      String   // pending, confirmed, processing, shipped, out_for_delivery, delivered, cancelled
   description String?  // e.g. "Package picked up from warehouse"
   location    String?  // e.g. "Mumbai Hub"
@@ -238,7 +236,7 @@ model OrderTrackingEvent {
 model PaymentSession {
   id              String   @id @default(cuid())
   orderId         String
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   provider        String   // razorpay, stripe
   providerSessionId String? // Razorpay order ID or Stripe session ID
   amount          Float
@@ -254,7 +252,7 @@ model PaymentSession {
 model OrderInvoice {
   id            String   @id @default(cuid())
   orderId       String   @unique
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  order         Order    @relation(fields: [orderId], references: [id])
   invoiceNumber String   @unique
   amount        Float
   tax           Float    @default(0)
@@ -310,7 +308,7 @@ model User {
 model UserPermission {
   id         String   @id @default(cuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   permission String   // e.g. "products.manage", "orders.manage", "accounting.view"
   createdAt  DateTime @default(now())
 
@@ -321,7 +319,7 @@ model Session {
   id           String   @id @default(cuid())
   token        String   @unique
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ipAddress    String?
   userAgent    String?
   deviceInfo   String?  // parsed device info
@@ -333,7 +331,7 @@ model Session {
 model AuditLog {
   id          String   @id @default(cuid())
   userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action      String   // login, logout, password_change, role_change, approval_change, mfa_setup, etc.
   entity      String?  // user, order, product, corporate, campaign, etc.
   entityId    String?  // ID of the affected entity
@@ -363,7 +361,7 @@ model Invoice {
   id             String       @id @default(cuid())
   invoiceNumber  String       @unique
   vendorId       String?
-  vendor         Vendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
   orderId        String?
   amount         Float
   tax            Float        @default(0)
@@ -380,7 +378,7 @@ model Invoice {
 model InvoiceItem {
   id          String  @id @default(cuid())
   invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
   quantity    Int     @default(1)
   unitPrice   Float
@@ -401,7 +399,7 @@ model AccountEntry {
 model InventoryLog {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product   Product  @relation(fields: [productId], references: [id])
   type      String   // in, out, adjustment, return
   quantity  Int
   note      String?
@@ -411,9 +409,9 @@ model InventoryLog {
 model WishlistItem {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product   Product  @relation(fields: [productId], references: [id])
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
@@ -473,7 +471,7 @@ model AgentDocShare {
   message      String?
   createdAt    DateTime @default(now())
 
-  document WikiDocument @relation(fields: [docId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  document WikiDocument @relation(fields: [docId], references: [id])
 }
 
 model Coupon {
@@ -507,7 +505,7 @@ model SupportTicket {
 model SupportTicketMessage {
   id        String         @id @default(cuid())
   ticketId  String
-  ticket    SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  ticket    SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   senderId  String?
   message   String
   createdAt DateTime       @default(now())
@@ -527,7 +525,7 @@ model AffiliateClick {
 model PartnerCategoryMap {
   id             String   @id @default(cuid())
   integrationId  String
-  integration    PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  integration    PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   partnerCatName String   // category name on partner site (e.g. "Rings", "Necklaces")
   partnerCatSlug String   // category slug on partner site
   localCatId     String?  // map to our category (nullable = create new)
@@ -561,7 +559,7 @@ model CorporateAccount {
   country         String    @default("India")
   logo            String?
   userId          String    @unique  // linked User account
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  user            User      @relation(fields: [userId], references: [id])
   approvalStatus  String    @default("pending") // pending, approved, rejected, suspended
   isActive        Boolean   @default(true)
   creditLimit     Float     @default(0)
@@ -578,7 +576,7 @@ model CorporateAccount {
 model CorporateMember {
   id            String          @id @default(cuid())
   corporateId   String
-  corporate     CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  corporate     CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade)
   userId        String?         // linked User account (nullable until they accept invite)
   email         String
   name          String?
@@ -595,7 +593,7 @@ model CorporateMember {
 model CorporateBranding {
   id              String          @id @default(cuid())
   corporateId     String          @unique
-  corporate       CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  corporate       CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade)
   logoUrl         String?
   primaryColor    String?         // hex color
   secondaryColor  String?         // hex color
@@ -612,7 +610,7 @@ model CorporateBranding {
 model CorporateCampaign {
   id              String   @id @default(cuid())
   corporateId     String
-  corporate       CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  corporate       CorporateAccount @relation(fields: [corporateId], references: [id])
   name            String
   occasion        String?  // diwali, christmas, new_year, birthday, anniversary, onboarding, etc.
   description     String?
@@ -623,7 +621,7 @@ model CorporateCampaign {
   deliveryDate    DateTime?
   message         String?  // custom greeting message for this campaign
   productId       String?  // selected product for all recipients
-  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  product         Product? @relation(fields: [productId], references: [id])
   recipients      CampaignRecipient[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -632,7 +630,7 @@ model CorporateCampaign {
 model CampaignRecipient {
   id          String   @id @default(cuid())
   campaignId  String
-  campaign    CorporateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  campaign    CorporateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   name        String
   email       String
   phone       String?
@@ -643,7 +641,7 @@ model CampaignRecipient {
   state       String?
   zipCode     String?
   productId   String?  // override campaign-level product
-  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  product     Product? @relation(fields: [productId], references: [id])
   budget      Float?   // override campaign budget
   message     String?  // override campaign message
   giftStatus  String   @default("pending") // pending, ordered, shipped, delivered, cancelled
@@ -657,9 +655,9 @@ model CampaignRecipient {
 model Review {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderId   String?
-  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  order     Order?   @relation(fields: [orderId], references: [id])
   userId    String?
   userName  String
   rating    Int      // 1-5
@@ -675,7 +673,7 @@ model Review {
 model CustomerPortfolio {
   id               String    @id @default(cuid())
   productId        String
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   userId           String?
   userName         String
   aiGeneratedImage String    // URL or base64 of the AI-generated style preview image
