@@ -441,37 +441,31 @@ export function AuthDialog() {
       setError(null)
       setSuccess(null)
 
-      // Google → real OAuth redirect
-      if (provider === 'Google') {
-        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '1057307558914-69t9cargikv5di9giaqk83vpc0t1e5vf.apps.googleusercontent.com'
-        const redirectUri = `${window.location.origin}/api/auth/google/callback`
-        const scope = 'openid email profile'
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`
-        window.location.href = googleAuthUrl
-        return
-      }
-
-      // Facebook → real OAuth redirect
+      // Facebook Login - Real OAuth redirect
       if (provider === 'Facebook') {
-        const appId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || '1638724140532761'
-        const redirectUri = `${window.location.origin}/api/auth/facebook/callback`
-        const scope = 'public_profile,email'
-        const fbAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`
-        window.location.href = fbAuthUrl
+        const appId = '1638724140532761'
+        const redirectUri = encodeURIComponent(
+          typeof window !== 'undefined' && window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api/auth/facebook/callback'
+            : 'https://3-boxes-luxury-v1-2.vercel.app/api/auth/facebook/callback'
+        )
+        const state = Math.random().toString(36).substring(2, 15)
+        const facebookAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&state=${state}&scope=email,public_profile&response_type=code`
+        window.location.href = facebookAuthUrl
         return
       }
 
-      // LinkedIn → simulated
+      // Other providers - simulated social login
       setLoading(true)
       try {
         const res = await fetch('/api/auth/social', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            provider: 'linkedin',
-            name: 'LinkedIn User',
-            socialId: `linkedin_${Date.now()}`,
-            email: `user_${Date.now()}@linkedin.com`,
+            provider: provider.toLowerCase(),
+            name: `${provider} User`,
+            socialId: `social_${Date.now()}`,
+            email: `user_${Date.now()}@${provider.toLowerCase()}.com`,
           }),
         })
 

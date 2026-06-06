@@ -1,32 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // ============================================================
-// Facebook OAuth Callback Route - V3 (Production-Ready)
+// Google OAuth Callback Route - Production-Ready
 // ============================================================
-// SELF-CONTAINED - Does NOT import @/lib/sessions or @/lib/db
-// at the top level, which was causing 404 errors on Vercel.
-//
-// Instead, it uses dynamic imports with fallback:
-// 1. Try @/lib/db + @/lib/sessions (proper DB-backed auth)
-// 2. Try /api/auth/social endpoint (reuse existing working route)
-// 3. Fall back to direct JWT (works without DB)
-//
-// Also sets auth cookies so the existing auth middleware works.
+// Handles the OAuth callback from Google.
+// 1. Exchanges authorization code for access token
+// 2. Fetches user profile from Google
+// 3. Creates/finds user via /api/auth/social
+// 4. Redirects to app with token params
+// 5. Sets auth cookies for middleware
 // ============================================================
 
-const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID || '1638724140532761';
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || 'f6faeeafe9b64e31719894476129b4ee';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 
 // Detect the correct redirect URI based on environment
 function getRedirectUri(requestUrl: string): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
-    return `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/facebook/callback`;
+    return `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`;
   }
   try {
     const url = new URL(requestUrl);
-    return `${url.origin}/api/auth/facebook/callback`;
+    return `${url.origin}/api/auth/google/callback`;
   } catch {
-    return 'https://3-boxes-luxury-v1-2.vercel.app/api/auth/facebook/callback';
+    return 'https://3-boxes-luxury-v1-2.vercel.app/api/auth/google/callback';
   }
 }
 
@@ -43,7 +40,7 @@ function getAppUrl(requestUrl: string): string {
   }
 }
 
-// Create a JWT token (fallback - no dependency on @/lib/sessions)
+// Create a fallback JWT (no dependency on @/lib/sessions)
 async function createFallbackJWT(payload: object): Promise<string | null> {
   try {
     const jwt = await import('jsonwebtoken');
@@ -63,84 +60,85 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(requestUrl);
     const code = searchParams.get('code');
     const error = searchParams.get('error');
-    const errorReason = searchParams.get('error_reason');
-    const state = searchParams.get('state') || '';
-
-    // Extract returnTo from state parameter (format: fb_connect_TIMESTAMP_returnTo_VIEW)
-    let returnTo = '';
-    if (state.includes('_returnTo_')) {
-      const parts = state.split('_returnTo_');
-      returnTo = parts[1] || '';
-    }
 
     // User denied permission
     if (error) {
-      console.log('[FB Auth] User denied permission:', error, errorReason);
+      console.log('[Google Auth] User denied permission:', error);
       return NextResponse.redirect(`${appUrl}/?auth=denied`);
     }
 
     if (!code) {
-      console.log('[FB Auth] No authorization code received');
+      console.log('[Google Auth] No authorization code received');
       return NextResponse.redirect(`${appUrl}/?auth=error&reason=no_code`);
     }
 
-    console.log('[FB Auth] Received authorization code, exchanging for token...');
+    console.log('[Google Auth] Received authorization code, exchanging for token...');
 
     // Step 1: Exchange code for access token
     let tokenData: any;
     try {
-      const tokenResponse = await fetch(
-        `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET}&code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}`,
-        { method: 'GET' }
-      );
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code,
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+        }),
+      });
       tokenData = await tokenResponse.json();
     } catch (fetchError) {
-      console.error('[FB Auth] Token exchange fetch failed:', fetchError);
+      console.error('[Google Auth] Token exchange fetch failed:', fetchError);
       return NextResponse.redirect(`${appUrl}/?auth=error&reason=token_fetch_failed`);
     }
 
     if (tokenData.error) {
-      console.error('[FB Auth] Token exchange error:', tokenData.error);
-      return NextResponse.redirect(`${appUrl}/?auth=error&reason=token_error&msg=${encodeURIComponent(tokenData.error.message || 'unknown')}`);
+      console.error('[Google Auth] Token exchange error:', tokenData.error);
+      return NextResponse.redirect(`${appUrl}/?auth=error&reason=token_error&msg=${encodeURIComponent(tokenData.error_description || tokenData.error)}`);
     }
 
     const accessToken = tokenData.access_token;
     if (!accessToken) {
-      console.error('[FB Auth] No access token in response:', tokenData);
+      console.error('[Google Auth] No access token in response:', tokenData);
       return NextResponse.redirect(`${appUrl}/?auth=error&reason=no_access_token`);
     }
 
-    console.log('[FB Auth] Token received, fetching user profile...');
+    console.log('[Google Auth] Token received, fetching user profile...');
 
-    // Step 2: Get user profile from Facebook
+    // Step 2: Get user profile from Google
     let profileData: any;
     try {
       const profileResponse = await fetch(
-        `https://graph.facebook.com/v19.0/me?fields=id,name,email,picture.width(200).height(200)&access_token=${accessToken}`,
-        { method: 'GET' }
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
       );
       profileData = await profileResponse.json();
     } catch (fetchError) {
-      console.error('[FB Auth] Profile fetch failed:', fetchError);
+      console.error('[Google Auth] Profile fetch failed:', fetchError);
       return NextResponse.redirect(`${appUrl}/?auth=error&reason=profile_fetch_failed`);
     }
 
     if (profileData.error) {
-      console.error('[FB Auth] Profile fetch error:', profileData.error);
-      return NextResponse.redirect(`${appUrl}/?auth=error&reason=profile_error&msg=${encodeURIComponent(profileData.error.message || 'unknown')}`);
+      console.error('[Google Auth] Profile fetch error:', profileData.error);
+      return NextResponse.redirect(`${appUrl}/?auth=error&reason=profile_error`);
     }
 
-    const facebookId = profileData.id;
-    const name = profileData.name || 'Facebook User';
+    const googleId = profileData.id;
+    const name = profileData.name || 'Google User';
     const email = profileData.email || null;
-    const avatar = profileData.picture?.data?.url || null;
+    const avatar = profileData.picture || null;
 
-    if (!facebookId) {
-      console.error('[FB Auth] No Facebook ID in profile');
-      return NextResponse.redirect(`${appUrl}/?auth=error&reason=no_facebook_id`);
+    if (!googleId) {
+      console.error('[Google Auth] No Google ID in profile');
+      return NextResponse.redirect(`${appUrl}/?auth=error&reason=no_google_id`);
     }
 
-    console.log('[FB Auth] Profile received:', { facebookId, name, email: email || '(not provided)' });
+    console.log('[Google Auth] Profile received:', { googleId, name, email: email || '(not provided)' });
 
     // ============================================================
     // Step 3: Try multiple auth strategies (in order of preference)
@@ -152,9 +150,9 @@ export async function GET(request: NextRequest) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: 'facebook',
-          socialId: facebookId,
-          email: email || `fb_${facebookId}@3boxesluxury.com`,
+          provider: 'google',
+          socialId: googleId,
+          email: email || `google_${googleId}@3boxesluxury.com`,
           name: name,
           avatar: avatar,
         }),
@@ -166,49 +164,58 @@ export async function GET(request: NextRequest) {
         const user = socialData.user;
         const jwtToken = socialData.token;
 
-        console.log('[FB Auth] Strategy A (social endpoint) SUCCESS for:', user.name);
+        console.log('[Google Auth] Strategy A (social endpoint) SUCCESS for:', user.name);
 
+        // Build redirect URL with token params
         const redirectUrl = new URL(appUrl);
         redirectUrl.searchParams.set('token', jwtToken);
         redirectUrl.searchParams.set('userId', user.id || '');
         redirectUrl.searchParams.set('userName', user.name || name);
         redirectUrl.searchParams.set('userEmail', user.email || '');
         redirectUrl.searchParams.set('userRole', user.role || 'user');
-        redirectUrl.searchParams.set('authProvider', 'facebook');
-        if (returnTo) redirectUrl.searchParams.set('returnTo', returnTo);
+        redirectUrl.searchParams.set('authProvider', 'google');
         if (socialData.isNewUser) {
           redirectUrl.searchParams.set('isNewUser', 'true');
         }
 
         const response = NextResponse.redirect(redirectUrl.toString());
 
+        // Set auth cookies
         response.cookies.set('auth-token', jwtToken, {
-          httpOnly: true, secure: true, sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7, path: '/',
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7,
+          path: '/',
         });
-        response.cookies.set('auth-provider', 'facebook', {
-          httpOnly: false, secure: true, sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7, path: '/',
+        response.cookies.set('auth-provider', 'google', {
+          httpOnly: false,
+          secure: true,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7,
+          path: '/',
         });
 
         return response;
       }
 
-      console.warn('[FB Auth] Strategy A failed:', socialData.error || socialData.message || 'unknown error');
+      console.warn('[Google Auth] Strategy A failed:', socialData.error || socialData.message || 'unknown error');
     } catch (socialError) {
-      console.warn('[FB Auth] Strategy A (social endpoint) exception:', socialError);
+      console.warn('[Google Auth] Strategy A (social endpoint) exception:', socialError);
     }
 
     // Strategy B: Try direct DB access via dynamic import
     try {
       const { db } = await import('@/lib/db');
 
-      const userEmail = email || `fb_${facebookId}@3boxesluxury.com`;
+      const userEmail = email || `google_${googleId}@3boxesluxury.com`;
 
+      // Find existing user by social ID
       let user = await db.user.findFirst({
-        where: { socialProvider: 'facebook', socialId: facebookId },
+        where: { socialProvider: 'google', socialId: googleId },
       });
 
+      // Try to find by email and link accounts
       if (!user && email) {
         user = await db.user.findUnique({
           where: { email: email.toLowerCase().trim() },
@@ -217,14 +224,15 @@ export async function GET(request: NextRequest) {
           user = await db.user.update({
             where: { id: user.id },
             data: {
-              socialProvider: 'facebook',
-              socialId: facebookId,
+              socialProvider: 'google',
+              socialId: googleId,
               ...(avatar && !user.avatar ? { avatar } : {}),
             },
           });
         }
       }
 
+      // Check user status
       if (user) {
         if ('isActive' in user && !user.isActive) {
           return NextResponse.redirect(`${appUrl}/?auth=deactivated`);
@@ -238,6 +246,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // Update avatar if missing
         if (avatar && 'avatar' in user && !user.avatar) {
           await db.user.update({
             where: { id: user.id },
@@ -245,20 +254,21 @@ export async function GET(request: NextRequest) {
           }).catch(() => {});
         }
 
+        // Generate JWT
         const jwtToken = await createFallbackJWT({
           type: 'session',
           userId: user.id,
           email: user.email,
           name: user.name,
           role: 'role' in user ? user.role : 'user',
-          authProvider: 'facebook',
+          authProvider: 'google',
         });
 
         if (!jwtToken) {
           return NextResponse.redirect(`${appUrl}/?auth=error&reason=jwt_failed`);
         }
 
-        console.log('[FB Auth] Strategy B (direct DB) SUCCESS for:', user.name);
+        console.log('[Google Auth] Strategy B (direct DB) SUCCESS for:', user.name);
 
         const redirectUrl = new URL(appUrl);
         redirectUrl.searchParams.set('token', jwtToken);
@@ -266,15 +276,14 @@ export async function GET(request: NextRequest) {
         redirectUrl.searchParams.set('userName', user.name);
         redirectUrl.searchParams.set('userEmail', user.email);
         redirectUrl.searchParams.set('userRole', 'role' in user ? user.role : 'user');
-        redirectUrl.searchParams.set('authProvider', 'facebook');
-        if (returnTo) redirectUrl.searchParams.set('returnTo', returnTo);
+        redirectUrl.searchParams.set('authProvider', 'google');
 
         const response = NextResponse.redirect(redirectUrl.toString());
         response.cookies.set('auth-token', jwtToken, {
           httpOnly: true, secure: true, sameSite: 'lax',
           maxAge: 60 * 60 * 24 * 7, path: '/',
         });
-        response.cookies.set('auth-provider', 'facebook', {
+        response.cookies.set('auth-provider', 'google', {
           httpOnly: false, secure: true, sameSite: 'lax',
           maxAge: 60 * 60 * 24 * 7, path: '/',
         });
@@ -288,8 +297,8 @@ export async function GET(request: NextRequest) {
         password: null,
         role: 'user',
         avatar: avatar,
-        socialProvider: 'facebook',
-        socialId: facebookId,
+        socialProvider: 'google',
+        socialId: googleId,
         approvalStatus: 'approved',
         isActive: true,
         emailVerified: !!email,
@@ -307,14 +316,14 @@ export async function GET(request: NextRequest) {
         email: newUser.email,
         name: newUser.name,
         role: newUser.role || 'user',
-        authProvider: 'facebook',
+        authProvider: 'google',
       });
 
       if (!jwtToken) {
         return NextResponse.redirect(`${appUrl}/?auth=error&reason=jwt_failed`);
       }
 
-      console.log('[FB Auth] Strategy B (direct DB) NEW USER:', newUser.name);
+      console.log('[Google Auth] Strategy B (direct DB) NEW USER:', newUser.name);
 
       const redirectUrl = new URL(appUrl);
       redirectUrl.searchParams.set('token', jwtToken);
@@ -322,34 +331,33 @@ export async function GET(request: NextRequest) {
       redirectUrl.searchParams.set('userName', newUser.name);
       redirectUrl.searchParams.set('userEmail', newUser.email);
       redirectUrl.searchParams.set('userRole', newUser.role || 'user');
-      redirectUrl.searchParams.set('authProvider', 'facebook');
+      redirectUrl.searchParams.set('authProvider', 'google');
       redirectUrl.searchParams.set('isNewUser', 'true');
-      if (returnTo) redirectUrl.searchParams.set('returnTo', returnTo);
 
       const response = NextResponse.redirect(redirectUrl.toString());
       response.cookies.set('auth-token', jwtToken, {
         httpOnly: true, secure: true, sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, path: '/',
       });
-      response.cookies.set('auth-provider', 'facebook', {
+      response.cookies.set('auth-provider', 'google', {
         httpOnly: false, secure: true, sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 7, path: '/',
       });
       return response;
 
     } catch (dbError) {
-      console.warn('[FB Auth] Strategy B (direct DB) failed:', dbError);
+      console.warn('[Google Auth] Strategy B (direct DB) failed:', dbError);
     }
 
     // Strategy C: Fallback - Direct JWT without database
-    console.log('[FB Auth] Falling back to Strategy C (direct JWT)');
+    console.log('[Google Auth] Falling back to Strategy C (direct JWT)');
     const fallbackToken = await createFallbackJWT({
       type: 'session',
-      userId: `fb_${facebookId}`,
-      email: email || `fb_${facebookId}@3boxesluxury.com`,
+      userId: `google_${googleId}`,
+      email: email || `google_${googleId}@3boxesluxury.com`,
       name: name,
       role: 'user',
-      authProvider: 'facebook',
+      authProvider: 'google',
     });
 
     if (!fallbackToken) {
@@ -359,25 +367,24 @@ export async function GET(request: NextRequest) {
     const redirectUrl = new URL(appUrl);
     redirectUrl.searchParams.set('token', fallbackToken);
     redirectUrl.searchParams.set('userName', name);
-    redirectUrl.searchParams.set('userEmail', email || `fb_${facebookId}@3boxesluxury.com`);
+    redirectUrl.searchParams.set('userEmail', email || `google_${googleId}@3boxesluxury.com`);
     redirectUrl.searchParams.set('userRole', 'user');
-    redirectUrl.searchParams.set('authProvider', 'facebook');
+    redirectUrl.searchParams.set('authProvider', 'google');
     redirectUrl.searchParams.set('isNewUser', 'true');
-    if (returnTo) redirectUrl.searchParams.set('returnTo', returnTo);
 
     const response = NextResponse.redirect(redirectUrl.toString());
     response.cookies.set('auth-token', fallbackToken, {
       httpOnly: true, secure: true, sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, path: '/',
     });
-    response.cookies.set('auth-provider', 'facebook', {
+    response.cookies.set('auth-provider', 'google', {
       httpOnly: false, secure: true, sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, path: '/',
     });
     return response;
 
   } catch (error) {
-    console.error('[FB Auth] Unexpected callback error:', error);
+    console.error('[Google Auth] Unexpected callback error:', error);
     return NextResponse.redirect(`${appUrl}/?auth=error&reason=unexpected`);
   }
 }
