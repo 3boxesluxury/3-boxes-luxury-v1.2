@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useStore } from '@/lib/store'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,7 @@ import {
   Facebook,
   Linkedin,
   Instagram,
+  Chrome,
   Loader2,
   Sparkles,
   Shield,
@@ -39,21 +40,9 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
-// Google SVG Icon
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-    </svg>
-  )
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type SocialNetwork = 'facebook' | 'google' | 'linkedin' | 'instagram'
+type SocialNetwork = 'facebook' | 'linkedin' | 'instagram' | 'google'
 
 interface SocialConnection {
   network: SocialNetwork
@@ -123,6 +112,22 @@ interface SocialNetworkConfig {
 
 const SOCIAL_NETWORKS: SocialNetworkConfig[] = [
   {
+    network: 'google',
+    label: 'Google',
+    icon: <Chrome className="size-5" />,
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/10',
+    borderColor: 'border-red-500/20',
+    dataDescription: [
+      'Your Google profile information',
+      'YouTube subscriptions & preferences',
+      'Search patterns related to fashion',
+      'Google Photos for style analysis',
+    ],
+    dataItems: ['Profile', 'YouTube', 'Search', 'Photos'],
+    realConnect: true,
+  },
+  {
     network: 'facebook',
     label: 'Facebook',
     icon: <Facebook className="size-5" />,
@@ -139,22 +144,6 @@ const SOCIAL_NETWORKS: SocialNetworkConfig[] = [
     realConnect: true,
   },
   {
-    network: 'google',
-    label: 'Google',
-    icon: <GoogleIcon className="size-5" />,
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/10',
-    borderColor: 'border-red-500/20',
-    dataDescription: [
-      'Your Google profile & account info',
-      'YouTube channel & subscriptions',
-      'Interest categories from your activity',
-      'Saved places & travel preferences',
-    ],
-    dataItems: ['Profile', 'YouTube', 'Interests', 'Activity'],
-    realConnect: true,
-  },
-  {
     network: 'linkedin',
     label: 'LinkedIn',
     icon: <Linkedin className="size-5" />,
@@ -168,7 +157,7 @@ const SOCIAL_NETWORKS: SocialNetworkConfig[] = [
       'Skills & endorsements related to fashion',
     ],
     dataItems: ['Profile', 'Industry', 'Communities', 'Skills'],
-    realConnect: false,
+    realConnect: true,
   },
   {
     network: 'instagram',
@@ -188,7 +177,7 @@ const SOCIAL_NETWORKS: SocialNetworkConfig[] = [
   },
 ]
 
-// ─── Fallback Data ────────────────────────────────────────────────────────────
+// ─── Fallback Mock Data ───────────────────────────────────────────────────────
 
 const FALLBACK_ANALYSIS: StyleAnalysis = {
   styleProfile: {
@@ -203,7 +192,6 @@ const FALLBACK_ANALYSIS: StyleAnalysis = {
     { name: 'Champagne Gold', hex: '#F7E7CE', affinity: 85 },
     { name: 'Slate Blue', hex: '#6A7BA2', affinity: 78 },
     { name: 'Burgundy', hex: '#800020', affinity: 72 },
-    { name: 'Forest Green', hex: '#228B22', affinity: 65 },
   ],
   recommendedCategories: [
     { name: 'Luxury Watches', score: 95, reason: 'Your classic aesthetic aligns perfectly with timeless timepieces' },
@@ -220,6 +208,7 @@ const FALLBACK_PRODUCTS: ProductRecommendation[] = [
   { id: 'rec-3', name: 'Emerald Tennis Bracelet', price: 62000, image: '/images/products/generated/emerald-tennis-bracelet-11047388709137.png', reason: 'Sophisticated elegance that matches your style', matchScore: 91 },
   { id: 'rec-4', name: 'Jardin Secret Eau de Parfum', price: 8500, image: '/images/products/generated/jardin-secret-eau-de-parfum-11047389036817.png', reason: 'Layered complexity for your contemporary taste', matchScore: 87 },
   { id: 'rec-5', name: 'Cashmere Overcoat', price: 35000, image: '/images/products/generated/cashmere-overcoat-11047388414225.png', reason: 'Premium fabric perfect for your refined palette', matchScore: 84 },
+  { id: 'rec-6', name: 'Sapphire Cascade Earrings', price: 38000, image: '/images/products/generated/sapphire-cascade-earrings-11047389954321.png', reason: 'Understated luxury that speaks to your sophistication', matchScore: 82 },
 ]
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
@@ -239,121 +228,52 @@ const cardHover = {
   hover: { scale: 1.02, transition: { duration: 0.2, ease: 'easeOut' as const } },
 }
 
-// ─── Facebook SDK Loader ──────────────────────────────────────────────────────
+// ─── Facebook SDK types (minimal, used only for disconnect) ──────────────────
 
 declare global {
   interface Window {
     FB?: {
-      init: (params: any) => void
-      login: (callback: (response: any) => void, params?: any) => void
       getLoginStatus: (callback: (response: any) => void) => void
       logout: (callback: () => void) => void
-      api: (path: string, params: any, callback: (response: any) => void) => void
     }
-    fbAsyncInit?: () => void
   }
-}
-
-function loadFacebookSDK(): Promise<void> {
-  return new Promise((resolve) => {
-    if (window.FB) {
-      resolve()
-      return
-    }
-
-    window.fbAsyncInit = () => {
-      window.FB!.init({
-        appId: '1638724140532761',
-        cookie: true,
-        xfbml: false,
-        version: 'v19.0',
-      })
-      resolve()
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://connect.facebook.net/en_US/sdk.js'
-    script.async = true
-    script.defer = true
-    script.crossOrigin = 'anonymous'
-    document.head.appendChild(script)
-  })
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-// ─── LocalStorage helpers for persisting social connections ────────────────
+const STORAGE_KEY = '3boxes_social_connections'
 
-const SOCIAL_CONNECTIONS_KEY = '3boxes-social-connections'
-
-function loadPersistedConnections(): Partial<SocialConnection>[] {
+// Helper: load persisted connections from localStorage
+function loadPersistedConnections(): Record<string, { name: string; email?: string; avatar?: string }> {
+  if (typeof window === 'undefined') return {}
   try {
-    const raw = localStorage.getItem(SOCIAL_CONNECTIONS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return []
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
 }
 
-function persistConnections(connections: SocialConnection[]) {
+// Helper: save connections to localStorage
+function persistConnections(data: Record<string, { name: string; email?: string; avatar?: string }>) {
+  if (typeof window === 'undefined') return
   try {
-    const data = connections
-      .filter((c) => c.connected)
-      .map((c) => ({
-        network: c.network,
-        connected: c.connected,
-        profile: c.profile,
-      }))
-    localStorage.setItem(SOCIAL_CONNECTIONS_KEY, JSON.stringify(data))
-  } catch { /* ignore */ }
-}
-
-function clearPersistedConnection(network: SocialNetwork) {
-  try {
-    const raw = localStorage.getItem(SOCIAL_CONNECTIONS_KEY)
-    if (raw) {
-      const data: Partial<SocialConnection>[] = JSON.parse(raw)
-      const updated = data.filter((c) => c.network !== network)
-      localStorage.setItem(SOCIAL_CONNECTIONS_KEY, JSON.stringify(updated))
-    }
-  } catch { /* ignore */ }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+  } catch {}
 }
 
 export function SocialStyleIntegration() {
   const { authUser, setAuthView } = useStore()
-  const fbLoaded = useRef(false)
 
-  // Connection states - initialize with persisted data
+  // Connection states — initialized from localStorage if available
   const [connections, setConnections] = useState<SocialConnection[]>(() => {
     const persisted = loadPersistedConnections()
-    const persistedMap = new Map(persisted.map((c) => [c.network, c]))
-
-    // Also check if returning from OAuth redirect
-    let returningProvider: string | null = null
-    try {
-      returningProvider = localStorage.getItem('auth-provider')
-    } catch { /* ignore */ }
-
-    return (
-      [
-        { network: 'facebook', connected: false, connecting: false },
-        { network: 'google', connected: false, connecting: false },
-        { network: 'linkedin', connected: false, connecting: false },
-        { network: 'instagram', connected: false, connecting: false },
-      ] as SocialConnection[]
-    ).map((defaultConn) => {
-      const saved = persistedMap.get(defaultConn.network)
-      const isConnected = saved?.connected ||
-        (returningProvider === defaultConn.network && !!authUser)
-
-      return {
-        ...defaultConn,
-        connected: isConnected,
-        profile: saved?.profile ||
-          (isConnected && returningProvider === defaultConn.network
-            ? { name: authUser?.name || `${defaultConn.network} User` }
-            : undefined),
-      }
-    })
+    return [
+      { network: 'google', connected: !!persisted.google, connecting: false, profile: persisted.google ? { name: persisted.google.name, email: persisted.google.email, avatar: persisted.google.avatar } : undefined },
+      { network: 'facebook', connected: !!persisted.facebook, connecting: false, profile: persisted.facebook ? { name: persisted.facebook.name, email: persisted.facebook.email, avatar: persisted.facebook.avatar } : undefined },
+      { network: 'linkedin', connected: !!persisted.linkedin, connecting: false, profile: persisted.linkedin ? { name: persisted.linkedin.name, email: persisted.linkedin.email, avatar: persisted.linkedin.avatar } : undefined },
+      { network: 'instagram', connected: !!persisted.instagram, connecting: false, profile: persisted.instagram ? { name: persisted.instagram.name, email: persisted.instagram.email } : undefined },
+    ]
   })
 
   // Consent dialog
@@ -376,33 +296,6 @@ export function SocialStyleIntegration() {
     allowPersonalizedAds: false,
   })
 
-  // ─── Persist connections to localStorage whenever they change ──────────────
-  useEffect(() => {
-    persistConnections(connections)
-  }, [connections])
-
-  // ─── Detect OAuth return and mark connection as connected ──────────────────
-  useEffect(() => {
-    try {
-      const returningProvider = localStorage.getItem('auth-provider')
-      if (returningProvider && authUser) {
-        const network = returningProvider as SocialNetwork
-        if (network === 'google' || network === 'facebook') {
-          updateConnection(network, {
-            connecting: false,
-            connected: true,
-            profile: {
-              name: authUser.name || `${returningProvider} User`,
-              email: authUser.email,
-            },
-          })
-        }
-      }
-    } catch { /* ignore */ }
-    // Only run on mount or when authUser changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUser])
-
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   const connectedNetworks = connections.filter((c) => c.connected)
@@ -411,109 +304,236 @@ export function SocialStyleIntegration() {
 
   const updateConnection = useCallback(
     (network: SocialNetwork, updates: Partial<SocialConnection>) => {
-      setConnections((prev) =>
-        prev.map((c) => (c.network === network ? { ...c, ...updates } : c))
-      )
+      setConnections((prev) => {
+        const next = prev.map((c) => (c.network === network ? { ...c, ...updates } : c))
+        // Persist to localStorage whenever connections change
+        const persisted: Record<string, { name: string; email?: string; avatar?: string }> = {}
+        for (const c of next) {
+          if (c.connected && c.profile) {
+            persisted[c.network] = { name: c.profile.name, email: c.profile.email, avatar: c.profile.avatar }
+          }
+        }
+        persistConnections(persisted)
+        return next
+      })
     },
     []
   )
 
-  // ─── Real Facebook Connect Flow ────────────────────────────────────────────
+  // ─── Real Facebook Connect Flow (server-side redirect, like LinkedIn) ──────
 
-  const handleFacebookConnect = useCallback(async () => {
+  const handleFacebookConnect = useCallback(() => {
     updateConnection('facebook', { connecting: true })
 
+    // Store that we're connecting Facebook so we can detect it on return
     try {
-      if (!fbLoaded.current) {
-        await loadFacebookSDK()
-        fbLoaded.current = true
-      }
+      sessionStorage.setItem('3boxes_facebook_connect', 'true')
+      sessionStorage.setItem('3boxes_facebook_connect_time', Date.now().toString())
+    } catch {}
 
-      window.FB!.login(
-        async (response: any) => {
-          if (response.status === 'connected' && response.authResponse) {
-            const accessToken = response.authResponse.accessToken
-
-            try {
-              const res = await fetch('/api/auth/facebook/connect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessToken }),
-              })
-
-              const data = await res.json()
-
-              if (data.success && data.data) {
-                const socialData = data.data
-                updateConnection('facebook', {
-                  connecting: false,
-                  connected: true,
-                  profile: {
-                    name: socialData.profile.name,
-                    avatar: socialData.profile.avatar,
-                    email: socialData.profile.email,
-                  },
-                  likes: socialData.likes || [],
-                })
-              } else {
-                updateConnection('facebook', {
-                  connecting: false,
-                  connected: true,
-                  profile: { name: 'Facebook User' },
-                })
-              }
-            } catch {
-              updateConnection('facebook', {
-                connecting: false,
-                connected: true,
-                profile: { name: 'Facebook User' },
-              })
-            }
-          } else {
-            updateConnection('facebook', { connecting: false })
-          }
-        },
-        {
-          scope: 'public_profile,email',
-          return_scopes: true,
-        }
-      )
-    } catch {
-      // Fallback: redirect-based flow
-      const appId = '1638724140532761'
-      const redirectUri = `${window.location.origin}/api/auth/facebook/callback`
-      const scope = 'public_profile,email'
-      const state = `fb_connect_${Date.now()}_returnTo_social-style`
-      const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=${encodeURIComponent(state)}`
-      window.location.href = authUrl
-      updateConnection('facebook', { connecting: false })
-    }
+    // Redirect to Facebook OAuth — include view=social-style in returnTo so we come back to this page
+    // Use action=connect so the callback does NOT change the main login session
+    const returnUrl = '/?view=social-style'
+    window.location.href = `/api/auth/facebook?returnTo=${encodeURIComponent(returnUrl)}&action=connect`
   }, [updateConnection])
 
-  // ─── Real Google Connect Flow ────────────────────────────────────────────
+  // ─── Real LinkedIn Connect Flow ─────────────────────────────────────────────
 
-  const handleGoogleConnect = useCallback(async () => {
+  const handleLinkedInConnect = useCallback(() => {
+    updateConnection('linkedin', { connecting: true })
+
+    // Store that we're connecting LinkedIn so we can detect it on return
+    try {
+      sessionStorage.setItem('3boxes_linkedin_connect', 'true')
+      sessionStorage.setItem('3boxes_linkedin_connect_time', Date.now().toString())
+    } catch {}
+
+    // Redirect to LinkedIn OAuth — include view=social-style in returnTo so we come back to this page
+    // Use action=connect so the callback does NOT change the main login session
+    const returnUrl = '/?view=social-style'
+    window.location.href = `/api/auth/linkedin?returnTo=${encodeURIComponent(returnUrl)}&action=connect`
+  }, [updateConnection])
+
+  // ─── Real Google Connect Flow ────────────────────────────────────────────────
+
+  const handleGoogleConnect = useCallback(() => {
     updateConnection('google', { connecting: true })
 
+    // Store that we're connecting Google so we can detect it on return
     try {
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '1057307558914-69t9cargikv5di9giaqk83vpc0t1e5vf.apps.googleusercontent.com'
-      const redirectUri = `${window.location.origin}/api/auth/google/callback`
-      const scope = 'openid email profile'
-      const state = `google_connect_${Date.now()}_returnTo_social-style`
+      sessionStorage.setItem('3boxes_google_connect', 'true')
+      sessionStorage.setItem('3boxes_google_connect_time', Date.now().toString())
+    } catch {}
 
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-        `client_id=${clientId}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `response_type=code&` +
-        `scope=${encodeURIComponent(scope)}&` +
-        `state=${encodeURIComponent(state)}&` +
-        `prompt=select_account`
-
-      window.location.href = googleAuthUrl
-    } catch {
-      updateConnection('google', { connecting: false })
-    }
+    // Redirect to Google OAuth — include view=social-style in returnTo so we come back to this page
+    // Use action=connect so the callback does NOT change the main login session
+    const returnUrl = '/?view=social-style'
+    window.location.href = `/api/auth/google?returnTo=${encodeURIComponent(returnUrl)}&action=connect`
   }, [updateConnection])
+
+  // ─── Detect OAuth callback on this page (Google/LinkedIn/Facebook) ────────────
+  // When OAuth redirects back to this page (via ?view=social-style), we need to
+  // mark the corresponding social network as "connected".
+  //
+  // We read provider info from THREE sources (in priority order):
+  // 1. URL params: connect_provider/connect_name (set by callback when action=connect)
+  // 2. sessionStorage: 3boxes_oauth_provider/3boxes_oauth_name (set by OAuthCallbackHandler)
+  // 3. Per-provider markers: 3boxes_facebook_connect etc. (set before redirect)
+  //
+  // CRITICAL: For "connect" action, authUser is the ORIGINAL login user.
+  // The provider's name/email come from the URL or sessionStorage, NOT from authUser.
+  // This ensures Facebook shows Facebook's username, not Google's.
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    try {
+      // ─── SOURCE 1: Direct URL params (most reliable for connect action) ───
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlConnectProvider = urlParams.get('connect_provider')
+      const urlConnectName = urlParams.get('connect_name')
+      const urlConnectEmail = urlParams.get('connect_email')
+      const urlConnectAvatar = urlParams.get('connect_avatar')
+
+      if (urlConnectProvider && urlConnectName && authUser) {
+        const network = urlConnectProvider as SocialNetwork
+        console.log('[Social Connect] ✅ Connect detected via URL params:', urlConnectProvider, urlConnectName)
+
+        if (network === 'google' || network === 'facebook' || network === 'linkedin') {
+          updateConnection(network, {
+            connecting: false,
+            connected: true,
+            profile: {
+              name: urlConnectName,
+              email: urlConnectEmail || undefined,
+              avatar: urlConnectAvatar || undefined,
+            },
+          })
+        }
+
+        // Clean URL — remove connect params but keep view param
+        const cleanParams = new URLSearchParams()
+        const viewParam = urlParams.get('view')
+        if (viewParam) cleanParams.set('view', viewParam)
+        const cleanUrl = cleanParams.toString()
+          ? `${window.location.pathname}?${cleanParams.toString()}`
+          : window.location.pathname
+        window.history.replaceState({}, '', cleanUrl)
+
+        // Clean up all sessionStorage markers
+        sessionStorage.removeItem('3boxes_oauth_provider')
+        sessionStorage.removeItem('3boxes_oauth_name')
+        sessionStorage.removeItem('3boxes_oauth_email')
+        sessionStorage.removeItem('3boxes_oauth_avatar')
+        sessionStorage.removeItem('3boxes_oauth_social_id')
+        sessionStorage.removeItem('3boxes_linkedin_connect')
+        sessionStorage.removeItem('3boxes_linkedin_connect_time')
+        sessionStorage.removeItem('3boxes_google_connect')
+        sessionStorage.removeItem('3boxes_google_connect_time')
+        sessionStorage.removeItem('3boxes_facebook_connect')
+        sessionStorage.removeItem('3boxes_facebook_connect_time')
+        return
+      }
+
+      // ─── SOURCE 2: sessionStorage (set by OAuthCallbackHandler) ───
+      const oauthProvider = sessionStorage.getItem('3boxes_oauth_provider')
+      const oauthName = sessionStorage.getItem('3boxes_oauth_name')
+      const oauthEmail = sessionStorage.getItem('3boxes_oauth_email')
+      const oauthAvatar = sessionStorage.getItem('3boxes_oauth_avatar')
+
+      if (oauthProvider && authUser) {
+        // IMPORTANT: Use oauthName (the provider's username), NOT authUser.name (the main login user)
+        const profileName = oauthName || 'Unknown'
+        const profileEmail = oauthEmail || ''
+        const profileAvatar = oauthAvatar || undefined
+        const network = oauthProvider as SocialNetwork
+
+        console.log('[Social Connect] ✅ OAuth callback detected via sessionStorage:', oauthProvider, profileName)
+
+        if (network === 'google' || network === 'facebook' || network === 'linkedin') {
+          updateConnection(network, {
+            connecting: false,
+            connected: true,
+            profile: { name: profileName, email: profileEmail, avatar: profileAvatar },
+          })
+        }
+
+        // Clean up all sessionStorage markers AFTER connection is established
+        sessionStorage.removeItem('3boxes_oauth_provider')
+        sessionStorage.removeItem('3boxes_oauth_name')
+        sessionStorage.removeItem('3boxes_oauth_email')
+        sessionStorage.removeItem('3boxes_oauth_avatar')
+        sessionStorage.removeItem('3boxes_oauth_social_id')
+        sessionStorage.removeItem('3boxes_linkedin_connect')
+        sessionStorage.removeItem('3boxes_linkedin_connect_time')
+        sessionStorage.removeItem('3boxes_google_connect')
+        sessionStorage.removeItem('3boxes_google_connect_time')
+        sessionStorage.removeItem('3boxes_facebook_connect')
+        sessionStorage.removeItem('3boxes_facebook_connect_time')
+        return
+      }
+
+      // ─── SOURCE 3: Per-provider markers (fallback for login flow) ───
+      const linkingLinkedIn = sessionStorage.getItem('3boxes_linkedin_connect')
+      const linkingGoogle = sessionStorage.getItem('3boxes_google_connect')
+      const linkingFacebook = sessionStorage.getItem('3boxes_facebook_connect')
+
+      // This fallback is for the "login" flow where authUser was just set by the OAuth login
+      // In this case, authUser.name IS the provider's name
+      if (linkingGoogle === 'true' && authUser) {
+        console.log('[Social Connect] ✅ Google callback (fallback), marking as connected:', authUser.name)
+        updateConnection('google', {
+          connecting: false,
+          connected: true,
+          profile: { name: authUser.name, email: authUser.email },
+        })
+        sessionStorage.removeItem('3boxes_google_connect')
+        sessionStorage.removeItem('3boxes_google_connect_time')
+      } else if (linkingFacebook === 'true' && authUser) {
+        console.log('[Social Connect] ✅ Facebook callback (fallback), marking as connected:', authUser.name)
+        updateConnection('facebook', {
+          connecting: false,
+          connected: true,
+          profile: { name: authUser.name, email: authUser.email },
+        })
+        sessionStorage.removeItem('3boxes_facebook_connect')
+        sessionStorage.removeItem('3boxes_facebook_connect_time')
+      } else if (linkingLinkedIn === 'true' && authUser) {
+        console.log('[Social Connect] ✅ LinkedIn callback (fallback), marking as connected:', authUser.name)
+        updateConnection('linkedin', {
+          connecting: false,
+          connected: true,
+          profile: { name: authUser.name, email: authUser.email },
+        })
+        sessionStorage.removeItem('3boxes_linkedin_connect')
+        sessionStorage.removeItem('3boxes_linkedin_connect_time')
+      }
+
+      // If we have markers but no authUser yet, wait for next render
+      // But if we've been waiting too long (>30 seconds), clean up and stop connecting
+      const now = Date.now()
+      const connectTime = parseInt(sessionStorage.getItem('3boxes_google_connect_time') || '0')
+      const connectTimeFB = parseInt(sessionStorage.getItem('3boxes_facebook_connect_time') || '0')
+      const connectTimeLI = parseInt(sessionStorage.getItem('3boxes_linkedin_connect_time') || '0')
+
+      if (linkingGoogle === 'true' && !authUser && now - connectTime > 30000) {
+        console.log('[Social Connect] Google connect timeout — marking as not connecting')
+        updateConnection('google', { connecting: false })
+        sessionStorage.removeItem('3boxes_google_connect')
+        sessionStorage.removeItem('3boxes_google_connect_time')
+      } else if (linkingFacebook === 'true' && !authUser && now - connectTimeFB > 30000) {
+        console.log('[Social Connect] Facebook connect timeout — marking as not connecting')
+        updateConnection('facebook', { connecting: false })
+        sessionStorage.removeItem('3boxes_facebook_connect')
+        sessionStorage.removeItem('3boxes_facebook_connect_time')
+      } else if (linkingLinkedIn === 'true' && !authUser && now - connectTimeLI > 30000) {
+        console.log('[Social Connect] LinkedIn connect timeout — marking as not connecting')
+        updateConnection('linkedin', { connecting: false })
+        sessionStorage.removeItem('3boxes_linkedin_connect')
+        sessionStorage.removeItem('3boxes_linkedin_connect_time')
+      }
+    } catch {}
+  }, [authUser, updateConnection])
 
   // ─── Connect Flow ─────────────────────────────────────────────────────────
 
@@ -523,22 +543,28 @@ export function SocialStyleIntegration() {
       return
     }
 
-    // Facebook - use SDK popup
-    if (networkConfig.network === 'facebook' && networkConfig.realConnect) {
-      handleFacebookConnect()
-      return
-    }
-
-    // Google - redirect to OAuth
+    // Google has real OAuth - use server-side redirect
     if (networkConfig.network === 'google' && networkConfig.realConnect) {
       handleGoogleConnect()
       return
     }
 
-    // LinkedIn and Instagram - show consent dialog for simulated connection
+    // Facebook has real OAuth - use server-side redirect (like LinkedIn)
+    if (networkConfig.network === 'facebook' && networkConfig.realConnect) {
+      handleFacebookConnect()
+      return
+    }
+
+    // LinkedIn has real OAuth - use server-side redirect
+    if (networkConfig.network === 'linkedin' && networkConfig.realConnect) {
+      handleLinkedInConnect()
+      return
+    }
+
+    // Instagram - show consent dialog for simulated connection
     setConsentDialogNetwork(networkConfig)
     setConsentDialogOpen(true)
-  }, [authUser, setAuthView, handleFacebookConnect, handleGoogleConnect])
+  }, [authUser, setAuthView, handleGoogleConnect, handleFacebookConnect, handleLinkedInConnect])
 
   const handleConsentAccept = useCallback(() => {
     if (!consentDialogNetwork) return
@@ -547,18 +573,15 @@ export function SocialStyleIntegration() {
     setConsentDialogOpen(false)
     updateConnection(network, { connecting: true })
 
-    // Simulate connection for non-real networks (2 second delay)
+    // Simulate connection for non-Facebook networks (2 second delay)
     setTimeout(() => {
       updateConnection(network, { connecting: false, connected: true })
     }, 2000)
   }, [consentDialogNetwork, updateConnection])
 
-  // ─── Facebook Connect: also save to persistence ────────────────────────────
-  // Note: handleFacebookConnect already calls updateConnection which triggers
-  // the useEffect that persists to localStorage. No extra code needed here.
-
   const handleDisconnect = useCallback(
     (network: SocialNetwork) => {
+      // If Facebook, also logout from FB SDK
       if (network === 'facebook' && window.FB) {
         try {
           window.FB.getLoginStatus((response: any) => {
@@ -571,7 +594,6 @@ export function SocialStyleIntegration() {
         }
       }
       updateConnection(network, { connected: false, profile: undefined, likes: undefined })
-      clearPersistedConnection(network)
       if (connectedNetworks.length <= 1) {
         setAnalysis(null)
         setProducts([])
@@ -588,22 +610,17 @@ export function SocialStyleIntegration() {
     setAnalyzing(true)
     setAnalysisError(null)
 
+    // Build social data payload including real Facebook data if available
     const socialPayload: any = {
       networks: connectedNetworks.map((c) => c.network),
     }
 
+    // Include real Facebook data for AI analysis
     const fbConnection = connections.find((c) => c.network === 'facebook' && c.connected)
     if (fbConnection?.profile) {
       socialPayload.facebookData = {
         profile: fbConnection.profile,
         likes: fbConnection.likes || [],
-      }
-    }
-
-    const googleConnection = connections.find((c) => c.network === 'google' && c.connected)
-    if (googleConnection?.profile) {
-      socialPayload.googleData = {
-        profile: googleConnection.profile,
       }
     }
 
@@ -619,8 +636,28 @@ export function SocialStyleIntegration() {
       }
 
       const data = await response.json()
-      setAnalysis(data.analysis ?? FALLBACK_ANALYSIS)
-      setProducts(data.products ?? FALLBACK_PRODUCTS)
+      // Map API response (which uses "match" field) to component format (which uses "score")
+      const mappedAnalysis: StyleAnalysis = {
+        styleProfile: {
+          tags: data.styleProfile?.tags || FALLBACK_ANALYSIS.styleProfile.tags,
+          confidence: data.styleProfile?.confidence
+            ? Math.round(data.styleProfile.confidence * 100)
+            : FALLBACK_ANALYSIS.styleProfile.confidence,
+          description: data.styleProfile?.description || FALLBACK_ANALYSIS.styleProfile.description,
+        },
+        colorPreferences: data.colorPreferences?.map((c: any) => ({
+          name: c.name,
+          hex: c.hex,
+          affinity: Math.round((c.affinity || 0.5) * 100),
+        })) || FALLBACK_ANALYSIS.colorPreferences,
+        recommendedCategories: data.recommendedCategories?.map((c: any) => ({
+          name: c.name,
+          score: c.match || c.score || 50,
+          reason: c.reason,
+        })) || FALLBACK_ANALYSIS.recommendedCategories,
+      }
+      setAnalysis(mappedAnalysis)
+      setProducts(FALLBACK_PRODUCTS)
     } catch {
       setAnalysis(FALLBACK_ANALYSIS)
       setProducts(FALLBACK_PRODUCTS)
@@ -686,14 +723,15 @@ export function SocialStyleIntegration() {
             const isConnecting = connection?.connecting ?? false
 
             return (
-              <motion.div key={networkConfig.network} variants={itemVariants}>
+              <motion.div key={networkConfig.network} variants={itemVariants} className="h-full">
                 <motion.div
                   variants={cardHover}
                   initial="rest"
                   whileHover="hover"
+                  className="h-full"
                 >
                   <Card
-                    className={`border transition-colors ${
+                    className={`h-full flex flex-col border transition-colors ${
                       isConnected
                         ? `${networkConfig.borderColor} bg-stone-900/80`
                         : 'border-amber-900/30 bg-stone-900/80 hover:border-amber-900/50'
@@ -718,17 +756,13 @@ export function SocialStyleIntegration() {
                               {networkConfig.icon}
                             </div>
                           )}
-                          <div>
-                            <CardTitle className="text-amber-100 text-sm">
-                              {isConnected && connection?.profile?.name
-                                ? connection.profile.name
-                                : networkConfig.label}
+                          <div className="min-w-0">
+                            <CardTitle className="text-amber-100">
+                              {networkConfig.label}
                             </CardTitle>
-                            <CardDescription className="text-amber-200/50 text-xs">
+                            <CardDescription className="text-amber-200/50 line-clamp-2 min-h-[2.5rem]">
                               {isConnected
-                                ? networkConfig.realConnect
-                                  ? 'Connected via OAuth'
-                                  : 'Connected'
+                                ? `Connected with ${networkConfig.label} user${connection?.profile?.name ? ': ' + connection.profile.name : ''}`
                                 : 'Not connected'}
                             </CardDescription>
                           </div>
@@ -744,26 +778,34 @@ export function SocialStyleIntegration() {
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1 flex flex-col">
                       {/* Data items preview */}
-                      <div className="mb-3 flex flex-wrap gap-1">
+                      <div className="mb-4 flex flex-wrap gap-1.5">
                         {networkConfig.dataItems.map((item) => (
                           <Badge
                             key={item}
                             variant="outline"
-                            className="border-amber-900/30 text-amber-200/50 text-[10px]"
+                            className="border-amber-900/30 text-amber-200/50"
                           >
                             {item}
                           </Badge>
                         ))}
                         {networkConfig.realConnect && (
-                          <Badge className="bg-emerald-600/20 text-emerald-300 border-emerald-600/30 text-[10px]">
+                          <Badge className="bg-emerald-600/20 text-emerald-300 border-emerald-600/30 text-xs">
                             Live
                           </Badge>
                         )}
                       </div>
 
+                      {/* Likes count for connected Facebook */}
+                      {isConnected && networkConfig.network === 'facebook' && connection?.likes && connection.likes.length > 0 && (
+                        <p className="mb-3 text-xs text-amber-200/50">
+                          {connection.likes.length} liked pages analyzed
+                        </p>
+                      )}
+
                       {/* Connect / Disconnect Button */}
+                      <div className="mt-auto pt-2">
                       {isConnecting ? (
                         <Button
                           disabled
@@ -797,6 +839,7 @@ export function SocialStyleIntegration() {
                           )}
                         </Button>
                       )}
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -829,7 +872,7 @@ export function SocialStyleIntegration() {
                     </div>
                     <p className="mt-1 text-sm text-amber-200/50">
                       {allConnected
-                        ? 'Ready for the most comprehensive style analysis'
+                        ? "You're ready for the most comprehensive style analysis"
                         : 'Connect more networks for a richer analysis'}
                     </p>
                   </div>
@@ -1055,77 +1098,82 @@ export function SocialStyleIntegration() {
               </div>
 
               {/* Personalized Product Recommendations */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.4 }}
-                className="mb-8"
-              >
-                <Card className="border-amber-900/30 bg-stone-900/80">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="size-5 text-amber-400" />
-                        <CardTitle className="text-amber-100">
-                          Curated For You
-                        </CardTitle>
+              {products.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="mb-8"
+                >
+                  <Card className="border-amber-900/30 bg-stone-900/80">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="size-5 text-amber-400" />
+                          <CardTitle className="text-amber-100">
+                            Curated For You
+                          </CardTitle>
+                        </div>
+                        <Badge className="bg-amber-600/20 text-amber-300 border-amber-600/30">
+                          {products.length} picks
+                        </Badge>
                       </div>
-                      <Badge className="bg-amber-600/20 text-amber-300 border-amber-600/30">
-                        {products.length} picks
-                      </Badge>
-                    </div>
-                    <CardDescription className="text-amber-200/50">
-                      Personalized recommendations based on your style DNA
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                      {products.map((product, i) => (
-                        <motion.div
-                          key={product.id}
-                          initial={{ opacity: 0, y: 15 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.5 + i * 0.07, duration: 0.35 }}
-                          className="group rounded-lg border border-amber-900/20 bg-stone-800/50 p-3 transition-colors hover:border-amber-900/40 hover:bg-stone-800/80"
-                        >
-                          <div className="mb-3 aspect-square overflow-hidden rounded-md bg-stone-800">
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="size-full object-cover transition-transform group-hover:scale-105"
-                              loading="lazy"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/images/placeholder.jpg'
-                              }}
-                            />
-                          </div>
-                          <div className="mb-2 flex items-center justify-between">
-                            <Badge
-                              variant="outline"
-                              className="border-amber-600/30 text-amber-400 text-xs"
-                            >
-                              {product.matchScore}% match
-                            </Badge>
-                            <span className="text-sm font-bold text-amber-100">
-                              {formatPrice(product.price)}
-                            </span>
-                          </div>
-                          <p className="text-sm font-medium text-amber-100 mb-1">
-                            {product.name}
-                          </p>
-                          <p className="text-xs text-amber-200/50">{product.reason}</p>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                      <CardDescription className="text-amber-200/50">
+                        Personalized recommendations based on your style DNA
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {products.map((product, i) => (
+                          <motion.div
+                            key={product.id}
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 + i * 0.07, duration: 0.35 }}
+                            className="group rounded-lg border border-amber-900/20 bg-stone-800/50 p-3 transition-colors hover:border-amber-900/40 hover:bg-stone-800/80"
+                          >
+                            <div className="mb-3 aspect-square overflow-hidden rounded-md bg-stone-800">
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="size-full object-cover transition-transform group-hover:scale-105"
+                                loading="lazy"
+                                onError={(e) => {
+                                  ;(e.target as HTMLImageElement).src =
+                                    '/images/placeholder.jpg'
+                                }}
+                              />
+                            </div>
+                            <div className="mb-2 flex items-center justify-between">
+                              <Badge
+                                variant="outline"
+                                className="border-amber-600/30 text-amber-400 text-xs"
+                              >
+                                {product.matchScore}% match
+                              </Badge>
+                              <span className="text-sm font-bold text-amber-100">
+                                {formatPrice(product.price)}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-medium text-amber-100 mb-1 line-clamp-1">
+                              {product.name}
+                            </h4>
+                            <p className="text-xs text-amber-200/50 line-clamp-2">
+                              {product.reason}
+                            </p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
-              {/* Privacy Controls */}
+              {/* Privacy Settings */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.4 }}
+                transition={{ delay: 0.5, duration: 0.4 }}
               >
                 <Card className="border-amber-900/30 bg-stone-900/80">
                   <CardHeader>
@@ -1134,19 +1182,25 @@ export function SocialStyleIntegration() {
                       <CardTitle className="text-amber-100">Privacy Controls</CardTitle>
                     </div>
                     <CardDescription className="text-amber-200/50">
-                      Manage what data is shared and how it&apos;s used
+                      Manage how your social data is used for recommendations
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {[
-                        { key: 'shareStyleProfile' as const, label: 'Share Style Profile', desc: 'Allow your style profile to be visible to others' },
-                        { key: 'shareColorPreferences' as const, label: 'Share Color Preferences', desc: 'Include your color preferences in recommendations' },
-                        { key: 'sharePurchaseHistory' as const, label: 'Share Purchase History', desc: 'Use your purchase history for better recommendations' },
-                        { key: 'allowPersonalizedAds' as const, label: 'Personalized Suggestions', desc: 'Allow personalized product suggestions based on style' },
-                      ].map((item) => (
-                        <div key={item.key} className="flex items-center justify-between">
-                          <div>
+                        { key: 'shareStyleProfile' as const, label: 'Share Style Profile', desc: 'Allow your style profile to influence product recommendations' },
+                        { key: 'shareColorPreferences' as const, label: 'Share Color Preferences', desc: 'Use your color preferences for visual curation' },
+                        { key: 'sharePurchaseHistory' as const, label: 'Share Purchase History', desc: 'Include purchase history in style analysis' },
+                        { key: 'allowPersonalizedAds' as const, label: 'Personalized Suggestions', desc: 'Show personalized product suggestions based on style data' },
+                      ].map((item, i) => (
+                        <motion.div
+                          key={item.key}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.6 + i * 0.05, duration: 0.3 }}
+                          className="flex items-center justify-between"
+                        >
+                          <div className="flex-1">
                             <p className="text-sm font-medium text-amber-100">{item.label}</p>
                             <p className="text-xs text-amber-200/50">{item.desc}</p>
                           </div>
@@ -1154,53 +1208,77 @@ export function SocialStyleIntegration() {
                             checked={privacySettings[item.key]}
                             onCheckedChange={() => togglePrivacy(item.key)}
                           />
-                        </div>
+                        </motion.div>
                       ))}
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {/* Re-analyze button */}
+              <div className="mt-6 text-center">
+                <Button
+                  onClick={() => { setAnalysis(null); setProducts([]) }}
+                  variant="outline"
+                  className="border-amber-900/40 text-amber-200/60 hover:bg-amber-900/20 hover:text-amber-100"
+                >
+                  <Wand2 className="size-4" />
+                  Re-analyze Style
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Consent Dialog for simulated networks */}
+        {/* Consent Dialog for Simulated Networks */}
         <Dialog open={consentDialogOpen} onOpenChange={setConsentDialogOpen}>
-          {consentDialogNetwork && (
-            <DialogContent className="border-amber-900/30 bg-stone-950 text-amber-50 sm:max-w-md [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200">
-              <DialogHeader>
-                <DialogTitle className="text-amber-100">
-                  Connect {consentDialogNetwork.label}
-                </DialogTitle>
-                <DialogDescription className="text-amber-200/50">
-                  This will allow 3 Boxes Luxury to access the following data:
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                {consentDialogNetwork.dataDescription.map((desc) => (
-                  <div key={desc} className="flex items-start gap-2">
-                    <CheckCircle2 className="size-4 text-emerald-400 mt-0.5 shrink-0" />
-                    <span className="text-sm text-amber-200/70">{desc}</span>
-                  </div>
-                ))}
+          <DialogContent className="bg-stone-900 border-amber-900/30 text-amber-100">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {consentDialogNetwork?.icon}
+                Connect {consentDialogNetwork?.label}
+              </DialogTitle>
+              <DialogDescription className="text-amber-200/60">
+                This will allow 3 BOXES LUXURY to access the following data from your{' '}
+                {consentDialogNetwork?.label} account:
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2 py-4">
+              {consentDialogNetwork?.dataDescription.map((desc) => (
+                <div key={desc} className="flex items-start gap-2 text-sm">
+                  <Eye className="size-4 mt-0.5 text-amber-400 shrink-0" />
+                  <span className="text-amber-200/70">{desc}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-amber-900/20 bg-stone-800/50 p-3">
+              <div className="flex items-start gap-2 text-xs">
+                <Lock className="size-3.5 mt-0.5 text-amber-400 shrink-0" />
+                <span className="text-amber-200/50">
+                  Your data is encrypted and used only for style analysis. You can disconnect anytime.
+                  {!consentDialogNetwork?.realConnect && ' (Simulated connection - no real data is accessed)'}
+                </span>
               </div>
-              <DialogFooter className="flex-col gap-2 sm:flex-col">
-                <Button
-                  onClick={handleConsentAccept}
-                  className="w-full bg-amber-600 text-stone-950 hover:bg-amber-500"
-                >
-                  Allow & Connect
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setConsentDialogOpen(false)}
-                  className="w-full border-amber-900/40 text-amber-200/60 hover:bg-stone-900"
-                >
-                  Cancel
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setConsentDialogOpen(false)}
+                className="border-amber-900/40 text-amber-200/60"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConsentAccept}
+                className="bg-amber-600 text-stone-950 hover:bg-amber-500"
+              >
+                Allow & Connect
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       </div>
     </section>

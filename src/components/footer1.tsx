@@ -121,7 +121,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView(item.view)}
+                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
                     {item.label}
                   </span>
@@ -156,7 +156,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView(item.view)}
+                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
                     {item.label}
                   </span>
@@ -181,7 +181,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView(item.view)}
+                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
                     {item.label}
                   </span>
@@ -205,7 +205,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-300/60 transition-colors hover:text-amber-400 cursor-pointer flex items-center gap-1.5"
-                    onClick={() => setView(item.view)}
+                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                   >
                     <item.icon className="h-3.5 w-3.5" />
                     {item.label}

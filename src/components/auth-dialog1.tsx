@@ -440,18 +440,38 @@ export function AuthDialog() {
     async (provider: string) => {
       setError(null)
       setSuccess(null)
-      setLoading(true)
 
+      // Google → real OAuth redirect
+      if (provider === 'Google') {
+        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '1057307558914-69t9cargikv5di9giaqk83vpc0t1e5vf.apps.googleusercontent.com'
+        const redirectUri = `${window.location.origin}/api/auth/google/callback`
+        const scope = 'openid email profile'
+        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`
+        window.location.href = googleAuthUrl
+        return
+      }
+
+      // Facebook → real OAuth redirect
+      if (provider === 'Facebook') {
+        const appId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || '1638724140532761'
+        const redirectUri = `${window.location.origin}/api/auth/facebook/callback`
+        const scope = 'public_profile,email'
+        const fbAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`
+        window.location.href = fbAuthUrl
+        return
+      }
+
+      // LinkedIn → simulated
+      setLoading(true)
       try {
-        // Simulated social login - in production, this would redirect to OAuth
         const res = await fetch('/api/auth/social', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            provider,
-            name: `${provider} User`,
-            socialId: `social_${Date.now()}`,
-            email: `user_${Date.now()}@${provider.toLowerCase()}.com`,
+            provider: 'linkedin',
+            name: 'LinkedIn User',
+            socialId: `linkedin_${Date.now()}`,
+            email: `user_${Date.now()}@linkedin.com`,
           }),
         })
 
@@ -503,7 +523,7 @@ export function AuthDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={`border-amber-900/30 bg-stone-950 text-amber-50 ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
+        className={`border-amber-900/30 bg-stone-950 text-amber-50 max-h-[90vh] overflow-y-auto ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
         onOpenAutoFocus={handleDialogMount}
       >
         {/* 2FA Verification Step */}
@@ -994,7 +1014,7 @@ export function AuthDialog() {
 
                 {/* ============ Register Form ============ */}
                 <TabsContent value="register">
-                  <form onSubmit={handleRegister} className="space-y-4">
+                  <form onSubmit={handleRegister} className="space-y-3">
                     {/* Role badge */}
                     <div className="flex items-center gap-2 mb-2">
                       {selectedLoginRole === 'user' && (
@@ -1119,7 +1139,7 @@ export function AuthDialog() {
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="space-y-4 border-t border-amber-900/30 pt-4"
+                        className="space-y-3 border-t border-amber-900/30 pt-3"
                       >
                         <p className="text-xs text-amber-500/60 font-medium uppercase tracking-wider">
                           Corporate Details
@@ -1235,7 +1255,7 @@ export function AuthDialog() {
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="space-y-4 border-t border-purple-900/30 pt-4"
+                        className="space-y-3 border-t border-purple-900/30 pt-3"
                       >
                         <p className="text-xs text-purple-400/60 font-medium uppercase tracking-wider">
                           Team / Agent Details

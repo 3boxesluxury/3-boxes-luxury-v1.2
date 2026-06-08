@@ -441,21 +441,18 @@ export function AuthDialog() {
       setError(null)
       setSuccess(null)
 
-      // Facebook Login - Real OAuth redirect
+      // Real OAuth redirect for Facebook and LinkedIn
       if (provider === 'Facebook') {
-        const appId = '1638724140532761'
-        const redirectUri = encodeURIComponent(
-          typeof window !== 'undefined' && window.location.hostname === 'localhost'
-            ? 'http://localhost:3000/api/auth/facebook/callback'
-            : 'https://3-boxes-luxury-v1-2.vercel.app/api/auth/facebook/callback'
-        )
-        const state = Math.random().toString(36).substring(2, 15)
-        const facebookAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&state=${state}&scope=email,public_profile&response_type=code`
-        window.location.href = facebookAuthUrl
+        window.location.href = '/api/auth/facebook'
         return
       }
 
-      // Other providers - simulated social login
+      if (provider === 'LinkedIn') {
+        window.location.href = '/api/auth/linkedin'
+        return
+      }
+
+      // Google and others use the simulated POST flow
       setLoading(true)
       try {
         const res = await fetch('/api/auth/social', {
@@ -517,7 +514,7 @@ export function AuthDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={`border-amber-900/30 bg-stone-950 text-amber-50 max-h-[90vh] overflow-y-auto ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
+        className={`border-amber-900/30 bg-stone-950 text-amber-50 max-h-[90vh] flex flex-col ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
         onOpenAutoFocus={handleDialogMount}
       >
         {/* 2FA Verification Step */}
@@ -530,7 +527,7 @@ export function AuthDialog() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <DialogHeader className="mb-4">
+              <DialogHeader className="mb-4 shrink-0">
                 <DialogTitle className="gold-shimmer text-2xl font-bold tracking-wide">
                   Two-Factor Authentication
                 </DialogTitle>
@@ -712,7 +709,7 @@ export function AuthDialog() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <DialogHeader className="mb-2">
+              <DialogHeader className="mb-2 shrink-0">
                 <DialogTitle className="gold-shimmer text-2xl font-bold tracking-wide text-center">
                   3 BOXES LUXURY
                 </DialogTitle>
@@ -727,7 +724,7 @@ export function AuthDialog() {
 
               {/* Step 0: Role Selection */}
               {!selectedLoginRole && (
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
                   <div className="text-center mb-4">
                     <h3 className="text-lg font-semibold text-amber-100">Choose Your Account Type</h3>
                     <p className="text-xs text-amber-200/40">Select how you'd like to continue</p>
@@ -789,7 +786,7 @@ export function AuthDialog() {
 
               {/* Step 1: Login/Register Form */}
               {selectedLoginRole && (
-              <>
+              <div className="overflow-y-auto flex-1 min-h-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1427,7 +1424,7 @@ export function AuthDialog() {
                   )}
                 </TabsContent>
               </Tabs>
-              </>
+              </div>
               )}
             </motion.div>
           )}

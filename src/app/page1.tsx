@@ -27,13 +27,98 @@ import { SocialStyleIntegration } from '@/components/social-style-integration';
 import { ThreeBoxCurate } from '@/components/threebox-curate';
 import { FamilyShopping } from '@/components/family-shopping';
 import { WikiSection } from '@/components/wiki-section';
+import { OAuthCallbackHandler } from '@/components/oauth-callback-handler';
 import { ToastContainer } from '@/hooks/use-toast-notification';
 import { AnimatePresence, motion } from 'framer-motion';
-import React from 'react';
+import React, { useEffect } from 'react';
+
+// Wrapper for FamilyShopping that scrolls to top on internal step changes
+// Detects step transitions by observing significant DOM content changes
+function FamilyShoppingWrapper() {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const lastScrollTime = React.useRef(0);
+
+  useEffect(() => {
+    // Scroll to top when FamilyShopping first mounts
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Throttled scroll: only scroll once per 500ms to avoid spamming
+    const throttledScroll = () => {
+      const now = Date.now();
+      if (now - lastScrollTime.current > 500) {
+        lastScrollTime.current = now;
+        window.scrollTo({ top: 0, behavior: 'smooth' as ScrollBehavior });
+      }
+    };
+
+    // Observe childList changes which happen on step transitions
+    const observer = new MutationObserver((mutations) => {
+      // Only react to significant structural changes (not just attribute changes)
+      const significant = mutations.some(
+        (m) => m.type === 'childList' && (m.addedNodes.length > 0 || m.removedNodes.length > 0)
+      );
+      if (significant) {
+        throttledScroll();
+      }
+    });
+
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={containerRef}>
+      <FamilyShopping />
+    </div>
+  );
+}
 
 function AppContent() {
   const view = useStore((s) => s.view);
+  const setView = useStore((s) => s.setView);
   const appTheme = useStore((s) => s.appTheme);
+
+  // Restore view state from URL ?view= parameter on initial load
+  // This allows OAuth callbacks to redirect back to the correct view
+  // (e.g. /?view=social-style after LinkedIn/Facebook OAuth)
+  // NOTE: OAuthCallbackHandler also handles this for OAuth-specific redirects.
+  // This handles the case where someone navigates directly to /?view=social-style
+  // without OAuth params, or as a fallback.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const viewParam = params.get('view')
+    const hasAuthParams = params.has('auth_token') || params.has('auth_error')
+    if (viewParam && !hasAuthParams) {
+      // Only handle view param here if there are NO OAuth auth params
+      // (OAuthCallbackHandler handles the OAuth case)
+      const validViews: View[] = [
+        'home', 'product', 'cart', 'checkout', 'orders', 'order-confirmation',
+        'user-dashboard', 'admin-dashboard', 'agent-dashboard', 'team-dashboard',
+        'corporate-dashboard', 'wiki', 'downloads', 'security-policy',
+        'social-style', '3box-curate', 'family-shopping',
+      ]
+      if (validViews.includes(viewParam as View) && viewParam !== view) {
+        setView(viewParam as View)
+      }
+      // Clean the URL after restoring view (remove ?view= param)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to top whenever the view changes
+  // This fixes: feature pages opening at bottom, product detail at bottom,
+  // cart page at bottom, footer navigation not scrolling up, etc.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [view]);
 
   const renderView = () => {
     switch (view) {
@@ -73,7 +158,7 @@ function AppContent() {
       case '3box-curate':
         return <ThreeBoxCurate />;
       case 'family-shopping':
-        return <FamilyShopping />;
+        return <FamilyShoppingWrapper />;
       case 'wiki':
         return <WikiSection />;
       default:
@@ -110,6 +195,7 @@ function AppContent() {
         </div>
       </main>
       <Footer />
+      <OAuthCallbackHandler />
       <AuthDialog />
       <GiftBuilder />
       <GiftAssistant />
