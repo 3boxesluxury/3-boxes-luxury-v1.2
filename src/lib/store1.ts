@@ -164,7 +164,7 @@ export const useStore = create<AppState>((set, get) => ({
   setView: (view) => set({ view }),
   selectProduct: (productId) => set({ selectedProductId: productId, view: 'product' }),
   setSearch: (query) => set({ searchQuery: query }),
-  setCategory: (category) => set({ selectedCategory: category, view: 'home' }),
+  setCategory: (category) => set({ selectedCategory: category }),
   addItem: (item) =>
     set((state) => {
       const existing = state.cartItems.find((ci) => ci.productId === item.productId)

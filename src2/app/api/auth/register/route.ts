@@ -41,7 +41,7 @@ const DEFAULT_PERMISSIONS: Record<string, string[]> = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, name, password, role } = body;
+    const { email, name, password, role, gender } = body;
 
     // Validate required fields
     if (!email || !name || !password) {
@@ -97,6 +97,9 @@ export async function POST(request: NextRequest) {
     // Determine approval status based on role
     const approvalStatus = ['user'].includes(validRole) ? 'approved' : 'pending';
 
+    // Validate gender if provided (v16)
+    const validGender = (gender === 'male' || gender === 'female') ? gender : null;
+
     // Create user
     const user = await db.user.create({
       data: {
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
         emailVerified: false,
         phoneVerified: false,
         twoFactorEnabled: false,
+        ...(validGender ? { gender: validGender } : {}),  // v16: persist gender if provided
       },
     });
 
@@ -135,6 +139,7 @@ export async function POST(request: NextRequest) {
           email: user.email,
           name: user.name,
           role: user.role,
+          ...(user.gender ? { gender: user.gender } : {}),  // v16: include gender in JWT
         },
         JWT_SECRET,
         { expiresIn: '7d' }
@@ -147,6 +152,7 @@ export async function POST(request: NextRequest) {
           name: user.name,
           role: user.role,
           avatar: user.avatar,
+          gender: user.gender,  // v16
           isActive: user.isActive,
           approvalStatus: user.approvalStatus,
           emailVerified: user.emailVerified,
@@ -165,6 +171,7 @@ export async function POST(request: NextRequest) {
           role: user.role,
           avatar: user.avatar,
           phone: user.phone,
+          gender: user.gender,  // v16
           isActive: user.isActive,
           emailVerified: user.emailVerified,
           phoneVerified: user.phoneVerified,
@@ -185,6 +192,7 @@ export async function POST(request: NextRequest) {
           email: user.email,
           name: user.name,
           role: user.role,
+          gender: user.gender,  // v16
           approvalStatus: user.approvalStatus,
           createdAt: user.createdAt,
         },

@@ -25,6 +25,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { PartnersTab } from '@/components/admin/partners-tab'
+import { StyleGalleryTab } from '@/components/admin/style-gallery-tab'
+import { DocumentationTab } from '@/components/admin/documentation-tab'
 import {
   LayoutDashboard, Package, Warehouse, ShoppingBag, FileText, Calculator,
   Truck, Users, BookOpen, Share2, Tag, Import, Plus, Pencil, Trash2,
@@ -33,14 +35,9 @@ import {
   Globe, ExternalLink, Image as ImageIcon, RefreshCw, Link2, ShoppingCart,
   Handshake, Building2, Megaphone, ThumbsUp, ThumbsDown, Users as UsersIcon,
   FolderOpen, BarChart3, Download, Truck as TruckIcon, Mail, Send, Copy, CheckCircle,
-  Presentation, Sun, Moon, Menu, ChevronLeft, ChevronRight, LogOut, Home,
-  Palette, Sparkles, GraduationCap, Filter, FileCheck, Video, Shield, BookMarked,
-  FileDown, Ban, Heart, MessageSquare, Star, ToggleLeft, ToggleRight,
+  Presentation, Sun, Moon, Menu, ChevronLeft, ChevronRight, LogOut, Home, Sparkles,
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { generateWikiPdf, shareDocumentLink, shareViaEmail, shareViaWhatsApp, shareViaLinkedIn, shareViaTwitter } from '@/lib/pdf-utils'
-import { showToast } from '@/hooks/use-toast-notification'
 
 /* ─── style constants ─── */
 const cardCls = 'border-amber-900/30 bg-stone-900/80'
@@ -186,18 +183,16 @@ export function AdminDashboard() {
     { value: 'accounting', icon: Calculator, label: 'Accounting' },
     { value: 'vendors', icon: Truck, label: 'Vendors' },
     { value: 'users', icon: Users, label: 'Users & Perms' },
-    { value: 'knowledge-hub', icon: GraduationCap, label: 'Knowledge Hub' },
+    { value: 'content', icon: BookOpen, label: 'Content' },
     { value: 'sharedocs', icon: Share2, label: 'Share Docs' },
+    { value: 'documentation', icon: BookOpen, label: 'Documentation' },
     { value: 'offers', icon: Tag, label: 'Offers' },
     { value: 'import', icon: Import, label: 'Import' },
     { value: 'reports', icon: BarChart3, label: 'Reports' },
     { value: 'integrations', icon: Globe, label: 'Integrations' },
     { value: 'partners', icon: Handshake, label: 'Partners' },
+    { value: 'style-gallery', icon: Sparkles, label: 'AI Style Gallery' },
     { value: 'corporate', icon: Building2, label: 'Corporate' },
-    { value: 'social-style', icon: Palette, label: 'Social Style' },
-    { value: '3box-curate', icon: Package, label: '3Box Curate' },
-    { value: 'family-shop', icon: Users, label: 'Family Shop' },
-    { value: 'ai-influencer', icon: Sparkles, label: 'AI Influencer' },
   ]
 
   const investorItems = [
@@ -215,18 +210,16 @@ export function AdminDashboard() {
       case 'accounting': return <AccountingTab token={authToken} onMutate={invalidateAll} />
       case 'vendors': return <VendorsTab token={authToken} onMutate={invalidateAll} />
       case 'users': return <UsersPermsTab token={authToken} onMutate={invalidateAll} />
-      case 'knowledge-hub': return <KnowledgeHubTab token={authToken} onMutate={invalidateAll} />
+      case 'content': return <ContentTab token={authToken} onMutate={invalidateAll} />
       case 'sharedocs': return <ShareDocsTab token={authToken} onMutate={invalidateAll} />
       case 'offers': return <OffersTab token={authToken} onMutate={invalidateAll} />
       case 'import': return <ImportTab token={authToken} onMutate={invalidateAll} />
       case 'reports': return <ReportsTab token={authToken} />
       case 'integrations': return <IntegrationsTab token={authToken} onMutate={invalidateAll} />
       case 'partners': return <PartnersTab token={authToken} onMutate={invalidateAll} />
+      case 'style-gallery': return <StyleGalleryTab />
       case 'corporate': return <CorporateTab token={authToken} onMutate={invalidateAll} />
-      case 'social-style': return <SocialStyleTab token={authToken} onMutate={invalidateAll} />
-      case '3box-curate': return <ThreeBoxCurateTab token={authToken} onMutate={invalidateAll} />
-      case 'family-shop': return <FamilyShopTab token={authToken} onMutate={invalidateAll} />
-      case 'ai-influencer': return <AIInfluencerTab token={authToken} onMutate={invalidateAll} />
+      case 'documentation': return <DocumentationTab token={authToken} />
       case 'investor': return <InvestorKitTab token={authToken} />
       default: return <DashboardTab token={authToken} theme={theme} />
     }
@@ -266,8 +259,8 @@ export function AdminDashboard() {
             <>
               <button onClick={() => setView('home')} className="shrink-0 group"><img src="/images/logo-uploaded.png" alt="3 Boxes Luxury" className="h-16 w-16 object-contain gold-logo group-hover:scale-105 transition-transform" /></button>
               <div className="min-w-0">
-                <p className={`text-sm font-bold truncate ${t.text}`}>3 BOXES LUXURY</p>
-                <p className={`text-[10px] truncate ${t.textMuted}`}>Management Console</p>
+                <p className={`text-xs font-bold leading-tight whitespace-nowrap ${t.text}`}>3 BOXES LUXURY</p>
+                <p className={`text-[10px] whitespace-nowrap ${t.textMuted}`}>Management Console</p>
               </div>
             </>
           )}
@@ -696,6 +689,19 @@ function DashboardTab({ token, theme }: { token: string | null; theme: 'dark' | 
 /* ════════════════════════════════════════════
    2. PRODUCTS TAB
    ════════════════════════════════════════════ */
+// ═══════════════════════════════════════════════════════════════════════
+// PRODUCTS TAB CODE (from src1 admin-dashboard.tsx)
+// Lines 691–1012 in the original file
+//
+// This includes:
+//   - ProductsTab()  — main products list with search, pagination, delete
+//   - ProductForm()  — add/edit product form with image upload
+//
+// Copy these two functions into your admin-dashboard.tsx
+// replacing the existing ProductsTab and ProductForm definitions
+// ═══════════════════════════════════════════════════════════════════════
+
+/* ─── 2. PRODUCTS TAB ─── */
 function ProductsTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
@@ -1334,7 +1340,7 @@ function OrdersTab({ token, onMutate }: { token: string | null; onMutate: () => 
               {viewOrder.items?.length > 0 && (
                 <div>
                   <p className={`mb-2 ${lblCls}`}>Items</p>
-                  {viewOrder.items.map((item: any, i: number) => (
+                  {(viewOrder.items ?? []).map((item: any, i: number) => (
                     <div key={i} className="flex items-center gap-2 border-b border-amber-900/10 py-2">
                       {item.image && <img src={item.image} alt="" className="h-8 w-8 rounded object-cover" />}
                       <div className="flex-1">
@@ -2132,59 +2138,21 @@ function AddUserForm({ token, onClose, onSaved }: { token: string | null; onClos
 }
 
 /* ════════════════════════════════════════════
-   9. KNOWLEDGE HUB TAB (Wiki Documents)
+   9. CONTENT TAB (Wiki Documents)
    ════════════════════════════════════════════ */
-const wikiCategoryConfig: Record<string, { label: string; icon: any; className: string }> = {
-  architecture: { label: 'Architecture', icon: Box, className: 'bg-amber-600/20 text-amber-400 border-amber-600/30' },
-  api: { label: 'API', icon: Globe, className: 'bg-emerald-600/20 text-emerald-400 border-emerald-600/30' },
-  technical: { label: 'Technical', icon: FileText, className: 'bg-rose-600/20 text-rose-400 border-rose-600/30' },
-  training: { label: 'Training', icon: Video, className: 'bg-purple-600/20 text-purple-400 border-purple-600/30' },
-  patent: { label: 'Patent', icon: Shield, className: 'bg-cyan-600/20 text-cyan-400 border-cyan-600/30' },
-  sop: { label: 'SOP', icon: BookMarked, className: 'bg-orange-600/20 text-orange-400 border-orange-600/30' },
-  general: { label: 'General', icon: BookOpen, className: 'bg-stone-600/20 text-stone-400 border-stone-600/30' },
-}
-
-function KnowledgeHubTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
+function ContentTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editDoc, setEditDoc] = useState<any>(null)
-  const [viewDoc, setViewDoc] = useState<any>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterCategory, setFilterCategory] = useState('all')
-  const [showUnpublished, setShowUnpublished] = useState(true)
-  const [deleteConfirm, setDeleteConfirm] = useState<any>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['wiki-docs', showUnpublished],
-    queryFn: () => apiFetch(`/api/wiki?all=${showUnpublished}`, undefined, token),
+    queryKey: ['wiki-docs'],
+    queryFn: () => apiFetch('/api/wiki', undefined, token),
   })
 
-  const { data: viewDocData, isLoading: viewDocLoading } = useQuery({
-    queryKey: ['wiki-doc-detail', viewDoc?.id],
-    queryFn: () => apiFetch(`/api/wiki/${viewDoc.id}`, undefined, token),
-    enabled: !!viewDoc,
-  })
+  const docs = (data as any)?.documents || (data as any)?.docs || []
 
-  const allDocs = (data as any)?.documents || []
-
-  // Filter docs by search and category
-  const docs = allDocs.filter((d: any) => {
-    const matchSearch = !searchTerm || d.title.toLowerCase().includes(searchTerm.toLowerCase()) || (d.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-    const matchCategory = filterCategory === 'all' || d.category === filterCategory
-    return matchSearch && matchCategory
-  })
-
-  // Category stats
-  const categoryStats = allDocs.reduce((acc: any, d: any) => {
-    const cat = d.category || 'general'
-    acc[cat] = (acc[cat] || 0) + 1
-    return acc
-  }, {})
-
-  const publishedCount = allDocs.filter((d: any) => d.isPublished).length
-  const unpublishedCount = allDocs.filter((d: any) => !d.isPublished).length
-
-  const [form, setForm] = useState({ title: '', content: '', category: 'general', slug: '', version: '1.0', accessRoles: 'admin,team,agent,user', isPublished: false })
+  const [form, setForm] = useState({ title: '', content: '', category: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -2193,480 +2161,71 @@ function KnowledgeHubTab({ token, onMutate }: { token: string | null; onMutate: 
     setSaving(true); setError('')
     try {
       if (editDoc) {
-        await apiFetch(`/api/wiki/${editDoc.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(form),
-        }, token)
+        await apiFetch(`/api/wiki/${editDoc.id}`, { method: 'PUT', body: JSON.stringify(form) }, token)
       } else {
-        await apiFetch('/api/wiki', {
-          method: 'POST',
-          body: JSON.stringify(form),
-        }, token)
+        await apiFetch('/api/wiki', { method: 'POST', body: JSON.stringify(form) }, token)
       }
       qc.invalidateQueries({ queryKey: ['wiki-docs'] })
-      setShowForm(false); setEditDoc(null); setForm({ title: '', content: '', category: 'general', slug: '', version: '1.0', accessRoles: 'admin,team,agent,user', isPublished: false })
+      setShowForm(false); setEditDoc(null); setForm({ title: '', content: '', category: '' })
     } catch (e: any) { setError(e.message) } finally { setSaving(false) }
   }
 
-  const handleEdit = (d: any) => {
-    setEditDoc(d)
-    setForm({
-      title: d.title,
-      content: d.content || '',
-      category: d.category || 'general',
-      slug: d.slug || '',
-      version: d.version || '1.0',
-      accessRoles: d.accessRoles || 'admin,team,agent,user',
-      isPublished: d.isPublished ?? false,
-    })
-    setShowForm(true)
-  }
-
-  const handleTogglePublish = async (d: any) => {
-    try {
-      await apiFetch(`/api/wiki/${d.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isPublished: !d.isPublished }),
-      }, token)
-      qc.invalidateQueries({ queryKey: ['wiki-docs'] })
-    } catch {}
-  }
-
-  const handleDelete = async () => {
-    if (!deleteConfirm) return
-    try {
-      await apiFetch(`/api/wiki/${deleteConfirm.id}`, { method: 'DELETE' }, token)
-      qc.invalidateQueries({ queryKey: ['wiki-docs'] })
-      setDeleteConfirm(null)
-    } catch {}
-  }
-
-  const [pdfGenerating, setPdfGenerating] = useState(false)
-
-  const handleDownloadPdf = async (doc: any) => {
-    setPdfGenerating(true)
-    try {
-      // If the doc doesn't have content, fetch it first
-      let fullDoc = doc
-      if (!doc.content && viewDocData?.document) {
-        fullDoc = viewDocData.document
-      } else if (!doc.content) {
-        const res = await apiFetch(`/api/wiki/${doc.id}`, undefined, token)
-        fullDoc = res.document
-      }
-      await generateWikiPdf({
-        title: fullDoc.title,
-        content: fullDoc.content || '',
-        category: fullDoc.category || 'general',
-        version: fullDoc.version || '1.0',
-        updatedAt: fullDoc.updatedAt || new Date().toISOString(),
-        slug: fullDoc.slug || 'document',
-      })
-      showToast('success', `PDF downloaded: ${fullDoc.slug || 'document'}-v${fullDoc.version || '1.0'}.pdf`)
-    } catch (err: any) {
-      console.error('PDF generation failed:', err)
-      showToast('error', 'Failed to generate PDF. Please try again.')
-    } finally {
-      setPdfGenerating(false)
-    }
-  }
-
-  const handleShareCopyLink = async (docId: string) => {
-    const url = `${window.location.origin}/?wiki=${docId}`
-    try {
-      await navigator.clipboard.writeText(url)
-      showToast('success', 'Link copied to clipboard!')
-    } catch {
-      showToast('error', 'Failed to copy link.')
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-amber-100 flex items-center gap-2">
-            <GraduationCap className="h-5 w-5 text-amber-400" />
-            Knowledge Hub & Wiki
-          </h2>
-          <p className="text-xs text-amber-200/50 mt-1">Manage technical docs, SOPs, training content, and patent documentation</p>
-        </div>
-        <Button className={btnPrimary} onClick={() => {
-          setEditDoc(null)
-          setForm({ title: '', content: '', category: 'general', slug: '', version: '1.0', accessRoles: 'admin,team,agent,user', isPublished: false })
-          setShowForm(true)
-        }}>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Button className={btnPrimary} onClick={() => { setEditDoc(null); setForm({ title: '', content: '', category: '' }); setShowForm(true) }}>
           <Plus className="mr-1 h-4 w-4" /> New Document
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {showForm && (
         <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-amber-100">{allDocs.length}</p>
-            <p className="text-[10px] text-amber-200/50">Total Documents</p>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-green-400">{publishedCount}</p>
-            <p className="text-[10px] text-amber-200/50">Published</p>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-amber-400">{unpublishedCount}</p>
-            <p className="text-[10px] text-amber-200/50">Drafts</p>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-purple-400">{Object.keys(categoryStats).length}</p>
-            <p className="text-[10px] text-amber-200/50">Categories</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-200/30" />
-          <Input
-            className={`${inputCls} pl-9`}
-            placeholder="Search documents..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className={`${selCls} w-full sm:w-44`}>
-            <Filter className="mr-2 h-3.5 w-3.5" />
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent className={selContentCls}>
-            <SelectItem value="all">All Categories</SelectItem>
-            {Object.entries(wikiCategoryConfig).map(([key, cfg]) => (
-              <SelectItem key={key} value={key}>{cfg.label} ({categoryStats[key] || 0})</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-amber-900/30 bg-stone-800/30">
-          <Switch
-            checked={showUnpublished}
-            onCheckedChange={setShowUnpublished}
-            className="data-[state=checked]:bg-amber-600"
-          />
-          <span className="text-xs text-amber-200/60">Show Drafts</span>
-        </div>
-      </div>
-
-      {/* Quick Category Filter Badges */}
-      <div className="flex flex-wrap gap-2">
-        {Object.entries(wikiCategoryConfig).map(([key, cfg]) => {
-          const count = categoryStats[key] || 0
-          if (count === 0 && key !== 'general') return null
-          return (
-            <button
-              key={key}
-              onClick={() => setFilterCategory(filterCategory === key ? 'all' : key)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-all ${
-                filterCategory === key
-                  ? cfg.className
-                  : 'border-amber-900/20 text-amber-200/40 hover:border-amber-600/40 hover:text-amber-200/60'
-              }`}
-            >
-              <cfg.icon className="h-3 w-3" />
-              {cfg.label}
-              <span className="opacity-60">({count})</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Document Form Dialog */}
-      <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditDoc(null) } }}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-amber-900/30 bg-stone-950 sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-amber-100">{editDoc ? 'Edit Document' : 'New Document'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-amber-100">{editDoc ? 'Edit Document' : 'New Document'}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {error && <div className="rounded-md bg-red-600/10 p-3 text-sm text-red-400">{error}</div>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className={lblCls}>Title *</Label>
-                <Input className={`${inputCls} mt-1`} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Document title" />
-              </div>
-              <div>
-                <Label className={lblCls}>Slug</Label>
-                <Input className={`${inputCls} mt-1`} value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="auto-generated from title" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <Label className={lblCls}>Category</Label>
-                <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-                  <SelectTrigger className={`${selCls} mt-1`}><SelectValue /></SelectTrigger>
-                  <SelectContent className={selContentCls}>
-                    {Object.entries(wikiCategoryConfig).map(([key, cfg]) => (
-                      <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className={lblCls}>Version</Label>
-                <Input className={`${inputCls} mt-1`} value={form.version} onChange={e => setForm(f => ({ ...f, version: e.target.value }))} />
-              </div>
-              <div>
-                <Label className={lblCls}>Access Roles</Label>
-                <Input className={`${inputCls} mt-1`} value={form.accessRoles} onChange={e => setForm(f => ({ ...f, accessRoles: e.target.value }))} placeholder="admin,team,agent,user" />
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={form.isPublished}
-                onCheckedChange={v => setForm(f => ({ ...f, isPublished: v }))}
-                className="data-[state=checked]:bg-green-600"
-              />
-              <Label className="text-sm text-amber-200/70">
-                {form.isPublished ? 'Published (visible to authorized roles)' : 'Draft (only visible to admins)'}
-              </Label>
-            </div>
-            <div>
-              <Label className={lblCls}>Content * (Markdown supported)</Label>
-              <Textarea className={`${inputCls} mt-1 font-mono text-xs`} rows={14} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} placeholder="# Document Title&#10;&#10;Write your content here..." />
-            </div>
+            <div><Label className={lblCls}>Title *</Label><Input className={`${inputCls} mt-1`} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
+            <div><Label className={lblCls}>Category</Label><Input className={`${inputCls} mt-1`} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} /></div>
+            <div><Label className={lblCls}>Content *</Label><Textarea className={`${inputCls} mt-1`} rows={8} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} /></div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" className={btnOutline} onClick={() => { setShowForm(false); setEditDoc(null) }}>Cancel</Button>
-              <Button className={btnPrimary} onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-                {editDoc ? 'Update' : 'Create'}
-              </Button>
+              <Button className={btnPrimary} onClick={handleSave} disabled={saving}>{saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}Save</Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Document Viewer Dialog */}
-      <Dialog open={!!viewDoc} onOpenChange={(open) => { if (!open) setViewDoc(null) }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] border-amber-900/30 bg-stone-950 overflow-hidden flex flex-col">
-          {viewDocLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-amber-400" />
-            </div>
-          ) : viewDocData?.document ? (
-            <>
-              <DialogHeader className="shrink-0 border-b border-amber-900/20 pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <DialogTitle className="text-lg font-bold text-amber-100">{viewDocData.document.title}</DialogTitle>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className={`text-[10px] ${wikiCategoryConfig[viewDocData.document.category]?.className || wikiCategoryConfig.general.className}`}>
-                        {wikiCategoryConfig[viewDocData.document.category]?.label || 'General'}
-                      </Badge>
-                      <span className="text-xs text-amber-200/40 font-mono">v{viewDocData.document.version}</span>
-                      <Badge className={viewDocData.document.isPublished ? 'bg-green-600/20 text-green-400 border-green-600/30' : 'bg-amber-600/20 text-amber-400 border-amber-600/30'} variant="outline">
-                        {viewDocData.document.isPublished ? 'Published' : 'Draft'}
-                      </Badge>
-                      <span className="text-xs text-amber-200/40">Updated {fmtDate(viewDocData.document.updatedAt)}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <Button size="sm" variant="outline" className={btnOutline} onClick={() => handleDownloadPdf(viewDocData.document)} disabled={pdfGenerating}>
-                      {pdfGenerating ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <FileDown className="mr-1 h-3.5 w-3.5" />}
-                      {pdfGenerating ? 'Generating...' : 'PDF'}
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" className={btnOutline}>
-                          <Share2 className="mr-1 h-3.5 w-3.5" /> Share
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-stone-950 border-amber-900/30">
-                        <DropdownMenuItem onClick={() => handleShareCopyLink(viewDocData.document.id)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                          <Link2 className="mr-2 h-3.5 w-3.5" /> Copy Link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => shareViaEmail(viewDocData.document.id, viewDocData.document.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                          <Mail className="mr-2 h-3.5 w-3.5" /> Share via Email
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-amber-900/20" />
-                        <DropdownMenuItem onClick={() => shareViaWhatsApp(viewDocData.document.id, viewDocData.document.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                          <span className="mr-2 text-green-400">💬</span> WhatsApp
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => shareViaLinkedIn(viewDocData.document.id, viewDocData.document.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                          <span className="mr-2 text-blue-400">💼</span> LinkedIn
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => shareViaTwitter(viewDocData.document.id, viewDocData.document.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                          <span className="mr-2 text-sky-400">🐦</span> Twitter / X
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button size="sm" variant="outline" className={btnOutline} onClick={() => { setViewDoc(null); handleEdit(viewDocData.document) }}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                  </div>
-                </div>
-              </DialogHeader>
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="prose prose-invert max-w-none text-amber-200/70">
-                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{viewDocData.document.content}</pre>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="py-8 text-center text-amber-200/40">Failed to load document</div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null) }}>
-        <DialogContent className="border-red-900/30 bg-stone-950 sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-300">Delete Document</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-amber-200/60">
-            Are you sure you want to delete <strong className="text-amber-100">{deleteConfirm?.title}</strong>? This action cannot be undone.
-          </p>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" className={btnOutline} onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button className="bg-red-600 text-white hover:bg-red-500" onClick={handleDelete}>Delete</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Document Grid */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-amber-400" /></div>
-      ) : docs.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-amber-900/20 bg-stone-900/40 py-16 text-center">
-          <GraduationCap className="h-12 w-12 text-amber-600/30" />
-          <div>
-            <p className="font-medium text-amber-100/80">No documents found</p>
-            <p className="mt-1 text-sm text-amber-200/40">
-              {searchTerm || filterCategory !== 'all' ? 'Try adjusting your search or filters' : 'Create your first document to get started'}
-            </p>
-          </div>
-          {!searchTerm && filterCategory === 'all' && (
-            <Button className={btnPrimary} onClick={() => setShowForm(true)}>
-              <Plus className="mr-1 h-4 w-4" /> Create Document
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {docs.map((d: any) => {
-            const catCfg = wikiCategoryConfig[d.category] || wikiCategoryConfig.general
-            return (
-              <motion.div
-                key={d.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="group rounded-xl border border-amber-900/20 bg-stone-900/60 p-4 transition-all duration-200 hover:border-amber-600/40 hover:bg-stone-900/80 hover:shadow-lg hover:shadow-amber-900/10"
-              >
-                {/* Card Header */}
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${catCfg.className.split(' ')[0]}`}>
-                      <catCfg.icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-amber-100 leading-snug line-clamp-2">{d.title}</h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${catCfg.className}`}>{catCfg.label}</Badge>
-                        <span className="text-[10px] text-amber-200/40 font-mono">v{d.version || '1.0'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Badge
-                    className={`shrink-0 text-[9px] cursor-pointer ${
-                      d.isPublished
-                        ? 'bg-green-600/20 text-green-400 border-green-600/30'
-                        : 'bg-amber-600/20 text-amber-400 border-amber-600/30'
-                    }`}
-                    variant="outline"
-                    onClick={() => handleTogglePublish(d)}
-                  >
-                    {d.isPublished ? 'Published' : 'Draft'}
-                  </Badge>
-                </div>
-
-                {/* Meta */}
-                <div className="mb-3 flex items-center gap-3 text-[10px] text-amber-200/40">
-                  <span>Updated {fmtDate(d.updatedAt)}</span>
-                  {d.accessRoles && (
-                    <span className="flex items-center gap-1">
-                      <Shield className="h-2.5 w-2.5" />
-                      {d.accessRoles.split(',').length} roles
-                    </span>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-1.5 border-t border-amber-900/10 pt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 border-amber-900/30 bg-transparent text-amber-200/60 hover:bg-amber-900/20 hover:text-amber-100 hover:border-amber-600/40 text-xs"
-                    onClick={() => setViewDoc(d)}
-                  >
-                    <Eye className="mr-1 h-3 w-3" /> View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-amber-200/40 hover:text-amber-400 text-xs"
-                    onClick={() => handleDownloadPdf(d)}
-                    disabled={pdfGenerating}
-                  >
-                    {pdfGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3" />}
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="ghost" className="h-7 text-amber-200/40 hover:text-amber-400 text-xs p-0 w-7">
-                        <Share2 className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-stone-950 border-amber-900/30">
-                      <DropdownMenuItem onClick={() => handleShareCopyLink(d.id)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                        <Link2 className="mr-2 h-3.5 w-3.5" /> Copy Link
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => shareViaEmail(d.id, d.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                        <Mail className="mr-2 h-3.5 w-3.5" /> Email
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-amber-900/20" />
-                      <DropdownMenuItem onClick={() => shareViaWhatsApp(d.id, d.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                        <span className="mr-2 text-green-400">💬</span> WhatsApp
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => shareViaLinkedIn(d.id, d.title)} className="text-amber-200/70 focus:bg-amber-900/20 focus:text-amber-100 cursor-pointer">
-                        <span className="mr-2 text-blue-400">💼</span> LinkedIn
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-amber-200/40 hover:text-amber-400 text-xs"
-                    onClick={() => handleEdit(d)}
-                  >
-                    <Pencil className="mr-1 h-3 w-3" /> Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 ml-auto text-red-400/40 hover:text-red-400 text-xs"
-                    onClick={() => setDeleteConfirm(d)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+          </CardContent>
+        </Card>
       )}
+
+      <Card className={cardCls}>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-amber-900/20 hover:bg-transparent">
+                <TableHead className="text-amber-200/50">Title</TableHead>
+                <TableHead className="text-amber-200/50">Category</TableHead>
+                <TableHead className="text-amber-200/50">Updated</TableHead>
+                <TableHead className="text-amber-200/50">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {docs.map((d: any) => (
+                <TableRow key={d.id} className="border-amber-900/10 hover:bg-amber-900/5">
+                  <TableCell className="text-sm font-medium text-amber-100">{d.title}</TableCell>
+                  <TableCell className="text-xs text-amber-200/60">{d.category || '—'}</TableCell>
+                  <TableCell className="text-xs text-amber-200/60">{fmtDate(d.updatedAt)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="ghost" className="h-7 text-amber-200/40 hover:text-amber-400" onClick={() => { setEditDoc(d); setForm({ title: d.title, content: d.content, category: d.category || '' }); setShowForm(true) }}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-red-400/40 hover:text-red-400" onClick={async () => { try { await apiFetch(`/api/wiki/${d.id}`, { method: 'DELETE' }, token); qc.invalidateQueries({ queryKey: ['wiki-docs'] }) } catch {} }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {docs.length === 0 && <TableRow><TableCell colSpan={4} className="py-8 text-center text-amber-200/40">No documents yet</TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -2676,8 +2235,8 @@ function KnowledgeHubTab({ token, onMutate }: { token: string | null; onMutate: 
    ════════════════════════════════════════════ */
 function ShareDocsTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
   const qc = useQueryClient()
-  const { data: usersData } = useQuery({ queryKey: ['admin-users-agents'], queryFn: () => apiFetch('/api/admin/users?role=agent&limit=100', undefined, token) })
-  const agents = (usersData?.users || []).filter((u: any) => u.role === 'agent')
+  const { data: usersData, isLoading: agentsLoading } = useQuery({ queryKey: ['admin-users-agents'], queryFn: () => apiFetch('/api/admin/users?limit=100', undefined, token) })
+  const agents = (usersData?.users || []).filter((u: any) => u.role === 'agent' || u.role === 'team')
 
   const { data: sharesData, isLoading: sharesLoading } = useQuery({
     queryKey: ['admin-share-docs'],
@@ -2713,10 +2272,13 @@ function ShareDocsTab({ token, onMutate }: { token: string | null; onMutate: () 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
               <Label className={lblCls}>Agent *</Label>
-              <Select value={form.agentId} onValueChange={v => setForm(f => ({ ...f, agentId: v }))}>
-                <SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder="Select agent" /></SelectTrigger>
+              <Select value={form.agentId || undefined} onValueChange={v => setForm(f => ({ ...f, agentId: v }))}>
+                <SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder={agentsLoading ? 'Loading agents...' : agents.length === 0 ? 'No agents available' : 'Select agent'} /></SelectTrigger>
                 <SelectContent className={selContentCls}>
-                  {agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  {agents.length === 0 && !agentsLoading && (
+                    <div className="px-2 py-3 text-center text-xs text-amber-200/40">No agents found. Create agents in Users & Perms first.</div>
+                  )}
+                  {agents.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.name} ({a.email})</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -3117,8 +2679,8 @@ function ReportsTab({ token }: { token: string | null }) {
     queryFn: () => apiFetch('/api/admin/products?limit=200', undefined, token),
   })
 
-  const orders: any[] = ordersData?.orders || []
-  const products: any[] = productsData?.products || []
+  const orders: any[] = Array.isArray(ordersData?.orders) ? ordersData.orders : []
+  const products: any[] = Array.isArray(productsData?.products) ? productsData.products : []
 
   // ── Revenue Summary ──
   const totalRevenue = orders.reduce((s: number, o: any) => s + (o.total || 0), 0)
@@ -4353,7 +3915,7 @@ function CorporateTab({ token, onMutate }: { token: string | null; onMutate: () 
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          {campaignDetail.campaign.recipients.map((r: any) => (
+                                          {(campaignDetail?.campaign?.recipients ?? []).map((r: any) => (
                                             <TableRow key={r.id} className="border-amber-900/5 hover:bg-amber-900/5">
                                               <TableCell className="text-xs text-amber-100">{r.name}</TableCell>
                                               <TableCell className="text-xs text-amber-200/60">{r.email}</TableCell>
@@ -4768,1067 +4330,3 @@ function InvestorKitTab({ token }: { token: string | null }) {
   )
 }
 
-/* ════════════════════════════════════════════
-   SOCIAL STYLE TAB
-   ════════════════════════════════════════════ */
-function SocialStyleTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
-  const [enabled, setEnabled] = useState(true)
-  const [socialConnections] = useState([
-    { network: 'Facebook', connected: true, followers: 12400, lastSync: '2 min ago' },
-    { network: 'LinkedIn', connected: true, followers: 8750, lastSync: '15 min ago' },
-    { network: 'Instagram', connected: false, followers: 0, lastSync: 'Never' },
-  ])
-  const [styleAnalyses] = useState([
-    { id: 'SA-001', user: 'Priya Sharma', style: 'Contemporary Elegant', score: 92, date: '2025-01-15' },
-    { id: 'SA-002', user: 'Ravi Kapoor', style: 'Classic Luxury', score: 88, date: '2025-01-14' },
-    { id: 'SA-003', user: 'Ananya Iyer', style: 'Boho Chic', score: 76, date: '2025-01-13' },
-    { id: 'SA-004', user: 'Vikram Singh', style: 'Minimalist Modern', score: 84, date: '2025-01-12' },
-    { id: 'SA-005', user: 'Meera Patel', style: 'Contemporary Elegant', score: 91, date: '2025-01-11' },
-  ])
-  const [consentLogs] = useState([
-    { user: 'Priya Sharma', action: 'Granted consent', timestamp: '2025-01-15 10:23' },
-    { user: 'Ravi Kapoor', action: 'Granted consent', timestamp: '2025-01-14 15:45' },
-    { user: 'Ananya Iyer', action: 'Revoked consent', timestamp: '2025-01-13 09:12' },
-    { user: 'Vikram Singh', action: 'Granted consent', timestamp: '2025-01-12 14:30' },
-  ])
-
-  const connectedCount = socialConnections.filter(s => s.connected).length
-
-  return (
-    <div className="space-y-6">
-      {/* Header with toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-amber-100">Social Style</h2>
-          <p className="text-xs text-amber-200/60">AI-powered style analysis from social media connections</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Label className={lblCls}>Feature Enabled</Label>
-          <Switch checked={enabled} onCheckedChange={setEnabled} />
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/10">
-                <Globe className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Connected Networks</p>
-                <p className="text-lg font-bold text-amber-100">{connectedCount} / {socialConnections.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600/10">
-                <Palette className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Style Analyses</p>
-                <p className="text-lg font-bold text-amber-100">{styleAnalyses.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
-                <UserCheck className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Active Consents</p>
-                <p className="text-lg font-bold text-amber-100">{consentLogs.filter(l => l.action.startsWith('Granted')).length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Social Connections */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Social Connections</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-amber-900/20 hover:bg-transparent">
-                <TableHead className="text-amber-200/50">Network</TableHead>
-                <TableHead className="text-amber-200/50">Status</TableHead>
-                <TableHead className="text-amber-200/50">Followers</TableHead>
-                <TableHead className="text-amber-200/50">Last Sync</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {socialConnections.map(s => (
-                <TableRow key={s.network} className="border-amber-900/10 hover:bg-amber-900/5">
-                  <TableCell className="text-sm font-medium text-amber-100">{s.network}</TableCell>
-                  <TableCell>
-                    <Badge className={s.connected ? statusColor('active') : statusColor('inactive')}>
-                      {s.connected ? 'Connected' : 'Not Connected'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-amber-200/60">{s.followers > 0 ? s.followers.toLocaleString() : '—'}</TableCell>
-                  <TableCell className="text-xs text-amber-200/60">{s.lastSync}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* AI Style Analysis Results */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">AI Style Analysis Results</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-amber-900/20 hover:bg-transparent">
-                  <TableHead className="text-amber-200/50">ID</TableHead>
-                  <TableHead className="text-amber-200/50">User</TableHead>
-                  <TableHead className="text-amber-200/50">Style Profile</TableHead>
-                  <TableHead className="text-amber-200/50">Score</TableHead>
-                  <TableHead className="text-amber-200/50">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {styleAnalyses.map(a => (
-                  <TableRow key={a.id} className="border-amber-900/10 hover:bg-amber-900/5">
-                    <TableCell className="text-xs text-amber-200/60">{a.id}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{a.user}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30">{a.style}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-16 rounded-full bg-stone-700">
-                          <div className="h-2 rounded-full bg-amber-500" style={{ width: `${a.score}%` }} />
-                        </div>
-                        <span className="text-xs text-amber-200/60">{a.score}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{fmtDate(a.date)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* User Consent Logs */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">User Consent Logs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-h-64 space-y-1 overflow-y-auto">
-            {consentLogs.map((log, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-amber-900/5 transition-colors">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-800/60">
-                  {log.action.startsWith('Granted') ? <CheckCircle className="h-4 w-4 text-green-400" /> : <X className="h-4 w-4 text-red-400" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-amber-100 truncate">{log.user} — {log.action}</p>
-                </div>
-                <span className="text-xs whitespace-nowrap text-amber-200/60">{log.timestamp}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   3BOX CURATE TAB
-   ════════════════════════════════════════════ */
-function ThreeBoxCurateTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
-  const [discountTiers] = useState([
-    { label: 'Starter Bundle (2 items)', discount: 5, minItems: 2 },
-    { label: 'Premium Bundle (3 items)', discount: 10, minItems: 3 },
-    { label: 'Luxury Bundle (5+ items)', discount: 15, minItems: 5 },
-  ])
-
-  const [portals] = useState([
-    { name: 'Portal A — Fragrances', connected: true, bundles: 12, revenue: 345000 },
-    { name: 'Portal B — Fashion', connected: true, bundles: 8, revenue: 520000 },
-    { name: 'Portal C — Home Decor', connected: false, bundles: 0, revenue: 0 },
-    { name: 'Portal D — Wellness', connected: true, bundles: 5, revenue: 180000 },
-  ])
-
-  const [recentOrders] = useState([
-    { id: 'BND-001', customer: 'Priya Sharma', items: 3, value: 24500, discount: 10, date: '2025-01-15' },
-    { id: 'BND-002', customer: 'Ravi Kapoor', items: 5, value: 48000, discount: 15, date: '2025-01-14' },
-    { id: 'BND-003', customer: 'Ananya Iyer', items: 2, value: 12000, discount: 5, date: '2025-01-13' },
-    { id: 'BND-004', customer: 'Vikram Singh', items: 3, value: 31500, discount: 10, date: '2025-01-12' },
-    { id: 'BND-005', customer: 'Meera Patel', items: 4, value: 39000, discount: 10, date: '2025-01-11' },
-  ])
-
-  const activeBundles = 25
-  const totalBundleValue = 1045000
-  const crossPortalRevenue = portals.reduce((sum, p) => sum + p.revenue, 0)
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-lg font-bold text-amber-100">3Box Curate</h2>
-        <p className="text-xs text-amber-200/60">Cross-portal bundle management and curation</p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600/10">
-                <Package className="h-5 w-5 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Active Bundles</p>
-                <p className="text-lg font-bold text-amber-100">{activeBundles}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
-                <DollarSign className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Total Bundle Value</p>
-                <p className="text-lg font-bold text-amber-100">{fmt(totalBundleValue)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/10">
-                <TrendingUp className="h-5 w-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Cross-Portal Revenue</p>
-                <p className="text-lg font-bold text-amber-100">{fmt(crossPortalRevenue)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Portal Integration Status */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Portal Integration Status</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-amber-900/20 hover:bg-transparent">
-                <TableHead className="text-amber-200/50">Portal</TableHead>
-                <TableHead className="text-amber-200/50">Status</TableHead>
-                <TableHead className="text-amber-200/50">Bundles</TableHead>
-                <TableHead className="text-amber-200/50">Revenue</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {portals.map(p => (
-                <TableRow key={p.name} className="border-amber-900/10 hover:bg-amber-900/5">
-                  <TableCell className="text-sm font-medium text-amber-100">{p.name}</TableCell>
-                  <TableCell>
-                    <Badge className={p.connected ? statusColor('active') : statusColor('inactive')}>
-                      {p.connected ? 'Connected' : 'Disconnected'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-amber-200/60">{p.bundles}</TableCell>
-                  <TableCell className="text-xs text-amber-200/60">{p.revenue > 0 ? fmt(p.revenue) : '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Bundle Discount Tiers */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Bundle Discount Configuration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {discountTiers.map((tier, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-4 rounded-lg border border-amber-900/20 bg-stone-800/30 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-amber-100">{tier.label}</p>
-                  <p className="text-xs text-amber-200/40">Min {tier.minItems} items per bundle</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className={lblCls}>Discount</Label>
-                  <div className="flex items-center gap-1 rounded-md border border-amber-900/40 bg-stone-800/50 px-3 py-1.5">
-                    <span className="text-sm font-bold text-amber-400">{tier.discount}%</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Bundle Orders */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Recent Bundle Orders</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-amber-900/20 hover:bg-transparent">
-                  <TableHead className="text-amber-200/50">Order ID</TableHead>
-                  <TableHead className="text-amber-200/50">Customer</TableHead>
-                  <TableHead className="text-amber-200/50">Items</TableHead>
-                  <TableHead className="text-amber-200/50">Value</TableHead>
-                  <TableHead className="text-amber-200/50">Discount</TableHead>
-                  <TableHead className="text-amber-200/50">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.map(o => (
-                  <TableRow key={o.id} className="border-amber-900/10 hover:bg-amber-900/5">
-                    <TableCell className="text-xs text-amber-200/60">{o.id}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{o.customer}</TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{o.items}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{fmt(o.value)}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-600/20 text-green-400 border-green-600/30">{o.discount}% OFF</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{fmtDate(o.date)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   FAMILY SHOP TAB
-   ════════════════════════════════════════════ */
-function FamilyShopTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
-  const [occasions, setOccasions] = useState([
-    { id: 1, name: 'Diwali', enabled: true, discount: 15 },
-    { id: 2, name: 'Raksha Bandhan', enabled: true, discount: 10 },
-    { id: 3, name: 'Wedding Season', enabled: true, discount: 12 },
-    { id: 4, name: 'Holi', enabled: false, discount: 8 },
-    { id: 5, name: 'Eid', enabled: true, discount: 10 },
-    { id: 6, name: 'Christmas', enabled: false, discount: 10 },
-  ])
-
-  const [templates] = useState([
-    { id: 'TPL-001', name: 'Family Gift Box', items: 5, price: 15000, occasions: ['Diwali', 'Wedding Season'] },
-    { id: 'TPL-002', name: 'Sibling Surprise Pack', items: 3, price: 8500, occasions: ['Raksha Bandhan'] },
-    { id: 'TPL-003', name: 'Festive Home Bundle', items: 7, price: 22000, occasions: ['Diwali', 'Christmas'] },
-    { id: 'TPL-004', name: 'Celebration Kit', items: 4, price: 12000, occasions: ['Holi', 'Eid'] },
-  ])
-
-  const [recentOrders] = useState([
-    { id: 'FAM-001', customer: 'Sharma Family', template: 'Family Gift Box', value: 15000, date: '2025-01-15' },
-    { id: 'FAM-002', customer: 'Kapoor Family', template: 'Sibling Surprise Pack', value: 8500, date: '2025-01-14' },
-    { id: 'FAM-003', customer: 'Iyer Family', template: 'Festive Home Bundle', value: 22000, date: '2025-01-13' },
-    { id: 'FAM-004', customer: 'Singh Family', template: 'Celebration Kit', value: 12000, date: '2025-01-12' },
-    { id: 'FAM-005', customer: 'Patel Family', template: 'Family Gift Box', value: 15000, date: '2025-01-11' },
-  ])
-
-  const totalFamilyRevenue = recentOrders.reduce((sum, o) => sum + o.value, 0)
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-lg font-bold text-amber-100">Family Shop</h2>
-        <p className="text-xs text-amber-200/60">Occasion-driven family package management</p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600/10">
-                <Users className="h-5 w-5 text-amber-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Active Occasions</p>
-                <p className="text-lg font-bold text-amber-100">{occasions.filter(o => o.enabled).length} / {occasions.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-600/10">
-                <ShoppingBag className="h-5 w-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Package Templates</p>
-                <p className="text-lg font-bold text-amber-100">{templates.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
-                <DollarSign className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-xs text-amber-200/60">Family Shopping Revenue</p>
-                <p className="text-lg font-bold text-amber-100">{fmt(totalFamilyRevenue)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Occasion Management */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Occasion / Festival Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {occasions.map(occ => (
-              <div key={occ.id} className="flex flex-wrap items-center gap-4 rounded-lg border border-amber-900/20 bg-stone-800/30 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-amber-100">{occ.name}</p>
-                  <p className="text-xs text-amber-200/40">Default discount: {occ.discount}%</p>
-                </div>
-                <Switch
-                  checked={occ.enabled}
-                  onCheckedChange={(checked) => {
-                    setOccasions(prev => prev.map(o => o.id === occ.id ? { ...o, enabled: checked } : o))
-                  }}
-                />
-                <Badge className={occ.enabled ? statusColor('active') : statusColor('inactive')}>
-                  {occ.enabled ? 'Active' : 'Inactive'}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Family Package Templates */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Family Package Templates</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-amber-900/20 hover:bg-transparent">
-                  <TableHead className="text-amber-200/50">ID</TableHead>
-                  <TableHead className="text-amber-200/50">Template</TableHead>
-                  <TableHead className="text-amber-200/50">Items</TableHead>
-                  <TableHead className="text-amber-200/50">Price</TableHead>
-                  <TableHead className="text-amber-200/50">Occasions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {templates.map(tmpl => (
-                  <TableRow key={tmpl.id} className="border-amber-900/10 hover:bg-amber-900/5">
-                    <TableCell className="text-xs text-amber-200/60">{tmpl.id}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{tmpl.name}</TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{tmpl.items}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{fmt(tmpl.price)}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {tmpl.occasions.map(o => (
-                          <Badge key={o} className="bg-purple-600/20 text-purple-400 border-purple-600/30 text-[10px]">{o}</Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Family Package Orders */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">Recent Family Package Orders</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-amber-900/20 hover:bg-transparent">
-                  <TableHead className="text-amber-200/50">Order ID</TableHead>
-                  <TableHead className="text-amber-200/50">Customer</TableHead>
-                  <TableHead className="text-amber-200/50">Template</TableHead>
-                  <TableHead className="text-amber-200/50">Value</TableHead>
-                  <TableHead className="text-amber-200/50">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.map(o => (
-                  <TableRow key={o.id} className="border-amber-900/10 hover:bg-amber-900/5">
-                    <TableCell className="text-xs text-amber-200/60">{o.id}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{o.customer}</TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{o.template}</TableCell>
-                    <TableCell className="text-sm font-medium text-amber-100">{fmt(o.value)}</TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{fmtDate(o.date)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   AI INFLUENCER TAB
-   ════════════════════════════════════════════ */
-function AIInfluencerTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
-  const qc = useQueryClient()
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
-  const [editImage, setEditImage] = useState<any>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<any>(null)
-  const [viewImage, setViewImage] = useState<any>(null)
-  const [editForm, setEditForm] = useState({ userName: '', reviewTitle: '', reviewComment: '', rating: 5, isApproved: false, isActive: true })
-  const [saving, setSaving] = useState(false)
-
-  // Fetch gallery images from database
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['style-gallery', statusFilter],
-    queryFn: () => apiFetch(`/api/style-gallery?status=${statusFilter}&limit=100`, undefined, token),
-  })
-
-  const images = (data as any)?.images || []
-  const totalImages = (data as any)?.pagination?.total || 0
-
-  // Stats
-  const approvedCount = images.filter((img: any) => img.isApproved && img.isActive).length
-  const pendingCount = images.filter((img: any) => !img.isApproved && img.isActive).length
-  const rejectedCount = images.filter((img: any) => !img.isActive).length
-
-  // Top contributors (group by userName)
-  const contributorMap: Record<string, { name: string; count: number; latestDate: string }> = {}
-  images.forEach((img: any) => {
-    const name = img.userName || 'Anonymous'
-    if (!contributorMap[name]) {
-      contributorMap[name] = { name, count: 0, latestDate: img.createdAt }
-    }
-    contributorMap[name].count++
-    if (new Date(img.createdAt) > new Date(contributorMap[name].latestDate)) {
-      contributorMap[name].latestDate = img.createdAt
-    }
-  })
-  const topContributors = Object.values(contributorMap)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-
-  // Delete mutation
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => apiFetch(`/api/style-gallery/${id}`, { method: 'DELETE' }, token),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['style-gallery'] })
-      onMutate()
-      setDeleteConfirm(null)
-      showToast('success', 'Image deleted successfully')
-    },
-    onError: (err: any) => {
-      showToast('error', `Failed to delete: ${err.message}`)
-    },
-  })
-
-  // Approve/reject mutation
-  const approveMut = useMutation({
-    mutationFn: ({ id, isApproved, isActive }: { id: string; isApproved?: boolean; isActive?: boolean }) =>
-      apiFetch(`/api/style-gallery/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isApproved, isActive }),
-      }, token),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['style-gallery'] })
-      onMutate()
-      showToast('success', 'Status updated')
-    },
-    onError: (err: any) => {
-      showToast('error', `Failed to update: ${err.message}`)
-    },
-  })
-
-  // Edit handler
-  const handleEdit = (img: any) => {
-    setEditImage(img)
-    setEditForm({
-      userName: img.userName || '',
-      reviewTitle: img.reviewTitle || '',
-      reviewComment: img.reviewComment || '',
-      rating: img.rating || 5,
-      isApproved: img.isApproved ?? false,
-      isActive: img.isActive ?? true,
-    })
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editImage) return
-    setSaving(true)
-    try {
-      await apiFetch(`/api/style-gallery/${editImage.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(editForm),
-      }, token)
-      qc.invalidateQueries({ queryKey: ['style-gallery'] })
-      onMutate()
-      setEditImage(null)
-      showToast('success', 'Image updated successfully')
-    } catch (err: any) {
-      showToast('error', `Failed to update: ${err.message}`)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Parse images from product for display
-  const getProductImage = (img: any) => {
-    try {
-      const imgs = typeof img.product?.images === 'string' ? JSON.parse(img.product.images || '[]') : (Array.isArray(img.product?.images) ? img.product.images : [])
-      return imgs[0] || null
-    } catch { return null }
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-amber-100 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-400" />
-            AI Style Gallery Manager
-          </h2>
-          <p className="text-xs text-amber-200/60 mt-1">Manage user-submitted AI style images — approve, edit, or delete for safety</p>
-        </div>
-        <Button variant="outline" className={btnOutline} onClick={() => refetch()}>
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Refresh
-        </Button>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-amber-100">{totalImages}</p>
-            <p className="text-[10px] text-amber-200/50">Total Images</p>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-green-400">{approvedCount}</p>
-            <p className="text-[10px] text-amber-200/50">Approved</p>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-yellow-400">{pendingCount}</p>
-            <p className="text-[10px] text-amber-200/50">Pending</p>
-          </CardContent>
-        </Card>
-        <Card className={cardCls}>
-          <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-red-400">{rejectedCount}</p>
-            <p className="text-[10px] text-amber-200/50">Rejected</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Status Filter Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'pending', 'approved', 'rejected'] as const).map(s => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-full text-xs border transition-all ${
-              statusFilter === s
-                ? s === 'pending'
-                  ? 'bg-yellow-600/20 text-yellow-400 border-yellow-600/30'
-                  : s === 'approved'
-                  ? 'bg-green-600/20 text-green-400 border-green-600/30'
-                  : s === 'rejected'
-                  ? 'bg-red-600/20 text-red-400 border-red-600/30'
-                  : 'bg-amber-600/20 text-amber-400 border-amber-600/30'
-                : 'border-amber-900/20 text-amber-200/40 hover:border-amber-600/40 hover:text-amber-200/60'
-            }`}
-          >
-            {s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Pending Moderation Queue */}
-      {statusFilter === 'all' && pendingCount > 0 && (
-        <Card className={`${cardCls} border-yellow-900/30`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-amber-100 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-yellow-400" />
-              Pending Moderation ({pendingCount})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {images.filter((img: any) => !img.isApproved && img.isActive).map((img: any) => (
-                <div key={img.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-yellow-900/20 bg-stone-800/30 p-3">
-                  {/* Image preview */}
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-amber-900/20">
-                    {img.aiGeneratedImage ? (
-                      <img src={img.aiGeneratedImage} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-stone-700/50">
-                        <ImageIcon className="h-5 w-5 text-amber-200/30" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-amber-100 truncate">{img.reviewTitle || 'No title'}</p>
-                    <p className="text-xs text-amber-200/40">by {img.userName} · {img.product?.name || 'Unknown product'}</p>
-                    {img.reviewComment && <p className="text-xs text-amber-200/30 mt-0.5 line-clamp-1">{img.reviewComment}</p>}
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Button size="sm" className={`h-7 gap-1 ${btnPrimary}`} onClick={() => approveMut.mutate({ id: img.id, isApproved: true })}>
-                      <ThumbsUp className="h-3 w-3" /> Approve
-                    </Button>
-                    <Button size="sm" variant="outline" className="h-7 gap-1 border-red-600/40 text-red-400 hover:bg-red-900/20 hover:text-red-300" onClick={() => approveMut.mutate({ id: img.id, isActive: false })}>
-                      <ThumbsDown className="h-3 w-3" /> Reject
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 text-amber-200/40 hover:text-amber-400" onClick={() => handleEdit(img)}>
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Top Contributors */}
-      {topContributors.length > 0 && (
-        <Card className={cardCls}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-amber-100">Top Contributors</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-amber-900/20 hover:bg-transparent">
-                  <TableHead className="text-amber-200/50">Name</TableHead>
-                  <TableHead className="text-amber-200/50">Images Shared</TableHead>
-                  <TableHead className="text-amber-200/50">Latest Activity</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topContributors.map((contrib, i) => (
-                  <TableRow key={contrib.name} className="border-amber-900/10 hover:bg-amber-900/5">
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-600/20 text-xs font-bold text-amber-400">
-                          {i + 1}
-                        </div>
-                        <span className="text-sm font-medium text-amber-100">{contrib.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{contrib.count}</TableCell>
-                    <TableCell className="text-xs text-amber-200/60">{fmtDate(contrib.latestDate)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* All Gallery Images Table */}
-      <Card className={cardCls}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-amber-100">All Gallery Images</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-amber-400" /></div>
-          ) : images.length === 0 ? (
-            <div className="py-12 text-center text-amber-200/40">
-              <ImageIcon className="h-12 w-12 mx-auto mb-3 text-amber-600/30" />
-              <p className="text-sm">No gallery images found</p>
-              <p className="text-xs mt-1">Images will appear here when users share their AI styles</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-amber-900/20 hover:bg-transparent">
-                    <TableHead className="text-amber-200/50">Image</TableHead>
-                    <TableHead className="text-amber-200/50">User</TableHead>
-                    <TableHead className="text-amber-200/50">Product</TableHead>
-                    <TableHead className="text-amber-200/50">Title / Comment</TableHead>
-                    <TableHead className="text-amber-200/50">Rating</TableHead>
-                    <TableHead className="text-amber-200/50">Status</TableHead>
-                    <TableHead className="text-amber-200/50">Date</TableHead>
-                    <TableHead className="text-amber-200/50">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {images.map((img: any) => (
-                    <TableRow key={img.id} className="border-amber-900/10 hover:bg-amber-900/5">
-                      <TableCell>
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-amber-900/20">
-                          {img.aiGeneratedImage ? (
-                            <img
-                              src={img.aiGeneratedImage.startsWith('data:') ? img.aiGeneratedImage.substring(0, 50) + '...' : img.aiGeneratedImage}
-                              alt=""
-                              className="h-full w-full object-cover cursor-pointer"
-                              onClick={() => setViewImage(img)}
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-stone-700/50">
-                              <ImageIcon className="h-4 w-4 text-amber-200/30" />
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-600/20 text-[10px] font-bold text-amber-400">
-                            {(img.userName || 'A').charAt(0).toUpperCase()}
-                          </div>
-                          <span className="text-xs text-amber-100 max-w-[100px] truncate">{img.userName || 'Anonymous'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs text-amber-200/60 max-w-[120px] truncate">{img.product?.name || '—'}</TableCell>
-                      <TableCell>
-                        <p className="text-xs text-amber-100 font-medium truncate max-w-[150px]">{img.reviewTitle || '—'}</p>
-                        {img.reviewComment && <p className="text-[10px] text-amber-200/40 truncate max-w-[150px]">{img.reviewComment}</p>}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-0.5">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`h-3 w-3 ${i < (img.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-stone-600'}`} />
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={
-                          !img.isActive ? 'bg-red-600/20 text-red-400 border-red-600/30' :
-                          img.isApproved ? 'bg-green-600/20 text-green-400 border-green-600/30' :
-                          'bg-yellow-600/20 text-yellow-400 border-yellow-600/30'
-                        } variant="outline">
-                          {!img.isActive ? 'Rejected' : img.isApproved ? 'Approved' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-amber-200/40 whitespace-nowrap">{fmtDate(img.createdAt)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {!img.isApproved && img.isActive && (
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-400/60 hover:text-green-400" onClick={() => approveMut.mutate({ id: img.id, isApproved: true })} title="Approve">
-                              <CheckCircle className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-200/40 hover:text-amber-400" onClick={() => handleEdit(img)} title="Edit">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400/40 hover:text-red-400" onClick={() => setDeleteConfirm(img)} title="Delete">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* View Image Dialog */}
-      <Dialog open={!!viewImage} onOpenChange={(open) => { if (!open) setViewImage(null) }}>
-        <DialogContent className="border-amber-900/30 bg-stone-950 sm:max-w-lg">
-          {viewImage && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-amber-100 flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-amber-400" />
-                  Image Preview
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <div className="overflow-hidden rounded-lg border border-amber-900/20">
-                  {viewImage.aiGeneratedImage ? (
-                    <img src={viewImage.aiGeneratedImage} alt={`AI style by ${viewImage.userName}`} className="w-full object-cover max-h-80" />
-                  ) : (
-                    <div className="flex h-60 items-center justify-center bg-stone-800/50">
-                      <ImageIcon className="h-12 w-12 text-amber-200/20" />
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-600/20 text-xs font-bold text-amber-400">
-                        {(viewImage.userName || 'A').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-amber-100">{viewImage.userName || 'Anonymous'}</p>
-                        <p className="text-[10px] text-amber-200/40">{viewImage.product?.name || 'Unknown product'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-0.5">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={`h-3.5 w-3.5 ${i < (viewImage.rating || 5) ? 'text-amber-400 fill-amber-400' : 'text-stone-600'}`} />
-                      ))}
-                    </div>
-                  </div>
-                  {viewImage.reviewTitle && <p className="text-sm font-medium text-amber-100">{viewImage.reviewTitle}</p>}
-                  {viewImage.reviewComment && <p className="text-xs text-amber-200/60">{viewImage.reviewComment}</p>}
-                  <div className="flex items-center gap-2 text-xs text-amber-200/40">
-                    <Badge className={
-                      !viewImage.isActive ? 'bg-red-600/20 text-red-400 border-red-600/30' :
-                      viewImage.isApproved ? 'bg-green-600/20 text-green-400 border-green-600/30' :
-                      'bg-yellow-600/20 text-yellow-400 border-yellow-600/30'
-                    } variant="outline">
-                      {!viewImage.isActive ? 'Rejected' : viewImage.isApproved ? 'Approved' : 'Pending'}
-                    </Badge>
-                    <span>{fmtDateTime(viewImage.createdAt)}</span>
-                    {viewImage.consentGiven && (
-                      <span className="flex items-center gap-0.5 text-green-400/60"><Shield className="h-3 w-3" /> Consent</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2 pt-2 border-t border-amber-900/20">
-                  {!viewImage.isApproved && viewImage.isActive && (
-                    <Button size="sm" className={btnPrimary} onClick={() => { approveMut.mutate({ id: viewImage.id, isApproved: true }); setViewImage(null) }}>
-                      <ThumbsUp className="mr-1 h-3.5 w-3.5" /> Approve
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" className={btnOutline} onClick={() => { setViewImage(null); handleEdit(viewImage) }}>
-                    <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                  </Button>
-                  <Button size="sm" variant="outline" className="border-red-600/40 text-red-400 hover:bg-red-900/20 hover:text-red-300" onClick={() => { setViewImage(null); setDeleteConfirm(viewImage) }}>
-                    <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
-                  </Button>
-                  <Button size="sm" variant="ghost" className="ml-auto text-amber-200/60" onClick={() => setViewImage(null)}>
-                    Close
-                  </Button>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Image Dialog */}
-      <Dialog open={!!editImage} onOpenChange={(open) => { if (!open) setEditImage(null) }}>
-        <DialogContent className="border-amber-900/30 bg-stone-950 sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-amber-100 flex items-center gap-2">
-              <Pencil className="h-4 w-4 text-amber-400" />
-              Edit Gallery Image
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className={lblCls}>Display Name</Label>
-              <Input className={`${inputCls} mt-1`} value={editForm.userName} onChange={e => setEditForm(f => ({ ...f, userName: e.target.value }))} />
-            </div>
-            <div>
-              <Label className={lblCls}>Review Title</Label>
-              <Input className={`${inputCls} mt-1`} value={editForm.reviewTitle} onChange={e => setEditForm(f => ({ ...f, reviewTitle: e.target.value }))} placeholder="Optional title" />
-            </div>
-            <div>
-              <Label className={lblCls}>Comment</Label>
-              <Textarea className={`${inputCls} mt-1`} rows={3} value={editForm.reviewComment} onChange={e => setEditForm(f => ({ ...f, reviewComment: e.target.value }))} placeholder="Optional comment" />
-            </div>
-            <div>
-              <Label className={lblCls}>Rating (1-5)</Label>
-              <div className="flex items-center gap-1 mt-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <button key={i} onClick={() => setEditForm(f => ({ ...f, rating: i + 1 }))} className="p-0.5">
-                    <Star className={`h-5 w-5 transition-colors ${i < editForm.rating ? 'text-amber-400 fill-amber-400' : 'text-stone-600 hover:text-amber-400/50'}`} />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={editForm.isApproved} onCheckedChange={v => setEditForm(f => ({ ...f, isApproved: v }))} className="data-[state=checked]:bg-green-600" />
-              <Label className="text-sm text-amber-200/70">{editForm.isApproved ? 'Approved (visible to users)' : 'Pending (not publicly visible)'}</Label>
-            </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={editForm.isActive} onCheckedChange={v => setEditForm(f => ({ ...f, isActive: v }))} className="data-[state=checked]:bg-green-600" />
-              <Label className="text-sm text-amber-200/70">{editForm.isActive ? 'Active' : 'Rejected / Inactive'}</Label>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" className={btnOutline} onClick={() => setEditImage(null)}>Cancel</Button>
-              <Button className={btnPrimary} onClick={handleSaveEdit} disabled={saving}>
-                {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null) }}>
-        <DialogContent className="border-red-900/30 bg-stone-950 sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-red-300 flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              Delete Gallery Image
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-amber-200/60">
-            Are you sure you want to delete this image by <strong className="text-amber-100">{deleteConfirm?.userName || 'Anonymous'}</strong>?
-            This action cannot be undone.
-          </p>
-          {deleteConfirm?.reviewTitle && (
-            <p className="text-xs text-amber-200/40">Title: {deleteConfirm.reviewTitle}</p>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" className={btnOutline} onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button className="bg-red-600 text-white hover:bg-red-500" onClick={() => deleteMut.mutate(deleteConfirm.id)} disabled={deleteMut.isPending}>
-              {deleteMut.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}

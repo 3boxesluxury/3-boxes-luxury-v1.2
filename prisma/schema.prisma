@@ -1,26 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-  relationMode = "prisma"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Category {
+// ════════════════════════════════════════════
+// USER & AUTH MODELS (from your current schema)
+// ════════════════════════════════════════════
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String
+  password          String?
+  role              String   @default("user")
+  avatar            String?
+  phone             String?
+  gender            String?  // v16: "male" | "female" | null — persisted from OAuth providers
+  isActive          Boolean  @default(true)
+  approvalStatus    String   @default("pending")
+  emailVerified     Boolean  @default(false)
+  phoneVerified     Boolean  @default(false)
+  twoFactorEnabled  Boolean  @default(false)
+  twoFactorRequired Boolean  @default(false)
+  twoFactorSecret   String?
+  socialProvider    String?
+  socialId          String?
+  // v22: Instagram Graph API fields — stored when user connects via Facebook OAuth with Instagram scopes
+  instagramId       String?  // Instagram Business Account ID (from Graph API)
+  instagramUsername String?  // Instagram username (e.g., "manoj_royal")
+  instagramToken    String?  // Long-lived Instagram access token (for API calls)
+  corporateRole     String?
+  adminRole         String?
+  otpCode           String?
+  otpExpiry         DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  emailVerifyToken  String?
+  emailVerifyExpiry DateTime?
+  phoneVerifyCode   String?
+  phoneVerifyExpiry DateTime?
+  failedLoginAttempts Int?   @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  lastLoginDevice   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  permissions       UserPermission[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  corporateAccount  CorporateAccount?
+  wishlistItems     WishlistItem[]
+}
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  permission String   // e.g. "products.manage", "orders.manage", "accounting.view"
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  userId       String
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  deviceInfo   String?
+  lastActivity DateTime? @default(now())
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // login_success, login_failed, register, logout, etc.
+  entity    String   // user, order, product, etc.
+  entityId  String?
+  details   String?  // JSON string with additional info
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+}
+
+// ════════════════════════════════════════════
+// CORPORATE MODELS (from your current schema)
+// ════════════════════════════════════════════
+
+model CorporateAccount {
+  id              String   @id @default(cuid())
+  companyName     String
+  slug            String   @unique
+  industry        String?
+  website         String?
+  gstNumber       String?
+  panNumber       String?
+  billingAddress  String?
+  billingCity     String?
+  billingState    String?
+  billingZipCode  String?
+  billingCountry  String?  @default("India")
+  contactName     String
+  contactEmail    String
+  contactPhone    String?
+  userId          String   @unique
+  approvalStatus  String   @default("pending")
+  isActive        Boolean  @default(true)
+  creditLimit     Float?
+  creditUsed      Float?
+  discountPercent Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members  CorporateMember[]
+  branding CorporateBranding?
+}
+
+model CorporateMember {
   id          String    @id @default(cuid())
+  corporateId String
+  userId      String?
+  email       String
+  name        String?
+  role        String    @default("member")
+  status      String    @default("pending")
+  invitedAt   DateTime?
+  joinedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  corporate CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+
+  @@unique([corporateId, email])
+  @@index([corporateId])
+}
+
+model CorporateBranding {
+  id             String  @id @default(cuid())
+  corporateId    String  @unique
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
+  customMessage  String?
+  packagingType  String  @default("standard")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  corporate CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+}
+
+// ════════════════════════════════════════════
+// PRODUCT & CATEGORY MODELS (from v1.2 + subCategoryId)
+// ════════════════════════════════════════════
+
+model Category {
+  id          String   @id @default(cuid())
   name        String
-  slug        String    @unique
+  slug        String   @unique
   description String?
   image       String?
-  parentId    String?
-  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  parentId    String?  // for sub-categories
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
-  order       Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   products    Product[]
 }
 
@@ -36,20 +203,16 @@ model Product {
   sku            String?
   images         String    // JSON array of image URLs
   categoryId     String
-  category       Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  category       Category  @relation(fields: [categoryId], references: [id])
+  subCategoryId  String?   // sub-category ID
   stock          Int       @default(0)
-  stockStatus    String    @default("in_stock") // in_stock, low_stock, out_of_stock, preorder
   reorderLevel   Int       @default(5)
   rating         Float     @default(0)
   reviewCount    Int       @default(0)
   featured       Boolean   @default(false)
   tags           String?   // JSON array of tags
-  occasions      String?   // JSON array: birthday, anniversary, wedding, diwali, christmas, etc.
-  recipientTypes String?   // JSON array: him, her, couple, kids, parents, friend, colleague
-  relationships  String?   // JSON array: spouse, parent, sibling, friend, colleague, boss
-  deliveryEstimate String? // e.g. "3-5 business days"
   vendorId       String?
-  vendor         Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  vendor         Vendor?   @relation(fields: [vendorId], references: [id])
   sourceUrl      String?
   platform       String?   // myntra, nykaa, amazon, caratlane, tanishq, bluestone, voylla, flipkart, etc.
   affiliateUrl   String?   // affiliate/tracking link for external products
@@ -65,40 +228,7 @@ model Product {
   orderItems     OrderItem[]
   inventoryLogs  InventoryLog[]
   wishlistItems  WishlistItem[]
-  campaigns      CorporateCampaign[]
-  recipients     CampaignRecipient[]
-  reviews        Review[]
-  variants       ProductVariant[]
-  productImages  ProductImage[]
   portfolioItems CustomerPortfolio[]
-}
-
-model ProductVariant {
-  id          String   @id @default(cuid())
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  name        String   // e.g. "Red / Large", "Gold Plated"
-  sku         String?  // variant-specific SKU
-  price       Float    // variant price (overrides product price if > 0)
-  compareAtPrice Float? // variant compare-at price
-  stock       Int      @default(0)
-  stockStatus String   @default("in_stock") // in_stock, low_stock, out_of_stock, preorder
-  attributes  String   // JSON: {"color": "Red", "size": "Large", "material": "Gold Plated"}
-  image       String?  // variant-specific image URL
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model ProductImage {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  url       String
-  alt       String?
-  sort      Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
 }
 
 model PlatformIntegration {
@@ -127,7 +257,7 @@ model PlatformIntegration {
 model SyncLog {
   id              String    @id @default(cuid())
   integrationId   String
-  integration     PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  integration     PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   type            String    // full, incremental, category
   status          String    // started, completed, failed
   productsFound   Int       @default(0)
@@ -139,209 +269,66 @@ model SyncLog {
   completedAt     DateTime?
 }
 
+// ════════════════════════════════════════════
+// CART & ORDER MODELS
+// ════════════════════════════════════════════
+
 model Cart {
-  id          String     @id @default(cuid())
-  sessionId   String     @unique
-  userId      String?    // link to authenticated user
-  couponCode  String?    // applied coupon code
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  items       CartItem[]
+  id        String     @id @default(cuid())
+  sessionId String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
 }
 
 model CartItem {
-  id             String  @id @default(cuid())
-  cartId         String
-  cart           Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  productId      String
-  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  quantity       Int     @default(1)
-  variantId      String? // selected product variant
-  giftWrapping   Boolean @default(false)
-  greetingMessage String?
-  hidePrice      Boolean @default(false)
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique
-  email           String
-  firstName       String
-  lastName        String
-  address         String
-  city            String
-  state           String
-  zipCode         String
-  country         String
-  phone           String?
-  subtotal        Float
-  shipping        Float
-  tax             Float
-  discount        Float       @default(0)
-  total           Float
-  status          String      @default("pending") // pending, processing, shipped, delivered, cancelled
-  paymentMethod   String      @default("card")
-  paymentStatus   String      @default("pending") // pending, paid, failed, refunded
-  deliveryType    String      @default("standard") // standard, express, same-day, scheduled
-  scheduledDate   DateTime?   // for scheduled delivery
-  occasion        String?     // birthday, anniversary, wedding, etc.
-  giftWrapping    Boolean     @default(false)
-  giftWrapStyle   String?     // classic, premium, luxury
-  greetingMessage String?
-  hidePrice       Boolean     @default(false)
-  couponCode      String?
-  trackingNumber  String?
-  trackingUrl     String?
-  estimatedDelivery DateTime?
-  cancelledAt     DateTime?
-  cancelReason    String?
-  refundStatus    String?     // pending, processed, denied
-  refundAmount    Float?
-  refundedAt      DateTime?
-  userId          String?     // link to authenticated user
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           OrderItem[]
-  reviews         Review[]
-  trackingEvents  OrderTrackingEvent[]
-  paymentSessions PaymentSession[]
-  invoice         OrderInvoice?
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  email         String
+  firstName     String
+  lastName      String
+  address       String
+  city          String
+  state         String
+  zipCode       String
+  country       String
+  phone         String?
+  subtotal      Float
+  shipping      Float
+  tax           Float
+  total         Float
+  status        String      @default("pending") // pending, processing, shipped, delivered, cancelled
+  paymentMethod String      @default("card")
+  paymentStatus String      @default("pending") // pending, paid, failed, refunded
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
 }
 
 model OrderItem {
-  id          String  @id @default(cuid())
-  orderId     String
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  productId   String
-  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  name        String
-  price       Float
-  quantity    Int
-  image       String?
-  variantId   String?  // selected variant
-  variantName String?  // variant display name
-  giftWrapping Boolean @default(false)
-  greetingMessage String?
-  hidePrice   Boolean @default(false)
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  price     Float
+  quantity  Int
+  image     String?
 }
 
-model OrderTrackingEvent {
-  id          String   @id @default(cuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  status      String   // pending, confirmed, processing, shipped, out_for_delivery, delivered, cancelled
-  description String?  // e.g. "Package picked up from warehouse"
-  location    String?  // e.g. "Mumbai Hub"
-  timestamp   DateTime @default(now())
-}
-
-model PaymentSession {
-  id              String   @id @default(cuid())
-  orderId         String
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  provider        String   // razorpay, stripe
-  providerSessionId String? // Razorpay order ID or Stripe session ID
-  amount          Float
-  currency        String   @default("INR")
-  status          String   @default("created") // created, attempted, paid, failed, expired
-  paymentId       String?  // provider payment ID after success
-  method          String?  // card, upi, netbanking, wallet
-  metadata        String?  // JSON: additional provider-specific data
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model OrderInvoice {
-  id            String   @id @default(cuid())
-  orderId       String   @unique
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  invoiceNumber String   @unique
-  amount        Float
-  tax           Float    @default(0)
-  total         Float
-  status        String   @default("generated") // generated, sent, paid
-  pdfUrl        String?  // generated PDF URL
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-model User {
-  id                 String            @id @default(cuid())
-  email              String            @unique
-  name               String
-  password           String?
-  role               String            @default("user") // admin, user, agent, team, corporate
-  adminRole          String?           // super_admin, product_manager, order_manager, inventory_manager, finance_manager, support_agent, corporate_account_manager
-  corporateRole      String?           // corporate_admin, finance_user, campaign_manager
-  avatar             String?
-  phone              String?
-  isActive           Boolean           @default(true)
-  emailVerified      Boolean           @default(false)
-  phoneVerified      Boolean           @default(false)
-  twoFactorSecret    String?
-  twoFactorEnabled   Boolean           @default(false)
-  twoFactorRequired  Boolean           @default(false) // admin-enforced 2FA
-  approvalStatus     String            @default("pending") // pending, approved, rejected, suspended
-  socialProvider     String?           // google, facebook, linkedin
-  socialId           String?
-  resetToken         String?
-  resetTokenExpiry   DateTime?
-  otpCode            String?           // OTP for phone login / forgot password
-  otpExpiry          DateTime?         // OTP expiry time
-  emailVerifyToken   String?
-  emailVerifyExpiry  DateTime?
-  phoneVerifyCode    String?
-  phoneVerifyExpiry  DateTime?
-  lastLoginAt        DateTime?
-  lastLoginIp        String?
-  lastLoginDevice    String?
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  permissions        UserPermission[]
-  sessions           Session[]
-  preferredLanguage  String?           @default("en")  // ISO 639-1, e.g. "en", "hi", "ar"
-  preferredCurrency  String?           @default("INR")  // ISO 4217, e.g. "USD", "EUR"
-  detectedCountry    String?                           // auto-detected country code
-  wishlistItems      WishlistItem[]
-  corporateAccount   CorporateAccount?
-  auditLogs          AuditLog[]
-}
-
-model UserPermission {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  permission String   // e.g. "products.manage", "orders.manage", "accounting.view"
-  createdAt  DateTime @default(now())
-
-  @@unique([userId, permission])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  token        String   @unique
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  ipAddress    String?
-  userAgent    String?
-  deviceInfo   String?  // parsed device info
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
-  lastActivity DateTime @default(now())
-}
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  action      String   // login, logout, password_change, role_change, approval_change, mfa_setup, etc.
-  entity      String?  // user, order, product, corporate, campaign, etc.
-  entityId    String?  // ID of the affected entity
-  details     String?  // JSON: additional details
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
-}
+// ════════════════════════════════════════════
+// VENDOR & INVOICE MODELS
+// ════════════════════════════════════════════
 
 model Vendor {
   id          String    @id @default(cuid())
@@ -363,7 +350,7 @@ model Invoice {
   id             String       @id @default(cuid())
   invoiceNumber  String       @unique
   vendorId       String?
-  vendor         Vendor?      @relation(fields: [vendorId], references: [id], onDelete: SetNull, onUpdate: Restrict)
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
   orderId        String?
   amount         Float
   tax            Float        @default(0)
@@ -380,12 +367,16 @@ model Invoice {
 model InvoiceItem {
   id          String  @id @default(cuid())
   invoiceId   String
-  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
   quantity    Int     @default(1)
   unitPrice   Float
   amount      Float
 }
+
+// ════════════════════════════════════════════
+// ACCOUNTING & INVENTORY MODELS
+// ════════════════════════════════════════════
 
 model AccountEntry {
   id          String   @id @default(cuid())
@@ -401,19 +392,23 @@ model AccountEntry {
 model InventoryLog {
   id        String   @id @default(cuid())
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product   Product  @relation(fields: [productId], references: [id])
   type      String   // in, out, adjustment, return
   quantity  Int
   note      String?
   createdAt DateTime @default(now())
 }
 
+// ════════════════════════════════════════════
+// WISHLIST & PAYMENT MODELS
+// ════════════════════════════════════════════
+
 model WishlistItem {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  product   Product  @relation(fields: [productId], references: [id])
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
@@ -428,6 +423,10 @@ model PaymentMethod {
   userId       String?
   createdAt    DateTime @default(now())
 }
+
+// ════════════════════════════════════════════
+// OFFERS & DISCOUNTS
+// ════════════════════════════════════════════
 
 model Offer {
   id          String    @id @default(cuid())
@@ -447,51 +446,38 @@ model Offer {
   updatedAt   DateTime  @updatedAt
 }
 
-model WikiDocument {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  content     String
-  category    String?
-  version     String   @default("1.0")
-  isPublished Boolean  @default(false)
-  accessRoles String   @default("admin,team,agent,user")
-  createdBy   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// ════════════════════════════════════════════
+// WIKI / DOCUMENTATION
+// ════════════════════════════════════════════
 
-  docShares AgentDocShare[]
+model WikiDocument {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String?
+  slug      String?
+  version   String?  @default("1.0")
+  accessRoles String?
+  isPublished Boolean  @default(false)
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AgentDocShare {
-  id           String   @id @default(cuid())
-  agentId      String
-  docId        String
-  sharedBy     String
-  canDownload  Boolean  @default(true)
-  canShare     Boolean  @default(false)
-  message      String?
-  createdAt    DateTime @default(now())
-
-  document WikiDocument @relation(fields: [docId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id         String   @id @default(cuid())
+  agentId    String
+  docId      String
+  sharedBy   String
+  canDownload Boolean @default(true)
+  canShare    Boolean @default(false)
+  message    String?
+  createdAt  DateTime @default(now())
 }
 
-model Coupon {
-  id          String    @id @default(cuid())
-  code        String    @unique
-  title       String?
-  type        String    @default("percentage") // percentage, fixed, free_shipping
-  value       Float     @default(0)
-  minOrder    Float?    @default(0)
-  maxDiscount Float?
-  validFrom   DateTime  @default(now())
-  validTo     DateTime
-  isActive    Boolean   @default(true)
-  usageLimit  Int?      // null = unlimited
-  usedCount   Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
+// ════════════════════════════════════════════
+// SUPPORT TICKETS
+// ════════════════════════════════════════════
 
 model SupportTicket {
   id        String                  @id @default(cuid())
@@ -507,11 +493,15 @@ model SupportTicket {
 model SupportTicketMessage {
   id        String         @id @default(cuid())
   ticketId  String
-  ticket    SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  ticket    SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   senderId  String?
   message   String
   createdAt DateTime       @default(now())
 }
+
+// ════════════════════════════════════════════
+// AFFILIATE & PARTNER
+// ════════════════════════════════════════════
 
 model AffiliateClick {
   id           String   @id @default(cuid())
@@ -527,7 +517,7 @@ model AffiliateClick {
 model PartnerCategoryMap {
   id             String   @id @default(cuid())
   integrationId  String
-  integration    PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  integration    PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
   partnerCatName String   // category name on partner site (e.g. "Rings", "Necklaces")
   partnerCatSlug String   // category slug on partner site
   localCatId     String?  // map to our category (nullable = create new)
@@ -536,176 +526,30 @@ model PartnerCategoryMap {
   @@unique([integrationId, partnerCatSlug])
 }
 
-// ─── Corporate Gifting Portal Models ───
-
-model CorporateAccount {
-  id              String    @id @default(cuid())
-  companyName     String
-  slug            String    @unique
-  industry        String?
-  website         String?
-  gstNumber       String?
-  panNumber       String?
-  billingAddress  String?   // structured billing address
-  billingCity     String?
-  billingState    String?
-  billingZipCode  String?
-  billingCountry  String    @default("India")
-  contactName     String
-  contactEmail    String
-  contactPhone    String?
-  address         String?
-  city            String?
-  state           String?
-  zipCode         String?
-  country         String    @default("India")
-  logo            String?
-  userId          String    @unique  // linked User account
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  approvalStatus  String    @default("pending") // pending, approved, rejected, suspended
-  isActive        Boolean   @default(true)
-  creditLimit     Float     @default(0)
-  creditUsed      Float     @default(0)
-  discountPercent Float     @default(0) // default corporate discount %
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  campaigns       CorporateCampaign[]
-  branding        CorporateBranding?
-  members         CorporateMember[]
-}
-
-model CorporateMember {
-  id            String          @id @default(cuid())
-  corporateId   String
-  corporate     CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  userId        String?         // linked User account (nullable until they accept invite)
-  email         String
-  name          String?
-  role          String          @default("campaign_manager") // corporate_admin, finance_user, campaign_manager
-  status        String          @default("pending") // pending, active, suspended
-  invitedAt     DateTime        @default(now())
-  joinedAt      DateTime?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-
-  @@unique([corporateId, email])
-}
-
-model CorporateBranding {
-  id              String          @id @default(cuid())
-  corporateId     String          @unique
-  corporate       CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  logoUrl         String?
-  primaryColor    String?         // hex color
-  secondaryColor  String?         // hex color
-  customMessage   String?         // default greeting message
-  packagingType   String          @default("standard") // standard, premium, luxury
-  giftWrapStyle   String?         // ribbon color, wrapping style
-  includeBranding Boolean         @default(true) // include corporate branding on package
-  hidePrice       Boolean         @default(true) // hide price on gift
-  cardTemplate    String?         // custom card template
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-}
-
-model CorporateCampaign {
-  id              String   @id @default(cuid())
-  corporateId     String
-  corporate       CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  name            String
-  occasion        String?  // diwali, christmas, new_year, birthday, anniversary, onboarding, etc.
-  description     String?
-  budgetPerRecipient Float?
-  totalBudget     Float?
-  status          String   @default("draft") // draft, pending_approval, approved, in_progress, completed, cancelled
-  deliveryType    String   @default("bulk") // bulk, individual
-  deliveryDate    DateTime?
-  message         String?  // custom greeting message for this campaign
-  productId       String?  // selected product for all recipients
-  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  recipients      CampaignRecipient[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-model CampaignRecipient {
-  id          String   @id @default(cuid())
-  campaignId  String
-  campaign    CorporateCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  name        String
-  email       String
-  phone       String?
-  designation String?
-  department  String?
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  productId   String?  // override campaign-level product
-  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  budget      Float?   // override campaign budget
-  message     String?  // override campaign message
-  giftStatus  String   @default("pending") // pending, ordered, shipped, delivered, cancelled
-  orderId     String?  // linked order once placed
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ─── Reviews ───
-
-model Review {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
-  orderId   String?
-  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Restrict)
-  userId    String?
-  userName  String
-  rating    Int      // 1-5
-  title     String?
-  comment   String
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// ─── Customer Portfolio (AI-Generated Style Previews) ───
+// ════════════════════════════════════════════
+// AI STYLE GALLERY — Customer Portfolio
+// ════════════════════════════════════════════
 
 model CustomerPortfolio {
-  id               String    @id @default(cuid())
-  productId        String
-  product          Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  id               String   @id @default(cuid())
+  productId        String?
   userId           String?
   userName         String
-  aiGeneratedImage String    // URL or base64 of the AI-generated style preview image
-  originalSelfie   String?   // stored only with explicit consent (optional)
-  rating           Int       @default(5)  // 1-5 star rating
+  aiGeneratedImage String
+  originalSelfie   String?
+  rating           Int      @default(5)
   reviewTitle      String?
   reviewComment    String?
-  consentGiven     Boolean   @default(false) // whether customer consented to public display
-  isApproved       Boolean   @default(false) // admin approval for public display
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-}
+  consentGiven     Boolean  @default(false)
+  isApproved       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-// ─── Multi-Currency & i18n Models ───
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
 
-model CurrencyRate {
-  id        String   @id @default(cuid())
-  code      String   @unique  // e.g. "USD", "EUR", "INR", "GBP"
-  name      String              // e.g. "US Dollar", "Euro"
-  symbol    String              // e.g. "$", "€", "₹", "£"
-  rate      Float               // exchange rate relative to base currency (INR)
-  updatedAt DateTime @updatedAt
-}
-
-model GeoCountry {
-  id           String  @id @default(cuid())
-  code         String  @unique  // ISO 3166-1 alpha-2, e.g. "US", "IN", "GB"
-  name         String              // e.g. "United States"
-  currencyCode String              // ISO 4217, e.g. "USD", "INR"
-  languageCode String  @default("en")  // ISO 639-1, e.g. "en", "hi", "ar"
-  flagEmoji    String?             // e.g. "🇺🇸", "🇮🇳"
+  @@index([productId])
+  @@index([userId])
+  @@index([isApproved, isActive])
+  @@map("customer_portfolio")
 }

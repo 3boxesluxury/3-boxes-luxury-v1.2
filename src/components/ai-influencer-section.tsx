@@ -217,28 +217,10 @@ export function AIInfluencerSection({ productId, productName, onShareImage, init
       pendingImage ||
       `data:image/svg+xml;base64,${btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect fill="#292524" width="400" height="400"/><text x="200" y="180" text-anchor="middle" fill="#d97706" font-size="48">✨</text><text x="200" y="230" text-anchor="middle" fill="#fbbf24" font-size="16" font-family="sans-serif">AI Style Preview</text><text x="200" y="260" text-anchor="middle" fill="#78716c" font-size="12" font-family="sans-serif">${productName.substring(0, 30)}</text></svg>`)}`;
 
-    const newImage: AIInfluencerImage = {
-      id: `inf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      productId,
-      imageDataUrl,
-      userName: userName.trim(),
-      userId: authUser.id,
-      isVerified: true,
-      createdAt: new Date().toISOString(),
-      likes: 0,
-    };
-
-    // Add to in-memory store immediately for responsive UI
-    addInfluencerImage(newImage);
-    refreshImages();
-    setShareDialogOpen(false);
-    setConsentGiven(false);
-    setPendingImage(null);
-
-    // Also save to database for admin moderation
+    // Save to database FIRST — only show success if API actually works
     setSubmitting(true);
     try {
-      await fetch('/api/style-gallery', {
+      const res = await fetch('/api/style-gallery', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -253,19 +235,50 @@ export function AIInfluencerSection({ productId, productName, onShareImage, init
           reviewTitle: `AI Style - ${productName}`,
         }),
       });
-      showToast('success', 'Style shared! It will appear after admin approval.');
+
+      if (res.ok) {
+        const result = await res.json();
+        console.log('[share-to-gallery] Submitted successfully:', result.image?.id);
+
+        // Only add to local store and close dialog after REAL success
+        const newImage: AIInfluencerImage = {
+          id: result.image?.id || `inf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          productId,
+          imageDataUrl: result.image?.aiGeneratedImage || imageDataUrl,
+          userName: userName.trim(),
+          userId: authUser.id,
+          isVerified: true,
+          createdAt: new Date().toISOString(),
+          likes: 0,
+        };
+
+        addInfluencerImage(newImage);
+        refreshImages();
+        setShareDialogOpen(false);
+        setConsentGiven(false);
+        setPendingImage(null);
+        showToast('success', 'Style submitted! It will appear in the gallery after admin approval.');
+
+        if (onShareImage) {
+          onShareImage(newImage.imageDataUrl);
+        }
+        if (onShareComplete) {
+          onShareComplete();
+        }
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('[share-to-gallery] API error:', res.status, errorData);
+        if (res.status === 401) {
+          showToast('error', 'Please sign in again to share your style.');
+        } else {
+          showToast('error', errorData.error || `Failed to submit (${res.status}). Please try again.`);
+        }
+      }
     } catch (err) {
-      console.error('Failed to save to gallery:', err);
-      showToast('info', 'Shared locally. Database save will retry later.');
+      console.error('[share-to-gallery] Network error:', err);
+      showToast('error', 'Network error. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
-    }
-
-    if (onShareImage) {
-      onShareImage(newImage.imageDataUrl);
-    }
-    if (onShareComplete) {
-      onShareComplete();
     }
   }, [consentGiven, userName, pendingImage, productId, productName, refreshImages, onShareImage, onShareComplete, authUser, authToken]);
 

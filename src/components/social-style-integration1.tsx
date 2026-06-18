@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useStore } from '@/lib/store'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,7 @@ import {
   TrendingUp,
   ExternalLink,
   User,
+  ArrowLeft,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -52,8 +53,15 @@ interface SocialConnection {
     name: string
     avatar?: string
     email?: string
+    gender?: string  // v21: Fix — gender from OAuth provider (Google/Facebook)
   }
   likes?: { name: string; category: string }[]
+  // v20: YouTube access token for fetching subscriptions
+  youtubeToken?: string
+  // v20.5: Token expiry timestamp (ms since epoch) — used to auto-refresh
+  youtubeTokenExpiry?: number
+  // v20.4: Birthday from Google People API
+  birthday?: string
 }
 
 interface StyleProfile {
@@ -170,10 +178,10 @@ const SOCIAL_NETWORKS: SocialNetworkConfig[] = [
       'Your public posts & captions',
       'Accounts you follow (fashion & lifestyle)',
       'Hashtags you frequently use',
-      'Saved collections & reels interactions',
+      'Profile & bio for style analysis',
     ],
-    dataItems: ['Posts', 'Follows', 'Hashtags', 'Collections'],
-    realConnect: false,
+    dataItems: ['Posts', 'Follows', 'Hashtags', 'Profile'],
+    realConnect: true,  // v22: Now uses real Instagram Graph API via Facebook OAuth
   },
 ]
 
@@ -244,7 +252,7 @@ declare global {
 const STORAGE_KEY = '3boxes_social_connections'
 
 // Helper: load persisted connections from localStorage
-function loadPersistedConnections(): Record<string, { name: string; email?: string; avatar?: string }> {
+function loadPersistedConnections(): Record<string, { name: string; email?: string; avatar?: string; gender?: string; youtubeToken?: string; youtubeTokenExpiry?: number; birthday?: string }> {
   if (typeof window === 'undefined') return {}
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -254,8 +262,8 @@ function loadPersistedConnections(): Record<string, { name: string; email?: stri
   }
 }
 
-// Helper: save connections to localStorage
-function persistConnections(data: Record<string, { name: string; email?: string; avatar?: string }>) {
+// Helper: save connections to localStorage (includes youtubeToken for Google)
+function persistConnections(data: Record<string, { name: string; email?: string; avatar?: string; gender?: string; youtubeToken?: string; youtubeTokenExpiry?: number; birthday?: string }>) {
   if (typeof window === 'undefined') return
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
@@ -263,16 +271,16 @@ function persistConnections(data: Record<string, { name: string; email?: string;
 }
 
 export function SocialStyleIntegration() {
-  const { authUser, setAuthView } = useStore()
+  const { authUser, setAuthView, setView } = useStore()
 
   // Connection states — initialized from localStorage if available
   const [connections, setConnections] = useState<SocialConnection[]>(() => {
     const persisted = loadPersistedConnections()
     return [
-      { network: 'google', connected: !!persisted.google, connecting: false, profile: persisted.google ? { name: persisted.google.name, email: persisted.google.email, avatar: persisted.google.avatar } : undefined },
-      { network: 'facebook', connected: !!persisted.facebook, connecting: false, profile: persisted.facebook ? { name: persisted.facebook.name, email: persisted.facebook.email, avatar: persisted.facebook.avatar } : undefined },
+      { network: 'google', connected: !!persisted.google, connecting: false, profile: persisted.google ? { name: persisted.google.name, email: persisted.google.email, avatar: persisted.google.avatar, gender: persisted.google.gender } : undefined, youtubeToken: persisted.google?.youtubeToken || undefined, youtubeTokenExpiry: persisted.google?.youtubeTokenExpiry || undefined, birthday: persisted.google?.birthday || undefined },
+      { network: 'facebook', connected: !!persisted.facebook, connecting: false, profile: persisted.facebook ? { name: persisted.facebook.name, email: persisted.facebook.email, avatar: persisted.facebook.avatar, gender: persisted.facebook.gender } : undefined },
       { network: 'linkedin', connected: !!persisted.linkedin, connecting: false, profile: persisted.linkedin ? { name: persisted.linkedin.name, email: persisted.linkedin.email, avatar: persisted.linkedin.avatar } : undefined },
-      { network: 'instagram', connected: !!persisted.instagram, connecting: false, profile: persisted.instagram ? { name: persisted.instagram.name, email: persisted.instagram.email } : undefined },
+      { network: 'instagram', connected: !!persisted.instagram, connecting: false, profile: persisted.instagram ? { name: persisted.instagram.name, email: persisted.instagram.email, avatar: persisted.instagram.avatar } : undefined },
     ]
   })
 
@@ -287,6 +295,12 @@ export function SocialStyleIntegration() {
 
   // Products
   const [products, setProducts] = useState<ProductRecommendation[]>([])
+
+  // Track avatars that failed to load (so we show icon fallback instead of broken image)
+  const [failedAvatars, setFailedAvatars] = useState<Set<SocialNetwork>>(new Set())
+
+  // Ref for the "Analyze My Style" section — used to scroll back on re-analyze
+  const analyzeSectionRef = useRef<HTMLDivElement>(null)
 
   // Privacy
   const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
@@ -306,11 +320,27 @@ export function SocialStyleIntegration() {
     (network: SocialNetwork, updates: Partial<SocialConnection>) => {
       setConnections((prev) => {
         const next = prev.map((c) => (c.network === network ? { ...c, ...updates } : c))
-        // Persist to localStorage whenever connections change
-        const persisted: Record<string, { name: string; email?: string; avatar?: string }> = {}
+        // Persist to localStorage whenever connections change (includes youtubeToken for Google)
+        const persisted: Record<string, { name: string; email?: string; avatar?: string; gender?: string; youtubeToken?: string; youtubeTokenExpiry?: number; birthday?: string }> = {}
         for (const c of next) {
           if (c.connected && c.profile) {
             persisted[c.network] = { name: c.profile.name, email: c.profile.email, avatar: c.profile.avatar }
+            // v21: Persist gender to localStorage so it survives page reloads
+            if (c.profile.gender) {
+              persisted[c.network].gender = c.profile.gender
+            }
+            // v20.1: Persist YouTube token to localStorage so it survives page reloads
+            if (c.network === 'google' && c.youtubeToken) {
+              persisted[c.network].youtubeToken = c.youtubeToken
+            }
+            // v20.5: Persist YouTube token expiry to localStorage
+            if (c.network === 'google' && c.youtubeTokenExpiry) {
+              persisted[c.network].youtubeTokenExpiry = c.youtubeTokenExpiry
+            }
+            // v20.4: Persist birthday to localStorage so it survives page reloads
+            if (c.network === 'google' && c.birthday) {
+              persisted[c.network].birthday = c.birthday
+            }
           }
         }
         persistConnections(persisted)
@@ -335,6 +365,26 @@ export function SocialStyleIntegration() {
     // Use action=connect so the callback does NOT change the main login session
     const returnUrl = '/?view=social-style'
     window.location.href = `/api/auth/facebook?returnTo=${encodeURIComponent(returnUrl)}&action=connect`
+  }, [updateConnection])
+
+  // ─── Real Instagram Connect Flow (via Facebook OAuth with Instagram scopes) ───
+  // v22: Instagram Graph API is accessed through the Facebook OAuth flow.
+  // We redirect to Facebook OAuth with Instagram scopes, and the callback returns
+  // Instagram data (profile, media, hashtags) alongside Facebook data.
+
+  const handleInstagramConnect = useCallback(() => {
+    updateConnection('instagram', { connecting: true })
+
+    // Store that we're connecting Instagram so we can detect it on return
+    try {
+      sessionStorage.setItem('3boxes_instagram_connect', 'true')
+      sessionStorage.setItem('3boxes_instagram_connect_time', Date.now().toString())
+    } catch {}
+
+    // Redirect to Facebook OAuth with Instagram scopes — same endpoint as Facebook connect
+    // The Facebook callback will also fetch Instagram data via the Graph API
+    const returnUrl = '/?view=social-style'
+    window.location.href = `/api/auth/facebook?returnTo=${encodeURIComponent(returnUrl)}&action=connect&instagram=true`
   }, [updateConnection])
 
   // ─── Real LinkedIn Connect Flow ─────────────────────────────────────────────
@@ -394,21 +444,105 @@ export function SocialStyleIntegration() {
       const urlConnectName = urlParams.get('connect_name')
       const urlConnectEmail = urlParams.get('connect_email')
       const urlConnectAvatar = urlParams.get('connect_avatar')
+      // v15: Read gender from Facebook OAuth callback
+      const urlConnectGender = urlParams.get('connect_gender')
+      // v21: Also read gender from cookie (set by callback route — survives reloads)
+      const cookieConnectGender = (() => { try { const cs = document.cookie.split(';'); const gc = cs.find(c => c.trim().startsWith('google_gender=')); const v = gc ? decodeURIComponent(gc.split('=').slice(1).join('=')) : null; return v && v !== '' ? v : null } catch { return null } })()
+      const connectGender = urlConnectGender || cookieConnectGender
+      // v20.2: Read birthday from Google OAuth callback
+      const urlConnectBirthday = urlParams.get('connect_birthday')
+      // v20.6: Also read birthday from cookie (set by callback route — MOST RELIABLE)
+      // Cookie is set even when Google returns no birthday (empty string), so we can differentiate
+      const cookieBirthday = (() => { try { const cookies = document.cookie.split(';'); const bCookie = cookies.find(c => c.trim().startsWith('google_birthday=')); return bCookie ? decodeURIComponent(bCookie.split('=').slice(1).join('=')) : null } catch { return null } })()
+      const connectBirthday = urlConnectBirthday || (cookieBirthday && cookieBirthday !== '' ? cookieBirthday : null)
+      // v20: Read YouTube access token from Google OAuth callback
+      const urlConnectYoutubeToken = urlParams.get('connect_youtube_token')
+      // v20.1: Also read YouTube token from cookie (set by callback route — more reliable)
+      const cookieYoutubeToken = (() => { try { const cookies = document.cookie.split(';'); const ytCookie = cookies.find(c => c.trim().startsWith('google_youtube_token=')); return ytCookie ? decodeURIComponent(ytCookie.split('=').slice(1).join('=')) : null } catch { return null } })()
+      const youtubeTokenFromOAuth = urlConnectYoutubeToken || cookieYoutubeToken
+      // v20.5: Read token expiry timestamp from cookie (set by callback route)
+      const cookieTokenExpiry = (() => { try { const cookies = document.cookie.split(';'); const expCookie = cookies.find(c => c.trim().startsWith('google_token_expires=')); return expCookie ? parseInt(decodeURIComponent(expCookie.split('=').slice(1).join('')), 10) || null : null } catch { return null } })()
 
       if (urlConnectProvider && urlConnectName && authUser) {
         const network = urlConnectProvider as SocialNetwork
         console.log('[Social Connect] ✅ Connect detected via URL params:', urlConnectProvider, urlConnectName)
 
-        if (network === 'google' || network === 'facebook' || network === 'linkedin') {
+        // v22: Read Instagram data from Facebook OAuth callback params
+        const urlIgUsername = urlParams.get('connect_ig_username')
+        const urlIgUserId = urlParams.get('connect_ig_user_id')
+        const urlIgAvatar = urlParams.get('connect_ig_avatar')
+
+        if (network === 'google' || network === 'facebook' || network === 'linkedin' || network === 'instagram') {
+          // v22.9: For Instagram, also check connect_ig_avatar as fallback for connect_avatar
+          const effectiveAvatar = urlConnectAvatar || (network === 'instagram' ? urlIgAvatar : undefined) || undefined
           updateConnection(network, {
             connecting: false,
             connected: true,
             profile: {
               name: urlConnectName,
               email: urlConnectEmail || undefined,
-              avatar: urlConnectAvatar || undefined,
+              avatar: effectiveAvatar,
+              // v15/v21: Store gender from OAuth provider (URL or cookie)
+              gender: connectGender || undefined,
             },
+            // v20.1: Store YouTube token for social-style route (from URL or cookie)
+            ...(youtubeTokenFromOAuth && network === 'google' ? { youtubeToken: youtubeTokenFromOAuth } : {}),
+            // v20.5: Store YouTube token expiry timestamp
+            ...(cookieTokenExpiry && network === 'google' ? { youtubeTokenExpiry: cookieTokenExpiry } : {}),
+            // v20.6: Store birthday from Google People API (from cookie or URL)
+            ...(connectBirthday && network === 'google' ? { birthday: connectBirthday } : {}),
           })
+
+          // v22.6: Store Instagram rich data when Instagram connects (SOURCE 1)
+          if (network === 'instagram' && urlIgUsername && urlIgUserId) {
+            try {
+              sessionStorage.setItem('3boxes_rich_instagram', JSON.stringify({
+                username: urlIgUsername,
+                igUserId: urlIgUserId,
+                profilePictureUrl: urlIgAvatar || null,
+              }))
+            } catch {}
+          }
+          if (network === 'instagram') {
+            try {
+              sessionStorage.setItem('3boxes_rich_instagram', JSON.stringify({
+                username: urlConnectName,
+                igUserId: urlParams.get('connect_user_id') || '',
+                profilePictureUrl: urlConnectAvatar || null,
+              }))
+            } catch {}
+          }
+
+          // v20.1: Persist YouTube token to sessionStorage + localStorage
+          if (youtubeTokenFromOAuth && network === 'google') {
+            try { sessionStorage.setItem('3boxes_google_youtube_token', youtubeTokenFromOAuth) } catch {}
+            console.log('[Social Connect] YouTube token stored from', urlConnectYoutubeToken ? 'URL' : 'cookie')
+          }
+          // v20.6: Persist birthday to sessionStorage AND localStorage
+          if (connectBirthday && network === 'google') {
+            try { sessionStorage.setItem('3boxes_google_birthday', connectBirthday) } catch {}
+            // Also persist to localStorage so it survives tab closes and page reloads
+            try {
+              const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+              if (stored.google) {
+                stored.google.birthday = connectBirthday
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+              }
+            } catch {}
+            console.log('[Social Connect] Birthday stored:', connectBirthday)
+          }
+          // v21: Persist gender to localStorage (gender is now in profile, which updateConnection persists)
+          // But also store it in a dedicated localStorage key for robustness
+          if (connectGender && network === 'google') {
+            try {
+              const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+              if (stored.google) {
+                stored.google.gender = connectGender
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+              }
+            } catch {}
+            console.log('[Social Connect] Gender stored:', connectGender)
+          }
         }
 
         // Clean URL — remove connect params but keep view param
@@ -420,12 +554,22 @@ export function SocialStyleIntegration() {
           : window.location.pathname
         window.history.replaceState({}, '', cleanUrl)
 
-        // Clean up all sessionStorage markers
+        // Clean up all sessionStorage markers (keep youtube token)
         sessionStorage.removeItem('3boxes_oauth_provider')
         sessionStorage.removeItem('3boxes_oauth_name')
         sessionStorage.removeItem('3boxes_oauth_email')
         sessionStorage.removeItem('3boxes_oauth_avatar')
         sessionStorage.removeItem('3boxes_oauth_social_id')
+        sessionStorage.removeItem('3boxes_oauth_gender')
+        // v22.1: Clean up Instagram data from sessionStorage
+        sessionStorage.removeItem('3boxes_oauth_ig_username')
+        sessionStorage.removeItem('3boxes_oauth_ig_user_id')
+        sessionStorage.removeItem('3boxes_oauth_ig_avatar')
+        // v22.5: Clean up Facebook data from sessionStorage (stored by Instagram connect)
+        sessionStorage.removeItem('3boxes_oauth_fb_name')
+        sessionStorage.removeItem('3boxes_oauth_fb_id')
+        sessionStorage.removeItem('3boxes_oauth_fb_email')
+        sessionStorage.removeItem('3boxes_oauth_fb_avatar')
         sessionStorage.removeItem('3boxes_linkedin_connect')
         sessionStorage.removeItem('3boxes_linkedin_connect_time')
         sessionStorage.removeItem('3boxes_google_connect')
@@ -435,27 +579,138 @@ export function SocialStyleIntegration() {
         return
       }
 
+      // v20.1: Also check for YouTube token in login redirect (URL or cookie)
+      const urlAuthYoutubeToken = urlParams.get('auth_youtube_token')
+      const loginYoutubeToken = urlAuthYoutubeToken || cookieYoutubeToken
+      if (loginYoutubeToken) {
+        try { sessionStorage.setItem('3boxes_google_youtube_token', loginYoutubeToken) } catch {}
+        // v20.1: Also persist to localStorage so it survives browser restarts
+        try {
+          const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          if (stored.google) {
+            stored.google.youtubeToken = loginYoutubeToken
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+          }
+        } catch {}
+        // Also update the Google connection state with the token
+        const googleConnState = connections.find(c => c.network === 'google' && c.connected)
+        if (googleConnState && !googleConnState.youtubeToken) {
+          updateConnection('google', { youtubeToken: loginYoutubeToken })
+        }
+        // Clean it from URL
+        urlParams.delete('auth_youtube_token')
+        const cleanUrl2 = urlParams.toString()
+          ? `${window.location.pathname}?${urlParams.toString()}`
+          : window.location.pathname
+        window.history.replaceState({}, '', cleanUrl2)
+        console.log('[Social Connect] YouTube token stored from login flow (source:', urlAuthYoutubeToken ? 'URL' : 'cookie', ')')
+      }
+
+      // v20.6: Also check for birthday in login redirect (URL + cookie)
+      const urlAuthBirthday = urlParams.get('auth_birthday')
+      const cookieAuthBirthday = (() => { try { const cookies = document.cookie.split(';'); const bCookie = cookies.find(c => c.trim().startsWith('google_birthday=')); return bCookie ? decodeURIComponent(bCookie.split('=').slice(1).join('=')) : null } catch { return null } })()
+      const authBirthday = urlAuthBirthday || (cookieAuthBirthday && cookieAuthBirthday !== '' ? cookieAuthBirthday : null)
+      if (authBirthday) {
+        try { sessionStorage.setItem('3boxes_google_birthday', authBirthday) } catch {}
+        // Also persist to localStorage so it survives tab closes and page reloads
+        try {
+          const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          if (stored.google) {
+            stored.google.birthday = authBirthday
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+          }
+        } catch {}
+        // v21: Also update Google connection state with birthday
+        const googleConnForBday = connections.find(c => c.network === 'google' && c.connected)
+        if (googleConnForBday && !googleConnForBday.birthday) {
+          updateConnection('google', { birthday: authBirthday })
+        }
+        urlParams.delete('auth_birthday')
+        const cleanUrl3 = urlParams.toString()
+          ? `${window.location.pathname}?${urlParams.toString()}`
+          : window.location.pathname
+        window.history.replaceState({}, '', cleanUrl3)
+        console.log('[Social Connect] Birthday stored from login flow:', authBirthday)
+      }
+
+      // v21: Also check for gender in login redirect (URL + cookie)
+      const urlAuthGender = urlParams.get('auth_gender')
+      const cookieAuthGender = (() => { try { const cs = document.cookie.split(';'); const gc = cs.find(c => c.trim().startsWith('google_gender=')); const v = gc ? decodeURIComponent(gc.split('=').slice(1).join('=')) : null; return v && v !== '' ? v : null } catch { return null } })()
+      const authGender = urlAuthGender || cookieAuthGender
+      if (authGender) {
+        try {
+          const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+          if (stored.google) {
+            stored.google.gender = authGender
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+          }
+        } catch {}
+        const googleConnForGender = connections.find(c => c.network === 'google' && c.connected)
+        if (googleConnForGender && !googleConnForGender.profile?.gender) {
+          updateConnection('google', { profile: { ...googleConnForGender.profile!, gender: authGender } })
+        }
+        urlParams.delete('auth_gender')
+        const cleanUrl4 = urlParams.toString()
+          ? `${window.location.pathname}?${urlParams.toString()}`
+          : window.location.pathname
+        window.history.replaceState({}, '', cleanUrl4)
+        console.log('[Social Connect] Gender stored from login flow:', authGender)
+      }
+
       // ─── SOURCE 2: sessionStorage (set by OAuthCallbackHandler) ───
       const oauthProvider = sessionStorage.getItem('3boxes_oauth_provider')
       const oauthName = sessionStorage.getItem('3boxes_oauth_name')
       const oauthEmail = sessionStorage.getItem('3boxes_oauth_email')
       const oauthAvatar = sessionStorage.getItem('3boxes_oauth_avatar')
+      // v16: Read gender from sessionStorage (stored by OAuthCallbackHandler)
+      const oauthGender = sessionStorage.getItem('3boxes_oauth_gender')
 
       if (oauthProvider && authUser) {
         // IMPORTANT: Use oauthName (the provider's username), NOT authUser.name (the main login user)
         const profileName = oauthName || 'Unknown'
         const profileEmail = oauthEmail || ''
-        const profileAvatar = oauthAvatar || undefined
+        // v22.9: For Instagram, also check 3boxes_oauth_ig_avatar as fallback
+        const igAvatarFallback = oauthProvider === 'instagram' ? sessionStorage.getItem('3boxes_oauth_ig_avatar') : null
+        const profileAvatar = oauthAvatar || igAvatarFallback || undefined
         const network = oauthProvider as SocialNetwork
 
-        console.log('[Social Connect] ✅ OAuth callback detected via sessionStorage:', oauthProvider, profileName)
+        console.log('[Social Connect] ✅ OAuth callback detected via sessionStorage:', oauthProvider, profileName, '| avatar:', profileAvatar ? 'YES' : 'NONE')
 
-        if (network === 'google' || network === 'facebook' || network === 'linkedin') {
+        if (network === 'google' || network === 'facebook' || network === 'linkedin' || network === 'instagram') {
+          // v21: For Google, also include birthday + YouTube token from cookie/sessionStorage
+          // to prevent overwriting previously-persisted data with empty values
+          const googleExtras: Partial<SocialConnection> = {}
+          if (network === 'google') {
+            // Read birthday from cookie (most reliable) or sessionStorage
+            const cookieBday = (() => { try { const cs = document.cookie.split(';'); const bc = cs.find(c => c.trim().startsWith('google_birthday=')); const v = bc ? decodeURIComponent(bc.split('=').slice(1).join('=')) : null; return v && v !== '' ? v : null } catch { return null } })()
+            const sessionBday = sessionStorage.getItem('3boxes_google_birthday')
+            if (cookieBday || sessionBday) googleExtras.birthday = cookieBday || sessionBday || undefined
+            // Read YouTube token from cookie
+            const cookieYt = (() => { try { const cs = document.cookie.split(';'); const yc = cs.find(c => c.trim().startsWith('google_youtube_token=')); return yc ? decodeURIComponent(yc.split('=').slice(1).join('=')) : null } catch { return null } })()
+            const sessionYt = sessionStorage.getItem('3boxes_google_youtube_token')
+            if (cookieYt || sessionYt) googleExtras.youtubeToken = cookieYt || sessionYt || undefined
+            // Read token expiry from cookie
+            const cookieExp = (() => { try { const cs = document.cookie.split(';'); const ec = cs.find(c => c.trim().startsWith('google_token_expires=')); return ec ? parseInt(decodeURIComponent(ec.split('=').slice(1).join('')), 10) || undefined : undefined } catch { return undefined } })()
+            if (cookieExp) googleExtras.youtubeTokenExpiry = cookieExp
+          }
           updateConnection(network, {
             connecting: false,
             connected: true,
-            profile: { name: profileName, email: profileEmail, avatar: profileAvatar },
+            profile: { name: profileName, email: profileEmail, avatar: profileAvatar, gender: oauthGender || undefined },
+            ...googleExtras,
           })
+
+          // v22.6: Store Instagram rich data when Instagram connects (SOURCE 2)
+          // Do NOT auto-connect the other provider — only connect the one the user clicked
+          if (network === 'instagram') {
+            try {
+              sessionStorage.setItem('3boxes_rich_instagram', JSON.stringify({
+                username: profileName,
+                igUserId: sessionStorage.getItem('3boxes_oauth_social_id') || '',
+                profilePictureUrl: profileAvatar || null,
+              }))
+            } catch {}
+          }
         }
 
         // Clean up all sessionStorage markers AFTER connection is established
@@ -464,6 +719,17 @@ export function SocialStyleIntegration() {
         sessionStorage.removeItem('3boxes_oauth_email')
         sessionStorage.removeItem('3boxes_oauth_avatar')
         sessionStorage.removeItem('3boxes_oauth_social_id')
+        // v16: Clean up gender from sessionStorage
+        sessionStorage.removeItem('3boxes_oauth_gender')
+        // v22.1: Clean up Instagram data from sessionStorage
+        sessionStorage.removeItem('3boxes_oauth_ig_username')
+        sessionStorage.removeItem('3boxes_oauth_ig_user_id')
+        sessionStorage.removeItem('3boxes_oauth_ig_avatar')
+        // v22.5: Clean up Facebook data from sessionStorage (stored by Instagram connect)
+        sessionStorage.removeItem('3boxes_oauth_fb_name')
+        sessionStorage.removeItem('3boxes_oauth_fb_id')
+        sessionStorage.removeItem('3boxes_oauth_fb_email')
+        sessionStorage.removeItem('3boxes_oauth_fb_avatar')
         sessionStorage.removeItem('3boxes_linkedin_connect')
         sessionStorage.removeItem('3boxes_linkedin_connect_time')
         sessionStorage.removeItem('3boxes_google_connect')
@@ -480,12 +746,31 @@ export function SocialStyleIntegration() {
 
       // This fallback is for the "login" flow where authUser was just set by the OAuth login
       // In this case, authUser.name IS the provider's name
+      // Also try to read avatar from sessionStorage (set by OAuthCallbackHandler)
+      const storedAvatar = sessionStorage.getItem('3boxes_oauth_avatar') || undefined
+
       if (linkingGoogle === 'true' && authUser) {
         console.log('[Social Connect] ✅ Google callback (fallback), marking as connected:', authUser.name)
+        // v21: Also read birthday + YouTube token + gender from cookie/sessionStorage/localStorage
+        // to prevent losing previously-persisted data
+        const savedGoogle = (() => { try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); return d.google || {} } catch { return {} } })()
+        const bdayCookie = (() => { try { const cs = document.cookie.split(';'); const bc = cs.find(c => c.trim().startsWith('google_birthday=')); const v = bc ? decodeURIComponent(bc.split('=').slice(1).join('=')) : null; return v && v !== '' ? v : null } catch { return null } })()
+        const bdaySession = sessionStorage.getItem('3boxes_google_birthday')
+        const bdayLocal = savedGoogle.birthday
+        const ytCookie = (() => { try { const cs = document.cookie.split(';'); const yc = cs.find(c => c.trim().startsWith('google_youtube_token=')); return yc ? decodeURIComponent(yc.split('=').slice(1).join('=')) : null } catch { return null } })()
+        const ytSession = sessionStorage.getItem('3boxes_google_youtube_token')
+        const ytLocal = savedGoogle.youtubeToken
+        const expCookie = (() => { try { const cs = document.cookie.split(';'); const ec = cs.find(c => c.trim().startsWith('google_token_expires=')); return ec ? parseInt(decodeURIComponent(ec.split('=').slice(1).join('')), 10) || undefined : undefined } catch { return undefined } })()
+        const expLocal = savedGoogle.youtubeTokenExpiry
+        const genderCookie = (() => { try { const cs = document.cookie.split(';'); const gc = cs.find(c => c.trim().startsWith('google_gender=')); return gc ? decodeURIComponent(gc.split('=').slice(1).join('=')) : null } catch { return null } })()
+        const genderLocal = savedGoogle.gender
         updateConnection('google', {
           connecting: false,
           connected: true,
-          profile: { name: authUser.name, email: authUser.email },
+          profile: { name: authUser.name, email: authUser.email, avatar: storedAvatar, gender: genderCookie || genderLocal || undefined },
+          birthday: bdayCookie || bdaySession || bdayLocal || undefined,
+          youtubeToken: ytCookie || ytSession || ytLocal || undefined,
+          youtubeTokenExpiry: expCookie || expLocal || undefined,
         })
         sessionStorage.removeItem('3boxes_google_connect')
         sessionStorage.removeItem('3boxes_google_connect_time')
@@ -494,7 +779,7 @@ export function SocialStyleIntegration() {
         updateConnection('facebook', {
           connecting: false,
           connected: true,
-          profile: { name: authUser.name, email: authUser.email },
+          profile: { name: authUser.name, email: authUser.email, avatar: storedAvatar },
         })
         sessionStorage.removeItem('3boxes_facebook_connect')
         sessionStorage.removeItem('3boxes_facebook_connect_time')
@@ -503,10 +788,21 @@ export function SocialStyleIntegration() {
         updateConnection('linkedin', {
           connecting: false,
           connected: true,
-          profile: { name: authUser.name, email: authUser.email },
+          profile: { name: authUser.name, email: authUser.email, avatar: storedAvatar },
         })
         sessionStorage.removeItem('3boxes_linkedin_connect')
         sessionStorage.removeItem('3boxes_linkedin_connect_time')
+      }
+
+      // v22: Also detect Instagram connect markers (redirects through Facebook OAuth)
+      const linkingInstagram = sessionStorage.getItem('3boxes_instagram_connect')
+      if (linkingInstagram === 'true' && authUser) {
+        // Instagram connect goes through Facebook OAuth, so Facebook will also be connected
+        // The Instagram data comes from the Facebook callback params (handled above)
+        // This is just a fallback for when the URL params have already been cleaned
+        console.log('[Social Connect] v22: Instagram connect marker found')
+        sessionStorage.removeItem('3boxes_instagram_connect')
+        sessionStorage.removeItem('3boxes_instagram_connect_time')
       }
 
       // If we have markers but no authUser yet, wait for next render
@@ -515,6 +811,7 @@ export function SocialStyleIntegration() {
       const connectTime = parseInt(sessionStorage.getItem('3boxes_google_connect_time') || '0')
       const connectTimeFB = parseInt(sessionStorage.getItem('3boxes_facebook_connect_time') || '0')
       const connectTimeLI = parseInt(sessionStorage.getItem('3boxes_linkedin_connect_time') || '0')
+      const connectTimeIG = parseInt(sessionStorage.getItem('3boxes_instagram_connect_time') || '0')
 
       if (linkingGoogle === 'true' && !authUser && now - connectTime > 30000) {
         console.log('[Social Connect] Google connect timeout — marking as not connecting')
@@ -531,6 +828,11 @@ export function SocialStyleIntegration() {
         updateConnection('linkedin', { connecting: false })
         sessionStorage.removeItem('3boxes_linkedin_connect')
         sessionStorage.removeItem('3boxes_linkedin_connect_time')
+      } else if (linkingInstagram === 'true' && !authUser && now - connectTimeIG > 30000) {
+        console.log('[Social Connect] v22: Instagram connect timeout — marking as not connecting')
+        updateConnection('instagram', { connecting: false })
+        sessionStorage.removeItem('3boxes_instagram_connect')
+        sessionStorage.removeItem('3boxes_instagram_connect_time')
       }
     } catch {}
   }, [authUser, updateConnection])
@@ -543,44 +845,51 @@ export function SocialStyleIntegration() {
       return
     }
 
-    // Google has real OAuth - use server-side redirect
-    if (networkConfig.network === 'google' && networkConfig.realConnect) {
-      handleGoogleConnect()
-      return
-    }
-
-    // Facebook has real OAuth - use server-side redirect (like LinkedIn)
-    if (networkConfig.network === 'facebook' && networkConfig.realConnect) {
-      handleFacebookConnect()
-      return
-    }
-
-    // LinkedIn has real OAuth - use server-side redirect
-    if (networkConfig.network === 'linkedin' && networkConfig.realConnect) {
-      handleLinkedInConnect()
-      return
-    }
-
-    // Instagram - show consent dialog for simulated connection
+    // v22.6: ALL networks show consent dialog first before redirecting to OAuth
+    // This gives users a clear understanding of what data will be accessed
     setConsentDialogNetwork(networkConfig)
     setConsentDialogOpen(true)
-  }, [authUser, setAuthView, handleGoogleConnect, handleFacebookConnect, handleLinkedInConnect])
+  }, [authUser, setAuthView])
 
   const handleConsentAccept = useCallback(() => {
     if (!consentDialogNetwork) return
     const network = consentDialogNetwork.network
 
     setConsentDialogOpen(false)
-    updateConnection(network, { connecting: true })
 
-    // Simulate connection for non-Facebook networks (2 second delay)
+    // v22.6: Redirect to real OAuth for networks that support it
+    if (network === 'google') {
+      handleGoogleConnect()
+      return
+    }
+    if (network === 'facebook') {
+      handleFacebookConnect()
+      return
+    }
+    if (network === 'linkedin') {
+      handleLinkedInConnect()
+      return
+    }
+    if (network === 'instagram') {
+      handleInstagramConnect()
+      return
+    }
+
+    // Fallback: simulate connection for non-OAuth networks (2 second delay)
+    updateConnection(network, { connecting: true })
     setTimeout(() => {
       updateConnection(network, { connecting: false, connected: true })
     }, 2000)
-  }, [consentDialogNetwork, updateConnection])
+  }, [consentDialogNetwork, updateConnection, handleGoogleConnect, handleFacebookConnect, handleLinkedInConnect, handleInstagramConnect])
 
   const handleDisconnect = useCallback(
     (network: SocialNetwork) => {
+      // Clear failed avatar state so it resets if they reconnect
+      setFailedAvatars((prev) => {
+        const next = new Set(prev)
+        next.delete(network)
+        return next
+      })
       // If Facebook, also logout from FB SDK
       if (network === 'facebook' && window.FB) {
         try {
@@ -610,21 +919,216 @@ export function SocialStyleIntegration() {
     setAnalyzing(true)
     setAnalysisError(null)
 
-    // Build social data payload including real Facebook data if available
+    // Build social data payload with ALL connected provider profiles + rich data
     const socialPayload: any = {
       networks: connectedNetworks.map((c) => c.network),
     }
 
-    // Include real Facebook data for AI analysis
+    // Helper: read rich data from cookie (set by OAuth callbacks)
+    const getRichData = (provider: string): any => {
+      try {
+        const cookies = document.cookie.split(';')
+        const richCookie = cookies.find(c => c.trim().startsWith('connect_rich_data='))
+        if (richCookie) {
+          const raw = decodeURIComponent(richCookie.split('=').slice(1).join('='))
+          const data = JSON.parse(raw)
+          // Check if this rich data is for the right provider (by matching name)
+          const conn = connections.find((c) => c.network === provider && c.connected)
+          if (conn?.profile?.name === data.name) return data
+        }
+      } catch {}
+      // Also try sessionStorage fallback
+      try {
+        const stored = sessionStorage.getItem(`3boxes_rich_${provider}`)
+        if (stored) return JSON.parse(stored)
+      } catch {}
+      return null
+    }
+
+    // Include Google profile data + rich data (YouTube, locale, corporate domain)
+    const googleConn = connections.find((c) => c.network === 'google' && c.connected)
+    if (googleConn?.profile) {
+      const googleRich = getRichData('google')
+      socialPayload.googleData = {
+        profile: googleConn.profile,
+        ...(googleRich?.youtubeCategories && { youtubeCategories: googleRich.youtubeCategories }),
+        ...(googleRich?.locale && { locale: googleRich.locale }),
+        ...(googleRich?.hd && { corporateDomain: googleRich.hd }),
+        ...(googleRich?.inferredSignals && { inferredSignals: googleRich.inferredSignals }),
+        // v16: Pass gender from Google People API to the social-style route
+        ...(googleConn.profile.gender && { gender: googleConn.profile.gender }),
+      }
+      // v20.6: Pass birthday from Google People API to the social-style route
+      // Read from multiple sources (like YouTube token) for robustness:
+      //   1. Cookie (set by callback route — MOST RELIABLE, survives reloads)
+      //   2. sessionStorage (set during OAuth callback)
+      //   3. localStorage (persisted across tabs/reloads)
+      //   4. googleConn.birthday (from component state)
+      const googleBirthdayFromCookie = typeof window !== 'undefined' ? (() => { try { const cookies = document.cookie.split(';'); const bCookie = cookies.find(c => c.trim().startsWith('google_birthday=')); const val = bCookie ? decodeURIComponent(bCookie.split('=').slice(1).join('=')) : null; return val && val !== '' ? val : null } catch { return null } })() : null
+      const googleBirthdayFromSession = typeof window !== 'undefined' ? sessionStorage.getItem('3boxes_google_birthday') : null
+      const googleBirthdayFromLocal = typeof window !== 'undefined' ? (() => { try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); return d.google?.birthday || null } catch { return null } })() : null
+      const googleBirthdayFromState = googleConn?.birthday
+      const googleBirthday = googleBirthdayFromCookie || googleBirthdayFromSession || googleBirthdayFromLocal || googleBirthdayFromState
+      console.log('[Social Style v20.6] Birthday debug:', {
+        fromCookie: !!googleBirthdayFromCookie,
+        fromSession: !!googleBirthdayFromSession,
+        fromLocal: !!googleBirthdayFromLocal,
+        fromState: !!googleBirthdayFromState,
+        hasBirthday: !!googleBirthday,
+      })
+      if (googleBirthday) {
+        socialPayload.googleData.birthday = googleBirthday
+      }
+    }
+
+    // v20.5: Pass Google/YouTube access token for fetching subscriptions
+    // AUTO-REFRESH: Check if token is expired, and if so, refresh it before calling API
+    // Token sources (in priority order):
+    //   1. Cookie (set by callback route — MOST RELIABLE)
+    //   2. googleConn.youtubeToken (from state)
+    //   3. sessionStorage (from OAuth callback redirect)
+    //   4. localStorage (fallback read)
+    const youtubeTokenFromCookie = typeof window !== 'undefined' ? (() => { try { const cookies = document.cookie.split(';'); const ytCookie = cookies.find(c => c.trim().startsWith('google_youtube_token=')); return ytCookie ? decodeURIComponent(ytCookie.split('=').slice(1).join('=')) : null } catch { return null } })() : null
+    const youtubeTokenFromState = googleConn?.youtubeToken
+    const youtubeTokenFromSession = typeof window !== 'undefined' ? sessionStorage.getItem('3boxes_google_youtube_token') : null
+    const youtubeTokenFromLocal = typeof window !== 'undefined' ? (() => { try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); return d.google?.youtubeToken || null } catch { return null } })() : null
+    let youtubeToken = youtubeTokenFromCookie || youtubeTokenFromState || youtubeTokenFromSession || youtubeTokenFromLocal
+
+    // v20.5: Check token expiry from cookie or state
+    const tokenExpiryFromCookie = typeof window !== 'undefined' ? (() => { try { const cookies = document.cookie.split(';'); const expCookie = cookies.find(c => c.trim().startsWith('google_token_expires=')); return expCookie ? parseInt(decodeURIComponent(expCookie.split('=').slice(1).join('')), 10) || null : null } catch { return null } })() : null
+    const tokenExpiryFromState = googleConn?.youtubeTokenExpiry
+    const tokenExpiryFromLocal = typeof window !== 'undefined' ? (() => { try { const d = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); return d.google?.youtubeTokenExpiry || null } catch { return null } })() : null
+    const tokenExpiry = tokenExpiryFromCookie || tokenExpiryFromState || tokenExpiryFromLocal
+
+    // v20.5: If token is expired (or expires in <5 minutes), try to refresh it
+    const TOKEN_REFRESH_BUFFER = 5 * 60 * 1000 // 5 minutes before actual expiry
+    const isTokenExpired = tokenExpiry ? Date.now() > (tokenExpiry - TOKEN_REFRESH_BUFFER) : !youtubeToken // if no expiry and no token, assume expired
+
+    if (youtubeToken && isTokenExpired && googleConn?.connected) {
+      console.log('[Social Style v20.5] YouTube token is expired or expiring soon — attempting refresh...')
+      try {
+        const refreshResponse = await fetch('/api/auth/google/refresh')
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json()
+          if (refreshData.success && refreshData.accessToken) {
+            youtubeToken = refreshData.accessToken
+            // Update the connection state with new token + expiry
+            updateConnection('google', {
+              youtubeToken: refreshData.accessToken,
+              youtubeTokenExpiry: refreshData.expiresAt,
+            })
+            // Also update sessionStorage
+            try { sessionStorage.setItem('3boxes_google_youtube_token', refreshData.accessToken) } catch {}
+            console.log('[Social Style v20.5] ✅ YouTube token refreshed successfully')
+          } else {
+            console.warn('[Social Style v20.5] Refresh response missing token:', refreshData.error)
+            // If needsReconnect, clear the stale token
+            if (refreshData.needsReconnect) {
+              youtubeToken = null
+              updateConnection('google', { youtubeToken: undefined, youtubeTokenExpiry: undefined })
+              console.warn('[Social Style v20.5] Refresh token invalid — user needs to reconnect Google')
+            }
+          }
+        } else {
+          console.warn('[Social Style v20.5] Token refresh failed with status:', refreshResponse.status)
+          // Try using the stale token anyway — it might still work for a few minutes
+        }
+      } catch (refreshError) {
+        console.warn('[Social Style v20.5] Token refresh request failed:', refreshError)
+        // Continue with stale token — API will handle 401 gracefully
+      }
+    }
+
+    console.log('[Social Style v20.5] YouTube token debug:', {
+      fromCookie: !!youtubeTokenFromCookie,
+      fromState: !!youtubeTokenFromState,
+      fromSession: !!youtubeTokenFromSession,
+      fromLocal: !!youtubeTokenFromLocal,
+      googleConnected: !!googleConn?.connected,
+      hasToken: !!youtubeToken,
+      tokenExpiry: tokenExpiry ? new Date(tokenExpiry).toISOString() : 'unknown',
+      isTokenExpired,
+    })
+
+    if (youtubeToken && googleConn?.connected) {
+      socialPayload.googleAccessToken = youtubeToken
+      console.log('[Social Style v20.5] Passing YouTube access token to API')
+    } else {
+      console.warn('[Social Style v20.5] No YouTube token available - recommendations will not use YouTube data')
+      if (!youtubeToken) console.warn('  Reason: No token found (or token expired and refresh failed)')
+      if (!googleConn?.connected) console.warn('  Reason: Google is not connected')
+    }
+
+    // Include Facebook profile data + rich data (likes, age_range, interests, gender)
     const fbConnection = connections.find((c) => c.network === 'facebook' && c.connected)
     if (fbConnection?.profile) {
+      const fbRich = getRichData('facebook')
       socialPayload.facebookData = {
         profile: fbConnection.profile,
-        likes: fbConnection.likes || [],
+        likes: fbRich?.likes || fbConnection.likes || [],
+        ...(fbRich?.ageRange && { ageRange: fbRich.ageRange }),
+        ...(fbRich?.inferredSignals && { inferredSignals: fbRich.inferredSignals }),
+        // v15: Pass gender from Facebook OAuth to the social-style route
+        ...(fbConnection.profile.gender && { gender: fbConnection.profile.gender }),
+      }
+    }
+
+    // Include LinkedIn profile data + rich data (locale, inferred industry)
+    const liConnection = connections.find((c) => c.network === 'linkedin' && c.connected)
+    if (liConnection?.profile) {
+      const liRich = getRichData('linkedin')
+      socialPayload.linkedinData = {
+        profile: liConnection.profile,
+        ...(liRich?.locale && { locale: liRich.locale }),
+        ...(liRich?.inferredSignals && { inferredSignals: liRich.inferredSignals }),
+        // v16: Pass gender from LinkedIn name inference to the social-style route
+        ...(liConnection.profile.gender && { gender: liConnection.profile.gender }),
+      }
+    }
+
+    // Include Instagram data if available
+    // v22: Now uses real Instagram Graph API data (profile, media, hashtags)
+    const igConnection = connections.find((c) => c.network === 'instagram' && c.connected)
+    if (igConnection?.profile) {
+      // Read rich Instagram data from sessionStorage or cookie
+      const igRich = getRichData('instagram')
+      // Also try to read Instagram data from the Facebook extended data (stored in rich cookie)
+      const fbRich = getRichData('facebook')
+
+      socialPayload.instagramData = {
+        username: igConnection.profile.name,
+        // v22: Add rich Instagram data from Graph API
+        ...(igRich?.igUserId && { igUserId: igRich.igUserId }),
+        ...(igRich?.biography && { biography: igRich.biography }),
+        ...(igRich?.followersCount && { followersCount: igRich.followersCount }),
+        ...(igRich?.followsCount && { followsCount: igRich.followsCount }),
+        ...(igRich?.mediaCount && { mediaCount: igRich.mediaCount }),
+        ...(igRich?.recentHashtags && { recentHashtags: igRich.recentHashtags }),
+        ...(igRich?.recentMedia && { recentMedia: igRich.recentMedia }),
+        // Also check Facebook rich data for Instagram info (since IG data comes through FB OAuth)
+        ...(fbRich?.instagram && { ...fbRich.instagram }),
       }
     }
 
     try {
+      // ─── Discover proxy URL (same pattern as try-on) ───
+      // This is needed so the server-side route can reach the AI API
+      // through the sandbox proxy, which the browser already knows about.
+      let proxyUrl = '';
+      try {
+        const configResponse = await fetch('/api/config');
+        if (configResponse.ok) {
+          const configData = await configResponse.json();
+          proxyUrl = configData.aiProxyUrl || '';
+        }
+      } catch {}
+      if (!proxyUrl) {
+        proxyUrl = process.env.NEXT_PUBLIC_AI_PROXY_URL || '';
+      }
+
+      // Pass the proxy URL in the request body so the server-side route can use it
+      socialPayload.proxyUrl = proxyUrl;
+
       const response = await fetch('/api/social-style', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -636,28 +1140,31 @@ export function SocialStyleIntegration() {
       }
 
       const data = await response.json()
+      // API returns { analysis: { styleProfile, colorPreferences, recommendedCategories }, products }
+      const aiAnalysis = data.analysis || data
       // Map API response (which uses "match" field) to component format (which uses "score")
       const mappedAnalysis: StyleAnalysis = {
         styleProfile: {
-          tags: data.styleProfile?.tags || FALLBACK_ANALYSIS.styleProfile.tags,
-          confidence: data.styleProfile?.confidence
-            ? Math.round(data.styleProfile.confidence * 100)
+          tags: aiAnalysis.styleProfile?.tags || FALLBACK_ANALYSIS.styleProfile.tags,
+          confidence: aiAnalysis.styleProfile?.confidence
+            ? Math.round(aiAnalysis.styleProfile.confidence * 100)
             : FALLBACK_ANALYSIS.styleProfile.confidence,
-          description: data.styleProfile?.description || FALLBACK_ANALYSIS.styleProfile.description,
+          description: aiAnalysis.styleProfile?.description || FALLBACK_ANALYSIS.styleProfile.description,
         },
-        colorPreferences: data.colorPreferences?.map((c: any) => ({
+        colorPreferences: aiAnalysis.colorPreferences?.map((c: any) => ({
           name: c.name,
           hex: c.hex,
           affinity: Math.round((c.affinity || 0.5) * 100),
         })) || FALLBACK_ANALYSIS.colorPreferences,
-        recommendedCategories: data.recommendedCategories?.map((c: any) => ({
+        recommendedCategories: aiAnalysis.recommendedCategories?.map((c: any) => ({
           name: c.name,
           score: c.match || c.score || 50,
           reason: c.reason,
         })) || FALLBACK_ANALYSIS.recommendedCategories,
       }
       setAnalysis(mappedAnalysis)
-      setProducts(FALLBACK_PRODUCTS)
+      // Use AI-recommended products if available, otherwise fallback
+      setProducts(data.products?.length > 0 ? data.products : FALLBACK_PRODUCTS)
     } catch {
       setAnalysis(FALLBACK_ANALYSIS)
       setProducts(FALLBACK_PRODUCTS)
@@ -687,6 +1194,55 @@ export function SocialStyleIntegration() {
   return (
     <section className="w-full bg-stone-950 text-amber-100">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Back Button — returns to the Social tab on the home page */}
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-6"
+        >
+          <Button
+            onClick={() => {
+              // Switch back to the home view
+              setView('home')
+              // After the home view renders, scroll to the Social Connections section
+              // (the Social tab) so the user lands back where they came from.
+              if (typeof window !== 'undefined') {
+                setTimeout(() => {
+                  const el = document.getElementById('social-connections-section')
+                  if (el) {
+                    const headerEl = document.querySelector('header') as HTMLElement | null
+                    const headerOffset = headerEl ? headerEl.getBoundingClientRect().bottom + 20 : 120
+                    const top = el.getBoundingClientRect().top + window.pageYOffset - headerOffset
+                    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+                  } else {
+                    // Fallback: if section not yet rendered, retry a few times
+                    let attempts = 0
+                    const tryScroll = () => {
+                      attempts++
+                      const e2 = document.getElementById('social-connections-section')
+                      if (e2) {
+                        const headerEl2 = document.querySelector('header') as HTMLElement | null
+                        const headerOffset2 = headerEl2 ? headerEl2.getBoundingClientRect().bottom + 20 : 120
+                        const top2 = e2.getBoundingClientRect().top + window.pageYOffset - headerOffset2
+                        window.scrollTo({ top: Math.max(0, top2), behavior: 'smooth' })
+                      } else if (attempts < 20) {
+                        setTimeout(tryScroll, 100)
+                      }
+                    }
+                    setTimeout(tryScroll, 100)
+                  }
+                }, 200)
+              }
+            }}
+            variant="outline"
+            className="gap-2 border-amber-900/40 bg-stone-900/60 text-amber-200/80 hover:bg-amber-900/20 hover:text-amber-100 hover:border-amber-700/50"
+          >
+            <ArrowLeft className="size-4" />
+            Back to Social Tab
+          </Button>
+        </motion.div>
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -723,61 +1279,70 @@ export function SocialStyleIntegration() {
             const isConnecting = connection?.connecting ?? false
 
             return (
-              <motion.div key={networkConfig.network} variants={itemVariants}>
+              <motion.div key={networkConfig.network} variants={itemVariants} className="h-full">
                 <motion.div
                   variants={cardHover}
                   initial="rest"
                   whileHover="hover"
+                  className="h-full"
                 >
                   <Card
-                    className={`border transition-colors ${
+                    className={`h-full flex flex-col border transition-colors ${
                       isConnected
                         ? `${networkConfig.borderColor} bg-stone-900/80`
                         : 'border-amber-900/30 bg-stone-900/80 hover:border-amber-900/50'
                     }`}
                   >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {isConnected && connection?.profile?.avatar ? (
-                            <img
-                              src={connection.profile.avatar}
-                              alt={connection.profile.name}
-                              className="size-10 rounded-lg object-cover border border-white/10"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none'
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className={`flex size-10 items-center justify-center rounded-lg ${networkConfig.bgColor} ${networkConfig.color}`}
-                            >
-                              {networkConfig.icon}
-                            </div>
-                          )}
-                          <div>
+                    <CardHeader className="pb-3 relative">
+                      {/* v22.9: Checkmark absolutely positioned in top-right so it's always aligned across all cards */}
+                      {isConnected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          className="absolute top-3 right-3 shrink-0"
+                        >
+                          <CheckCircle2 className="size-5 text-emerald-400" />
+                        </motion.div>
+                      )}
+                      <div className="flex items-center gap-3 min-w-0 flex-1 pr-8">
+                        {isConnected && connection?.profile?.avatar && !failedAvatars.has(networkConfig.network) ? (
+                          <img
+                            src={connection.profile.avatar}
+                            alt={connection.profile.name}
+                            className="size-10 rounded-lg object-cover border border-white/10 shrink-0"
+                            onError={() => {
+                              setFailedAvatars((prev) => new Set(prev).add(networkConfig.network))
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className={`flex size-10 items-center justify-center rounded-lg ${networkConfig.bgColor} ${networkConfig.color} shrink-0`}
+                          >
+                            {networkConfig.icon}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
                             <CardTitle className="text-amber-100">
                               {networkConfig.label}
                             </CardTitle>
-                            <CardDescription className="text-amber-200/50">
-                              {isConnected
-                                ? `Connected with ${networkConfig.label} user${connection?.profile?.name ? ': ' + connection.profile.name : ''}`
-                                : 'Not connected'}
-                            </CardDescription>
+                            {isConnected && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
+                                <span className="size-1.5 rounded-full bg-emerald-400" />
+                                Connected
+                              </span>
+                            )}
                           </div>
+                          <CardDescription className="text-amber-200/50 truncate">
+                            {isConnected
+                              ? (connection?.profile?.name || 'Connected')
+                              : 'Not connected'}
+                          </CardDescription>
                         </div>
-                        {isConnected && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                          >
-                            <CheckCircle2 className="size-5 text-emerald-400" />
-                          </motion.div>
-                        )}
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1 flex flex-col">
                       {/* Data items preview */}
                       <div className="mb-4 flex flex-wrap gap-1.5">
                         {networkConfig.dataItems.map((item) => (
@@ -804,6 +1369,7 @@ export function SocialStyleIntegration() {
                       )}
 
                       {/* Connect / Disconnect Button */}
+                      <div className="mt-auto pt-2">
                       {isConnecting ? (
                         <Button
                           disabled
@@ -837,6 +1403,7 @@ export function SocialStyleIntegration() {
                           )}
                         </Button>
                       )}
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -850,6 +1417,7 @@ export function SocialStyleIntegration() {
           {hasAnyConnection && !analysis && (
             <motion.div
               key="analyze-section"
+              ref={analyzeSectionRef}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -998,20 +1566,21 @@ export function SocialStyleIntegration() {
               </motion.div>
 
               {/* Color Preferences & Recommended Categories */}
-              <div className="mb-6 grid gap-6 lg:grid-cols-2">
+              <div className="mb-6 grid gap-6 lg:grid-cols-2 lg:grid-rows-1">
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.4 }}
+                  className="min-h-0"
                 >
-                  <Card className="h-full border-amber-900/30 bg-stone-900/80">
-                    <CardHeader>
+                  <Card className="h-full flex flex-col overflow-hidden border-amber-900/30 bg-stone-900/80">
+                    <CardHeader className="shrink-0">
                       <div className="flex items-center gap-2">
                         <Palette className="size-5 text-amber-400" />
                         <CardTitle className="text-amber-100">Color Preferences</CardTitle>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1 min-h-0 overflow-y-auto">
                       <div className="space-y-3">
                         {analysis.colorPreferences.map((color, i) => (
                           <motion.div
@@ -1054,17 +1623,18 @@ export function SocialStyleIntegration() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2, duration: 0.4 }}
+                  className="min-h-0"
                 >
-                  <Card className="h-full border-amber-900/30 bg-stone-900/80">
-                    <CardHeader>
+                  <Card className="h-full flex flex-col overflow-hidden border-amber-900/30 bg-stone-900/80">
+                    <CardHeader className="shrink-0">
                       <div className="flex items-center gap-2">
                         <ShoppingBag className="size-5 text-amber-400" />
                         <CardTitle className="text-amber-100">Recommended Categories</CardTitle>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="max-h-72">
-                        <div className="space-y-3">
+                    <CardContent className="flex-1 min-h-0 overflow-hidden">
+                      <ScrollArea className="h-full">
+                        <div className="space-y-3 pr-3">
                           {analysis.recommendedCategories.map((cat, i) => (
                             <motion.div
                               key={cat.name}
@@ -1073,13 +1643,13 @@ export function SocialStyleIntegration() {
                               transition={{ delay: 0.3 + i * 0.08, duration: 0.3 }}
                               className="rounded-lg border border-amber-900/20 bg-stone-800/50 p-3"
                             >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-amber-100">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-amber-100 truncate">
                                   {cat.name}
                                 </span>
                                 <Badge
                                   variant="outline"
-                                  className="border-amber-600/30 text-amber-400"
+                                  className="border-amber-600/30 text-amber-400 shrink-0"
                                 >
                                   {cat.score}% match
                                 </Badge>
@@ -1215,7 +1785,14 @@ export function SocialStyleIntegration() {
               {/* Re-analyze button */}
               <div className="mt-6 text-center">
                 <Button
-                  onClick={() => { setAnalysis(null); setProducts([]) }}
+                  onClick={() => {
+                    setAnalysis(null)
+                    setProducts([])
+                    // Scroll back to the "Analyze My Style" button area
+                    setTimeout(() => {
+                      analyzeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                    }, 100)
+                  }}
                   variant="outline"
                   className="border-amber-900/40 text-amber-200/60 hover:bg-amber-900/20 hover:text-amber-100"
                 >

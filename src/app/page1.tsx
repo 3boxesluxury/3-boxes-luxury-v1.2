@@ -27,8 +27,14 @@ import { SocialStyleIntegration } from '@/components/social-style-integration';
 import { ThreeBoxCurate } from '@/components/threebox-curate';
 import { FamilyShopping } from '@/components/family-shopping';
 import { WikiSection } from '@/components/wiki-section';
+import { FamilyPackSection } from '@/components/family-pack-section';
+import { SocialConnectionsSection } from '@/components/social-connections-section';
+import { ThreeboxesCurateSection } from '@/components/threeboxes-curate-section';
+import { StyleGallerySection } from '@/components/style-gallery-section';
+import { AIStyleGallery } from '@/components/ai-style-gallery';
 import { OAuthCallbackHandler } from '@/components/oauth-callback-handler';
 import { ToastContainer } from '@/hooks/use-toast-notification';
+import { useBrowserHistory } from '@/hooks/useBrowserHistory';
 import { AnimatePresence, motion } from 'framer-motion';
 import React, { useEffect } from 'react';
 
@@ -83,40 +89,71 @@ function FamilyShoppingWrapper() {
 function AppContent() {
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
+  const selectProduct = useStore((s) => s.selectProduct);
   const appTheme = useStore((s) => s.appTheme);
 
-  // Restore view state from URL ?view= parameter on initial load
-  // This allows OAuth callbacks to redirect back to the correct view
-  // (e.g. /?view=social-style after LinkedIn/Facebook OAuth)
-  // NOTE: OAuthCallbackHandler also handles this for OAuth-specific redirects.
-  // This handles the case where someone navigates directly to /?view=social-style
-  // without OAuth params, or as a fallback.
+  // ─── Browser history sync ────────────────────────────────────────────────
+  // This hook handles:
+  //   1. Pushing view changes to browser history (so Back/Forward work)
+  //   2. Listening to popstate (Back/Forward) → restore view from URL
+  //   3. Showing "Leave site?" confirmation via beforeunload
+  // See src/hooks/useBrowserHistory.ts for full details.
+  useBrowserHistory();
+
+  // ─── Restore view + product from URL on initial load ─────────────────────
+  // This runs ONCE on mount. It reads ?view=...&id=... from the URL and
+  // restores the corresponding view in the Zustand store.
+  //
+  // This handles:
+  //   - Direct URL access (e.g., user bookmarks /?view=product&id=123)
+  //   - Page refresh (URL is preserved by useBrowserHistory, so refresh
+  //     lands on the same view)
+  //   - OAuth callbacks (e.g., /?view=social-style after Google OAuth)
+  //
+  // Unlike the previous implementation, we NO LONGER clear the URL after
+  // reading it — the URL is preserved so refresh works. OAuth-specific
+  // params (auth_token, connect_provider, etc.) are still cleaned up by
+  // OAuthCallbackHandler and SocialStyleIntegration respectively.
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const params = new URLSearchParams(window.location.search)
-    const viewParam = params.get('view')
-    const hasAuthParams = params.has('auth_token') || params.has('auth_error')
-    if (viewParam && !hasAuthParams) {
-      // Only handle view param here if there are NO OAuth auth params
-      // (OAuthCallbackHandler handles the OAuth case)
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view') as View | null;
+    const idParam = params.get('id');
+
+    if (viewParam) {
       const validViews: View[] = [
         'home', 'product', 'cart', 'checkout', 'orders', 'order-confirmation',
         'user-dashboard', 'admin-dashboard', 'agent-dashboard', 'team-dashboard',
         'corporate-dashboard', 'wiki', 'downloads', 'security-policy',
         'social-style', '3box-curate', 'family-shopping',
-      ]
-      if (validViews.includes(viewParam as View) && viewParam !== view) {
-        setView(viewParam as View)
+      ];
+      if (validViews.includes(viewParam)) {
+        if (viewParam === 'product' && idParam) {
+          // Restore product view with the specific product ID
+          selectProduct(idParam);
+        } else if (viewParam !== view) {
+          setView(viewParam);
+        }
       }
-      // Clean the URL after restoring view (remove ?view= param)
-      window.history.replaceState({}, '', window.location.pathname)
     }
+    // NOTE: We intentionally do NOT clear the URL here anymore.
+    // useBrowserHistory will replaceState on initial mount to canonicalize
+    // the URL for the current view.
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to top whenever the view changes
   // This fixes: feature pages opening at bottom, product detail at bottom,
   // cart page at bottom, footer navigation not scrolling up, etc.
+  // NOTE: Skip scroll-to-top if we're navigating to a section (header handles that)
   useEffect(() => {
+    // Check if there's a pending section scroll (set by header navigation)
+    const pendingScroll = (window as any).__pendingScrollToSection;
+    if (pendingScroll) {
+      // Let the header's scroll logic handle it
+      delete (window as any).__pendingScrollToSection;
+      return;
+    }
+    // Always scroll to top for non-home views
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [view]);
 
@@ -128,6 +165,29 @@ function AppContent() {
             <HeroSection />
             <CategoryGrid />
             <ProductGrid />
+            <ErrorBoundary fallback={null}>
+              <StyleGallerySection />
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="family-pack-section" className="scroll-mt-20">
+                <FamilyPackSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="social-connections-section" className="scroll-mt-20">
+                <SocialConnectionsSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="3boxes-curate-section" className="scroll-mt-20">
+                <ThreeboxesCurateSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="ai-style-gallery" className="scroll-mt-20">
+                <AIStyleGallery />
+              </div>
+            </ErrorBoundary>
             <AppDownloadSection />
           </>
         );
@@ -167,6 +227,29 @@ function AppContent() {
             <HeroSection />
             <CategoryGrid />
             <ProductGrid />
+            <ErrorBoundary fallback={null}>
+              <StyleGallerySection />
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="family-pack-section" className="scroll-mt-20">
+                <FamilyPackSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="social-connections-section" className="scroll-mt-20">
+                <SocialConnectionsSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="3boxes-curate-section" className="scroll-mt-20">
+                <ThreeboxesCurateSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="ai-style-gallery" className="scroll-mt-20">
+                <AIStyleGallery />
+              </div>
+            </ErrorBoundary>
             <AppDownloadSection />
           </>
         );
@@ -211,10 +294,10 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; fallback?: React.ReactNode },
   ErrorBoundaryState
 > {
-  constructor(props: { children: React.ReactNode }) {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -229,6 +312,9 @@ class ErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) {
+        return this.props.fallback;
+      }
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-stone-950 p-8 text-center">
           <h2 className="mb-4 text-2xl font-bold text-amber-100">Something went wrong!</h2>

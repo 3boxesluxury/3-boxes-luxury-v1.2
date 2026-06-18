@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, getGalleryModel } from '@/lib/db'
 import { verifyAuth } from '@/lib/auth-api'
 
 // GET /api/style-gallery/[id] — get a single gallery image
@@ -8,9 +8,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const galleryModel = getGalleryModel()
+    if (!galleryModel) {
+      return NextResponse.json({ error: 'Gallery model not configured. Run: npx prisma generate' }, { status: 503 })
+    }
+
     const { id } = await params
 
-    const image = await db.customerPortfolio.findUnique({
+    const image = await galleryModel.findUnique({
       where: { id },
       include: {
         product: {
@@ -49,6 +54,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const galleryModel = getGalleryModel()
+    if (!galleryModel) {
+      return NextResponse.json({ error: 'Gallery model not configured' }, { status: 503 })
+    }
+
     const user = await verifyAuth(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -61,7 +71,7 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const existing = await db.customerPortfolio.findUnique({ where: { id } })
+    const existing = await galleryModel.findUnique({ where: { id } })
     if (!existing) {
       return NextResponse.json({ error: 'Image not found' }, { status: 404 })
     }
@@ -80,7 +90,7 @@ export async function PATCH(
     }
     if (body.userName !== undefined) updateData.userName = body.userName
 
-    const updated = await db.customerPortfolio.update({
+    const updated = await galleryModel.update({
       where: { id },
       data: updateData,
       include: {
@@ -108,6 +118,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const galleryModel = getGalleryModel()
+    if (!galleryModel) {
+      return NextResponse.json({ error: 'Gallery model not configured' }, { status: 503 })
+    }
+
     const user = await verifyAuth(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -119,12 +134,12 @@ export async function DELETE(
 
     const { id } = await params
 
-    const existing = await db.customerPortfolio.findUnique({ where: { id } })
+    const existing = await galleryModel.findUnique({ where: { id } })
     if (!existing) {
       return NextResponse.json({ error: 'Image not found' }, { status: 404 })
     }
 
-    await db.customerPortfolio.delete({ where: { id } })
+    await galleryModel.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error) {

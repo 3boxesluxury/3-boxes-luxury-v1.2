@@ -27,6 +27,11 @@ import { SocialStyleIntegration } from '@/components/social-style-integration';
 import { ThreeBoxCurate } from '@/components/threebox-curate';
 import { FamilyShopping } from '@/components/family-shopping';
 import { WikiSection } from '@/components/wiki-section';
+import { FamilyPackSection } from '@/components/family-pack-section';
+import { SocialConnectionsSection } from '@/components/social-connections-section';
+import { ThreeboxesCurateSection } from '@/components/threeboxes-curate-section';
+import { StyleGallerySection } from '@/components/style-gallery-section';
+import { AIStyleGallery } from '@/components/ai-style-gallery';
 import { OAuthCallbackHandler } from '@/components/oauth-callback-handler';
 import { ToastContainer } from '@/hooks/use-toast-notification';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -105,9 +110,11 @@ function AppContent() {
       if (validViews.includes(viewParam as View) && viewParam !== view) {
         setView(viewParam as View)
       }
-      // Only clean URL if there are no auth params (OAuthCallbackHandler handles that case)
+      // Only clean URL if there are no auth params AND no connect params
+      // (OAuthCallbackHandler handles auth params, SocialStyleIntegration handles connect params)
       const hasAuthParams = params.has('auth_token') || params.has('auth_error')
-      if (!hasAuthParams) {
+      const hasConnectParams = params.has('connect_provider') || params.has('connect_name')
+      if (!hasAuthParams && !hasConnectParams) {
         window.history.replaceState({}, '', window.location.pathname)
       }
     }
@@ -128,6 +135,29 @@ function AppContent() {
             <HeroSection />
             <CategoryGrid />
             <ProductGrid />
+            <ErrorBoundary fallback={null}>
+              <StyleGallerySection />
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="family-pack-section">
+                <FamilyPackSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="social-connections-section">
+                <SocialConnectionsSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="3boxes-curate-section">
+                <ThreeboxesCurateSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="ai-style-gallery">
+                <AIStyleGallery />
+              </div>
+            </ErrorBoundary>
             <AppDownloadSection />
           </>
         );
@@ -167,6 +197,29 @@ function AppContent() {
             <HeroSection />
             <CategoryGrid />
             <ProductGrid />
+            <ErrorBoundary fallback={null}>
+              <StyleGallerySection />
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="family-pack-section">
+                <FamilyPackSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="social-connections-section">
+                <SocialConnectionsSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="3boxes-curate-section">
+                <ThreeboxesCurateSection />
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div id="ai-style-gallery">
+                <AIStyleGallery />
+              </div>
+            </ErrorBoundary>
             <AppDownloadSection />
           </>
         );
@@ -211,10 +264,10 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; fallback?: React.ReactNode },
   ErrorBoundaryState
 > {
-  constructor(props: { children: React.ReactNode }) {
+  constructor(props: { children: React.ReactNode; fallback?: React.ReactNode }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -229,6 +282,9 @@ class ErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) {
+        return this.props.fallback;
+      }
       return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-stone-950 p-8 text-center">
           <h2 className="mb-4 text-2xl font-bold text-amber-100">Something went wrong!</h2>

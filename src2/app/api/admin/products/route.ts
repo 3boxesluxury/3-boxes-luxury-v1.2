@@ -84,13 +84,103 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Verify the category exists before creating product ──
-    const categoryExists = await db.category.findUnique({ where: { id: categoryId } });
-    if (!categoryExists) {
+    // ── Resolve categoryId: handle both real DB IDs and Shopify-style synthetic IDs ──
+    let resolvedCategoryId: string | null = null;
+    let resolvedSubCategoryId: string | null = body.subCategoryId || null;
+
+    // First, try direct DB lookup by ID (works for real cuid IDs)
+    const categoryById = await db.category.findUnique({ where: { id: categoryId } });
+    if (categoryById) {
+      resolvedCategoryId = categoryId;
+    } else {
+      // categoryId might be a Shopify-style synthetic ID — resolve it
+      // Possible formats: "shopify-parent-men", "shopify-cat-watches", "shopify-col-4823761"
+      let slugToLookup: string | null = null;
+
+      if (categoryId.startsWith('shopify-parent-')) {
+        // e.g. "shopify-parent-men" → slug could be "men"
+        slugToLookup = categoryId.replace('shopify-parent-', '');
+      } else if (categoryId.startsWith('shopify-cat-')) {
+        // e.g. "shopify-cat-watches" → slug "watches"
+        slugToLookup = categoryId.replace('shopify-cat-', '');
+      } else if (categoryId.startsWith('shopify-col-')) {
+        // e.g. "shopify-col-4823761" — this is a Shopify collection ID
+        // Try to match by looking for a category with a matching slug pattern
+        // We'll try the slug as-is first, then try common transformations
+        slugToLookup = categoryId.replace('shopify-col-', '');
+      } else {
+        // Maybe it's already a slug (no shopify prefix)
+        slugToLookup = categoryId;
+      }
+
+      // Try to find category by slug
+      if (slugToLookup) {
+        const categoryBySlug = await db.category.findUnique({ where: { slug: slugToLookup } });
+        if (categoryBySlug) {
+          resolvedCategoryId = categoryBySlug.id;
+          console.log(`[Product Create] Resolved Shopify ID "${categoryId}" → DB category "${categoryBySlug.name}" (id: ${categoryBySlug.id})`);
+        } else {
+          // Try broader slug matching — the Shopify slug might use dashes differently
+          // e.g., "men-accessories" might be "men-accessories" or "mens-accessories" in DB
+          const allCategories = await db.category.findMany();
+          const matched = allCategories.find(c => {
+            const cSlug = c.slug.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const lookupSlug = slugToLookup!.toLowerCase().replace(/[^a-z0-9]/g, '');
+            return cSlug === lookupSlug || cSlug.includes(lookupSlug) || lookupSlug.includes(cSlug);
+          });
+          if (matched) {
+            resolvedCategoryId = matched.id;
+            console.log(`[Product Create] Resolved Shopify ID "${categoryId}" via fuzzy slug match → DB category "${matched.name}" (id: ${matched.id})`);
+          }
+        }
+      }
+    }
+
+    if (!resolvedCategoryId) {
       return NextResponse.json(
-        { error: `Category not found (id: ${categoryId}). Please select a valid category.` },
+        { error: `Category not found (id: ${categoryId}). The category may not exist in the database yet. Please seed the database first or create the category.` },
         { status: 400 }
       );
+    }
+
+    // ── Resolve subCategoryId if provided and Shopify-style ──
+    if (resolvedSubCategoryId && resolvedSubCategoryId !== 'none') {
+      const subCategoryById = await db.category.findUnique({ where: { id: resolvedSubCategoryId } });
+      if (!subCategoryById) {
+        // Try to resolve Shopify-style sub-category ID
+        let subSlugToLookup: string | null = null;
+        if (resolvedSubCategoryId.startsWith('shopify-cat-')) {
+          subSlugToLookup = resolvedSubCategoryId.replace('shopify-cat-', '');
+        } else if (resolvedSubCategoryId.startsWith('shopify-col-')) {
+          subSlugToLookup = resolvedSubCategoryId.replace('shopify-col-', '');
+        } else if (resolvedSubCategoryId.startsWith('shopify-parent-')) {
+          subSlugToLookup = resolvedSubCategoryId.replace('shopify-parent-', '');
+        } else {
+          subSlugToLookup = resolvedSubCategoryId;
+        }
+
+        if (subSlugToLookup) {
+          const subCategoryBySlug = await db.category.findUnique({ where: { slug: subSlugToLookup } });
+          if (subCategoryBySlug) {
+            resolvedSubCategoryId = subCategoryBySlug.id;
+          } else {
+            // Fuzzy match
+            const allCategories = await db.category.findMany();
+            const matched = allCategories.find(c => {
+              const cSlug = c.slug.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const lookupSlug = subSlugToLookup!.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return cSlug === lookupSlug || cSlug.includes(lookupSlug) || lookupSlug.includes(cSlug);
+            });
+            if (matched) {
+              resolvedSubCategoryId = matched.id;
+            } else {
+              // Sub-category not found — clear it rather than failing
+              console.warn(`[Product Create] Could not resolve sub-category ID "${resolvedSubCategoryId}", setting to null`);
+              resolvedSubCategoryId = null;
+            }
+          }
+        }
+      }
     }
 
     // Auto-generate productNumber: PRD-XXXXX
@@ -142,12 +232,17 @@ export async function POST(request: NextRequest) {
       costPrice: costPrice ? parseFloat(costPrice) : null,
       sku: sku || null,
       images: images ? JSON.stringify(images) : '[]',
-      categoryId,
+      categoryId: resolvedCategoryId,
       stock: stock ? parseInt(stock) : 0,
       reorderLevel: reorderLevel ? parseInt(reorderLevel) : 5,
       featured: featured || false,
       tags: tags ? JSON.stringify(tags) : null,
     };
+
+    // Add resolved sub-category if available
+    if (resolvedSubCategoryId) {
+      productData.subCategoryId = resolvedSubCategoryId;
+    }
 
     // Only add vendorId if it's a valid non-empty string
     if (vendorId && vendorId !== 'none') {

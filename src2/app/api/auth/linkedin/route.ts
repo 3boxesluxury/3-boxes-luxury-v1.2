@@ -1,32 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '';
-
-/**
- * Get the base URL for the application.
- * Checks NEXT_PUBLIC_APP_URL first, then NEXT_PUBLIC_BASE_URL,
- * then falls back to the request origin.
- */
-function getBaseUrl(request: NextRequest): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  if (process.env.NEXT_PUBLIC_BASE_URL) {
-    return process.env.NEXT_PUBLIC_BASE_URL;
-  }
-  return request.nextUrl.origin;
-}
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 /**
  * GET /api/auth/linkedin
  * Initiates LinkedIn OAuth flow - redirects user to LinkedIn login page
  * Supports ?returnTo=/path to redirect back after login
+ * Supports ?action=connect for social media integration (links provider without changing main auth)
  */
 export async function GET(request: NextRequest) {
-  const BASE_URL = getBaseUrl(request);
   const returnTo = request.nextUrl.searchParams.get('returnTo') || '/';
+  const action = request.nextUrl.searchParams.get('action') || 'login'; // 'login' or 'connect'
 
   if (!LINKEDIN_CLIENT_ID) {
+    // Redirect to page with error message instead of returning JSON
     const redirectUrl = new URL(returnTo, BASE_URL);
     redirectUrl.searchParams.set('auth_error', 'LinkedIn login is not configured. Please set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET in your Vercel environment variables.');
     return NextResponse.redirect(redirectUrl.toString());
@@ -41,6 +29,8 @@ export async function GET(request: NextRequest) {
   linkedinAuthUrl.searchParams.set('redirect_uri', callbackUrl);
   linkedinAuthUrl.searchParams.set('state', state);
   linkedinAuthUrl.searchParams.set('scope', 'openid profile email');
+  // Force LinkedIn to show login screen every time — prevents auto-login with previous account
+  linkedinAuthUrl.searchParams.set('prompt', 'consent');
 
   const response = NextResponse.redirect(linkedinAuthUrl.toString());
   response.cookies.set('oauth_state_linkedin', state, {
@@ -51,6 +41,15 @@ export async function GET(request: NextRequest) {
     path: '/',
   });
   response.cookies.set('oauth_return_to', returnTo, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 600,
+    path: '/',
+  });
+  // Store the action so the callback knows whether to create a new session (login)
+  // or just link the provider without changing auth (connect)
+  response.cookies.set('oauth_action', action, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

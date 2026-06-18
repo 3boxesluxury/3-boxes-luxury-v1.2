@@ -1,13 +1,28 @@
 'use client';
 
 import Image from 'next/image';
-import { useTranslation } from '@/hooks/useTranslation';
 import { Smartphone, Download, Phone, Mail, MessageCircle, Palette, Zap, Users, GraduationCap } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { useCallback } from 'react';
+
+// Map of footer Shop links → search query terms that should match products in DB.
+// Clicking a Shop link triggers a database search via /api/products?search=… and
+// routes the user to the home view with the product grid filtered.
+type ShopLink = { label: string; search: string };
+
+const SHOP_LINKS: ShopLink[] = [
+  { label: 'Watches',         search: 'watch' },
+  { label: 'Jewellery',       search: 'jewel' },
+  { label: 'Leather Goods',   search: 'leather' },
+  { label: 'Fragrances',      search: 'perfume' },
+  { label: 'Fashion',         search: 'fashion' },
+  { label: 'Home & Living',   search: 'home decor' },
+  { label: 'Sarees',          search: 'saree' },
+  { label: 'Kids Fashion',    search: 'kids' },
+];
 
 export function Footer() {
-  const { t } = useTranslation();
-  const setView = useStore((s) => s.setView);
+  const { setView, setSearch, setCategory, scrollToProducts } = useStore();
 
   const handleInstallApp = () => {
     // Try to trigger PWA install prompt
@@ -20,6 +35,16 @@ export function Footer() {
       downloadSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  // Shop-link click → set search query, reset category, route to home, scroll to products grid.
+  // The /api/products endpoint will return products matching the search term from the DB only.
+  // If no products match, the ProductGrid's empty state will display "No products found".
+  const handleShopLinkClick = useCallback((search: string) => {
+    setSearch(search);
+    setCategory(null);
+    setView('home');
+    setTimeout(() => scrollToProducts(), 60);
+  }, [setSearch, setCategory, setView, scrollToProducts]);
 
   return (
     <footer className="mt-auto border-t border-amber-900/30 bg-stone-950">
@@ -34,7 +59,7 @@ export function Footer() {
                   alt="3 Boxes Luxury Logo"
                   width={64}
                   height={64}
-                  className="h-16 w-16 object-contain gold-logo"
+                  className="h-16 w-16 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
                 />
               </div>
               <h3 className="gold-shimmer text-lg font-bold tracking-widest">
@@ -42,7 +67,7 @@ export function Footer() {
               </h3>
             </div>
             <p className="mt-2 text-sm text-amber-200/50">
-              {t('footer.description')}
+              Luxury gifting, curated for every occasion. Personalised hampers, premium fragrances, and timeless pieces — handpicked and delivered across India.
             </p>
             {/* Social / Contact Icons */}
             <div className="mt-4 flex items-center gap-3">
@@ -72,51 +97,17 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Shop */}
+          {/* Shop — each link searches the DB for matching products (Issue 7) */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-amber-400/80">
-              {t('footer.shop')}
+              Shop
             </h4>
             <ul className="mt-3 space-y-2">
-              {[
-                t('categories.watches'),
-                t('categories.jewelry'),
-                t('categories.leatherGoods'),
-                t('categories.fragrances'),
-                t('categories.fashion'),
-                t('categories.homeLiving'),
-                t('categories.sarees'),
-                'Kids Fashion',
-              ].map((item, i) => (
+              {SHOP_LINKS.map((item, i) => (
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView('shop')}
-                  >
-                    {item}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h4 className="text-sm font-semibold uppercase tracking-wider text-amber-400/80">
-              {t('footer.company')}
-            </h4>
-            <ul className="mt-3 space-y-2">
-              {[
-                { label: t('footer.aboutUs'), view: 'about' },
-                { label: t('footer.ourDivisions'), view: 'divisions' },
-                { label: t('footer.careers'), view: 'careers' },
-                { label: t('footer.press'), view: 'press' },
-                { label: t('footer.sustainability'), view: 'sustainability' },
-              ].map((item, i) => (
-                <li key={i}>
-                  <span
-                    className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView(item.view)}
+                    onClick={() => handleShopLinkClick(item.search)}
                   >
                     {item.label}
                   </span>
@@ -125,33 +116,58 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Company — literal labels (Issue 7) */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-amber-400/80">
-              {t('footer.support')}
+              Company
+            </h4>
+            <ul className="mt-3 space-y-2">
+              {[
+                { label: 'About Us',        view: 'about' },
+                { label: 'Our Divisions',   view: 'divisions' },
+                { label: 'Careers',         view: 'careers' },
+                { label: 'Press',           view: 'press' },
+                { label: 'Sustainability',  view: 'sustainability' },
+              ].map((item, i) => (
+                <li key={i}>
+                  <span
+                    className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
+                    onClick={() => setView(item.view as any)}
+                  >
+                    {item.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Support — literal labels (Issue 7) */}
+          <div>
+            <h4 className="text-sm font-semibold uppercase tracking-wider text-amber-400/80">
+              Support
             </h4>
             <ul className="mt-3 space-y-2">
               <li>
                 <span
                   className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                  onClick={() => setView('contact')}
+                  onClick={() => setView('contact' as any)}
                 >
-                  {t('footer.contactUs')}
+                  Contact Us
                 </span>
                 <p className="mt-0.5 text-xs text-amber-200/30">
                   info@3boxes.in · +91 9611533511
                 </p>
               </li>
               {[
-                { label: t('footer.shippingReturns'), view: 'shipping' },
-                { label: t('footer.faq'), view: 'faq' },
-                { label: t('footer.sizeGuide'), view: 'size-guide' },
-                { label: t('footer.trackOrder'), view: 'track-order' },
+                { label: 'Shipping & Returns', view: 'shipping' },
+                { label: 'FAQ',                view: 'faq' },
+                { label: 'Size Guide',         view: 'size-guide' },
+                { label: 'Track Order',        view: 'track-order' },
               ].map((item, i) => (
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView(item.view)}
+                    onClick={() => setView(item.view as any)}
                   >
                     {item.label}
                   </span>
@@ -160,23 +176,23 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Policies */}
+          {/* Policies — literal labels (Issue 7) */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-amber-400/80">
-              {t('footer.policies')}
+              Policies
             </h4>
             <ul className="mt-3 space-y-2">
               {[
-                { label: t('footer.privacyPolicy'), view: 'privacy-policy' },
-                { label: t('footer.termsOfService'), view: 'terms-of-service' },
-                { label: t('footer.securityPolicy'), view: 'security-policy' },
-                { label: t('footer.cookiePolicy'), view: 'cookie-policy' },
-                { label: t('footer.refundPolicy'), view: 'refund-policy' },
+                { label: 'Privacy Policy',   view: 'privacy-policy'   },
+                { label: 'Terms of Service', view: 'terms-of-service' },
+                { label: 'Security Policy',  view: 'security-policy'  },
+                { label: 'Cookie Policy',    view: 'cookie-policy'    },
+                { label: 'Refund Policy',    view: 'refund-policy'    },
               ].map((item, i) => (
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => setView(item.view)}
+                    onClick={() => setView(item.view as any)}
                   >
                     {item.label}
                   </span>
@@ -185,22 +201,46 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Features */}
+          {/* Features — "Social Style" renamed to "Social" (Issue 7).
+              3 Boxes Curate & Family Shop scroll to home-page sections (v3 fix). */}
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-amber-400/80">
               Features
             </h4>
             <ul className="mt-3 space-y-2">
               {[
-                { label: 'Social Style', view: 'social-style', icon: Palette },
-                { label: '3Box Curate', view: '3box-curate', icon: Zap },
-                { label: 'Family Shop', view: 'family-shopping', icon: Users },
-                { label: 'Knowledge Hub', view: 'wiki', icon: GraduationCap },
+                { label: 'Social',          type: 'view',   target: 'social-style',     icon: Palette },
+                { label: '3 Boxes Curate',  type: 'scroll', target: '3boxes-curate-section', icon: Zap },
+                { label: 'Family Shop',     type: 'scroll', target: 'family-pack-section',  icon: Users },
+                { label: 'Knowledge Hub',   type: 'view',   target: 'wiki',             icon: GraduationCap },
               ].map((item, i) => (
                 <li key={i}>
                   <span
                     className="text-sm text-amber-300/60 transition-colors hover:text-amber-400 cursor-pointer flex items-center gap-1.5"
-                    onClick={() => setView(item.view)}
+                    onClick={() => {
+                      if (item.type === 'view') {
+                        setView(item.target as any);
+                      } else {
+                        // Scroll to a section on the home page.
+                        // Pattern: route home, clear category, then queue the scroll.
+                        setView('home');
+                        setCategory(null);
+                        // Use a small delay + retry loop to ensure the section exists.
+                        const tryScroll = (attempts = 0) => {
+                          const el = document.getElementById(item.target);
+                          if (el) {
+                            const heading = el.querySelector('h1, h2, h3, h4, h5, h6') as HTMLElement | null;
+                            const headerEl = document.querySelector('header') as HTMLElement | null;
+                            const offset = (headerEl ? headerEl.getBoundingClientRect().bottom : 100) + 20;
+                            const top = (heading || el).getBoundingClientRect().top + window.pageYOffset - offset;
+                            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+                          } else if (attempts < 60) {
+                            setTimeout(() => tryScroll(attempts + 1), 50);
+                          }
+                        };
+                        setTimeout(tryScroll, 60);
+                      }
+                    }}
                   >
                     <item.icon className="h-3.5 w-3.5" />
                     {item.label}
@@ -254,7 +294,7 @@ export function Footer() {
         <div className="mt-6 border-t border-amber-900/20 pt-6">
           <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
             <p className="text-xs text-amber-200/40">
-              &copy; 2024 3 Boxes Luxury Curations. {t('footer.rights')} {t('footer.crafted')}
+              © 2024 3 Boxes Luxury Curations. All rights reserved. Crafted with care.
             </p>
             <p className="text-xs text-amber-200/30">
               Bengaluru, India | info@3boxes.in | +91 9611533511

@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   Card, CardContent, CardHeader, CardTitle,
 } from '@/components/ui/card'
@@ -12,22 +11,19 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
-import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 import {
-  Globe, Plus, Pencil, Trash2, RefreshCw, Loader2, ExternalLink,
-  Link2, Tag, Eye, ArrowUpRight, X, Check, AlertTriangle,
-  ShoppingCart, TrendingUp, ImageIcon,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import {
+  Handshake, Plus, Pencil, Trash2, Loader2, Search, ExternalLink, Building2, Mail, Globe,
 } from 'lucide-react'
 
-/* ─── style constants (matching admin-dashboard) ─── */
 const cardCls = 'border-amber-900/30 bg-stone-900/80'
 const inputCls = 'border-amber-900/40 bg-stone-800/50 text-amber-100 placeholder:text-amber-200/30'
 const lblCls = 'text-amber-200/60 text-xs'
@@ -46,918 +42,204 @@ async function apiFetch(url: string, opts: RequestInit = {}, token?: string | nu
   return res.json()
 }
 
-const fmtDateTime = (d: string) => d ? new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never'
-const fmt = (n: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
-
 const statusColor = (s: string) => {
-  const m: Record<string, string> = {
-    active: 'bg-green-600/20 text-green-400 border-green-600/30',
-    inactive: 'bg-stone-600/20 text-stone-400 border-stone-600/30',
-    idle: 'bg-stone-600/20 text-stone-400 border-stone-600/30',
-    syncing: 'bg-blue-600/20 text-blue-400 border-blue-600/30',
-    error: 'bg-red-600/20 text-red-400 border-red-600/30',
-    completed: 'bg-green-600/20 text-green-400 border-green-600/30',
-    failed: 'bg-red-600/20 text-red-400 border-red-600/30',
-  }
+  const m: Record<string, string> = { active: 'bg-green-600/20 text-green-400 border-green-600/30', inactive: 'bg-stone-600/20 text-stone-400 border-stone-600/30', pending: 'bg-yellow-600/20 text-yellow-400 border-yellow-600/30', suspended: 'bg-red-600/20 text-red-400 border-red-600/30' }
   return m[s] || defCls
 }
 
-const platformIcon = (slug: string) => {
-  const colors: Record<string, string> = {
-    caratlane: 'bg-amber-600/20 text-amber-400',
-    tanishq: 'bg-yellow-600/20 text-yellow-400',
-    bluestone: 'bg-cyan-600/20 text-cyan-400',
-    voylla: 'bg-rose-600/20 text-rose-400',
-    myntra: 'bg-pink-600/20 text-pink-400',
-    'nykaa-fashion': 'bg-purple-600/20 text-purple-400',
-    'amazon-jewelry': 'bg-orange-600/20 text-orange-400',
-    'flipkart-fashion': 'bg-blue-600/20 text-blue-400',
-  }
-  return colors[slug?.toLowerCase()] || 'bg-stone-600/20 text-stone-400'
+const typeColor = (t: string) => {
+  const m: Record<string, string> = { supplier: 'bg-blue-600/20 text-blue-400 border-blue-600/30', manufacturer: 'bg-purple-600/20 text-purple-400 border-purple-600/30', distributor: 'bg-amber-600/20 text-amber-400 border-amber-600/30', logistics: 'bg-cyan-600/20 text-cyan-400 border-cyan-600/30', marketing: 'bg-pink-600/20 text-pink-400 border-pink-600/30', technology: 'bg-indigo-600/20 text-indigo-400 border-indigo-600/30' }
+  return m[t] || defCls
 }
 
-/* ─── Quick-Add Suggestions ─── */
-const QUICK_ADD_SUGGESTIONS = [
-  { name: 'CaratLane', slug: 'caratlane', baseUrl: 'https://www.caratlane.com', categories: ['rings', 'necklaces', 'earrings', 'bracelets', 'bangles'], commission: 5, type: 'Jewelry' },
-  { name: 'Tanishq', slug: 'tanishq', baseUrl: 'https://www.tanishq.co.in', categories: ['rings', 'necklaces', 'earrings', 'bracelets', 'bangles'], commission: 4, type: 'Jewelry' },
-  { name: 'BlueStone', slug: 'bluestone', baseUrl: 'https://www.bluestone.com', categories: ['rings', 'necklaces', 'earrings', 'pendants'], commission: 5, type: 'Jewelry' },
-  { name: 'Voylla', slug: 'voylla', baseUrl: 'https://www.voylla.com', categories: ['earrings', 'necklaces', 'bracelets', 'bangles', 'maang-tikka'], commission: 6, type: 'Fashion Jewelry' },
-  { name: 'Myntra', slug: 'myntra', baseUrl: 'https://www.myntra.com', categories: ['sarees', 'kurtas', 'dresses', 'tops', 'jewelry'], commission: 8, type: 'Fashion' },
-  { name: 'Nykaa Fashion', slug: 'nykaa-fashion', baseUrl: 'https://www.nykaafashion.com', categories: ['sarees', 'kurtas', 'jewelry', 'bags'], commission: 7, type: 'Fashion' },
-  { name: 'Amazon Jewelry', slug: 'amazon-jewelry', baseUrl: 'https://www.amazon.in/s?rh=n%3A1955387031', categories: ['rings', 'necklaces', 'earrings', 'bracelets'], commission: 3, type: 'Jewelry' },
-  { name: 'Flipkart Fashion', slug: 'flipkart-fashion', baseUrl: 'https://www.flipkart.com/clothing', categories: ['sarees', 'kurtas', 'dresses', 'jewelry'], commission: 4, type: 'Fashion' },
-]
+interface Partner {
+  id: string; name: string; type: string; status: string; email: string; phone: string; website: string;
+  contactPerson: string; description: string; commission: number; isVerified: boolean;
+  address: { city: string; state: string; country: string }; stats: { totalOrders: number; totalRevenue: number; rating: number }; createdAt: string; updatedAt: string
+}
 
-const SYNC_INTERVALS = [
-  { label: '1 hour', value: 3600 },
-  { label: '6 hours', value: 21600 },
-  { label: '12 hours', value: 43200 },
-  { label: '24 hours', value: 86400 },
-]
-
-/* ════════════════════════════════════════════
-   MAIN PARTNERS TAB
-   ════════════════════════════════════════════ */
 export function PartnersTab({ token, onMutate }: { token: string | null; onMutate: () => void }) {
   const qc = useQueryClient()
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [showForm, setShowForm] = useState(false)
-  const [editPartner, setEditPartner] = useState<any>(null)
-  const [showDelete, setShowDelete] = useState<any>(null)
-  const [showSyncDialog, setShowSyncDialog] = useState<string | null>(null)
-  const [showCategoryMaps, setShowCategoryMaps] = useState<string | null>(null)
-  const [syncingPartnerIds, setSyncingPartnerIds] = useState<Set<string>>(new Set())
-  const syncPollRefs = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const [editPartner, setEditPartner] = useState<Partner | null>(null)
+  const [viewPartner, setViewPartner] = useState<Partner | null>(null)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['partners'],
-    queryFn: () => apiFetch('/api/partners', undefined, token),
+    queryKey: ['admin-partners', page, search, typeFilter, statusFilter],
+    queryFn: () => apiFetch(`/api/admin/partners?page=${page}&limit=20${search ? `&search=${search}` : ''}${typeFilter ? `&type=${typeFilter}` : ''}${statusFilter ? `&status=${statusFilter}` : ''}`, undefined, token),
   })
 
-  const { data: affiliateStats } = useQuery({
-    queryKey: ['affiliate-stats'],
-    queryFn: () => apiFetch('/api/affiliate/stats?period=30d', undefined, token),
-  })
-
-  const partners = data?.partners || []
+  const partners: Partner[] = data?.partners || []
+  const pagination = data?.pagination
+  const summary = data?.summary
 
   const deleteMut = useMutation({
-    mutationFn: ({ id, removeProducts }: { id: string; removeProducts: boolean }) =>
-      apiFetch(`/api/partners/${id}?removeProducts=${removeProducts}`, { method: 'DELETE' }, token),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['partners'] }); onMutate(); setShowDelete(null) },
+    mutationFn: (id: string) => apiFetch(`/api/admin/partners/${id}`, { method: 'DELETE' }, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-partners'] }); onMutate() },
   })
 
-  const syncMut = useMutation({
-    mutationFn: (id: string) => apiFetch(`/api/partners/${id}/sync`, { method: 'POST' }, token),
-    onSuccess: (_data, id) => {
-      // Start polling for this partner
-      setSyncingPartnerIds(prev => new Set(prev).add(id))
-      const pollRef = setInterval(() => {
-        qc.invalidateQueries({ queryKey: ['partners'] })
-        qc.invalidateQueries({ queryKey: ['partner-detail', id] })
-      }, 3000)
-      syncPollRefs.current.set(id, pollRef)
-    },
-    onError: (_err, id) => {
-      setSyncingPartnerIds(prev => { const n = new Set(prev); n.delete(id); return n })
-    },
+  const statusMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) => apiFetch(`/api/admin/partners/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-partners'] }); onMutate() },
   })
 
-  // Clean up polling intervals
-  useEffect(() => {
-    return () => { syncPollRefs.current.forEach(ref => clearInterval(ref)) }
-  }, [])
-
-  // Stop polling when a partner is no longer syncing
-  useEffect(() => {
-    partners.forEach((p: any) => {
-      if (p.syncStatus !== 'syncing' && syncingPartnerIds.has(p.id)) {
-        const ref = syncPollRefs.current.get(p.id)
-        if (ref) { clearInterval(ref); syncPollRefs.current.delete(p.id) }
-        setSyncingPartnerIds(prev => { const n = new Set(prev); n.delete(p.id); return n })
-      }
-    })
-  }, [partners, syncingPartnerIds])
-
-  const handleSyncAll = () => {
-    partners.filter((p: any) => p.isActive && p.syncStatus !== 'syncing').forEach((p: any) => {
-      syncMut.mutate(p.id)
-    })
-  }
-
-  const isAnySyncing = syncingPartnerIds.size > 0 || partners.some((p: any) => p.syncStatus === 'syncing')
-  const [fixingImages, setFixingImages] = useState(false)
-  const [fixImagesResult, setFixImagesResult] = useState<string | null>(null)
-
-  const handleFixImages = async () => {
-    setFixingImages(true)
-    setFixImagesResult(null)
-    try {
-      const result = await apiFetch('/api/products/fix-images', {
-        method: 'POST',
-        body: JSON.stringify({ all: true }),
-      }, token)
-      setFixImagesResult(`Fixed ${result.fixed} of ${result.total} products. ${result.failed} failed.`)
-    } catch (e: any) {
-      setFixImagesResult(`Error: ${e.message}`)
-    } finally {
-      setFixingImages(false)
-    }
-  }
+  const verifyMut = useMutation({
+    mutationFn: ({ id, isVerified }: { id: string; isVerified: boolean }) => apiFetch(`/api/admin/partners/${id}`, { method: 'PATCH', body: JSON.stringify({ isVerified }) }, token),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-partners'] }); onMutate() },
+  })
 
   return (
     <div className="space-y-4">
-      {/* Affiliate Stats Card */}
-      <AffiliateStatsCard stats={affiliateStats} />
-
-      {/* Action Buttons */}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button className={btnPrimary} onClick={() => { setEditPartner(null); setShowForm(true) }}>
-          <Plus className="mr-1 h-4 w-4" /> Add Partner
-        </Button>
-        <Button
-          variant="outline"
-          className={btnOutline}
-          onClick={handleSyncAll}
-          disabled={isAnySyncing || partners.filter((p: any) => p.isActive).length === 0}
-        >
-          {isAnySyncing ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-1 h-4 w-4" />}
-          Sync All Active
-        </Button>
-        <Button
-          variant="outline"
-          className={btnOutline}
-          onClick={handleFixImages}
-          disabled={fixingImages}
-        >
-          {fixingImages ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-1 h-4 w-4" />}
-          Fix Missing Images
-        </Button>
-        {fixImagesResult && (
-          <span className="text-xs text-amber-200/50">{fixImagesResult}</span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Handshake className="h-5 w-5 text-amber-400" />
+          <h2 className="text-lg font-semibold text-amber-100">Partners</h2>
+          {summary && <span className="text-xs text-amber-200/50">({summary.total} total, {summary.active} active)</span>}
+        </div>
+        <Button className={btnPrimary} onClick={() => { setEditPartner(null); setShowForm(true) }}><Plus className="mr-1 h-4 w-4" /> Add Partner</Button>
       </div>
 
-      {/* Partner Cards Grid */}
+      {summary && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Card className={cardCls}><CardContent className="p-3 text-center"><p className="text-xl font-bold text-amber-100">{summary.total || 0}</p><p className="text-xs text-amber-200/50">Total Partners</p></CardContent></Card>
+          <Card className={cardCls}><CardContent className="p-3 text-center"><p className="text-xl font-bold text-green-400">{summary.active || 0}</p><p className="text-xs text-amber-200/50">Active</p></CardContent></Card>
+          <Card className={cardCls}><CardContent className="p-3 text-center"><p className="text-xl font-bold text-yellow-400">{summary.pending || 0}</p><p className="text-xs text-amber-200/50">Pending Approval</p></CardContent></Card>
+          <Card className={cardCls}><CardContent className="p-3 text-center"><p className="text-xl font-bold text-amber-400">{summary.revenue ? `₹${(summary.revenue / 100000).toFixed(1)}L` : '₹0'}</p><p className="text-xs text-amber-200/50">Total Revenue</p></CardContent></Card>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-200/40" />
+          <Input className={`${inputCls} pl-9`} placeholder="Search partners..." value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+        </div>
+        <Select value={typeFilter} onValueChange={v => { setTypeFilter(v === 'all' ? '' : v); setPage(1) }}><SelectTrigger className={`${selCls} w-40`}><SelectValue placeholder="All Types" /></SelectTrigger><SelectContent className={selContentCls}><SelectItem value="all">All Types</SelectItem><SelectItem value="supplier">Supplier</SelectItem><SelectItem value="manufacturer">Manufacturer</SelectItem><SelectItem value="distributor">Distributor</SelectItem><SelectItem value="logistics">Logistics</SelectItem><SelectItem value="marketing">Marketing</SelectItem><SelectItem value="technology">Technology</SelectItem></SelectContent></Select>
+        <Select value={statusFilter} onValueChange={v => { setStatusFilter(v === 'all' ? '' : v); setPage(1) }}><SelectTrigger className={`${selCls} w-36`}><SelectValue placeholder="All Status" /></SelectTrigger><SelectContent className={selContentCls}><SelectItem value="all">All Status</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="suspended">Suspended</SelectItem></SelectContent></Select>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-amber-400" /></div>
       ) : partners.length === 0 ? (
+        <Card className={cardCls}><CardContent className="flex flex-col items-center justify-center py-16 text-amber-200/50"><Handshake className="mb-3 h-12 w-12" /><p className="text-sm">No partners found. Add your first partner!</p></CardContent></Card>
+      ) : (
         <Card className={cardCls}>
-          <CardContent className="py-12 text-center">
-            <Globe className="mx-auto mb-3 h-10 w-10 text-amber-200/20" />
-            <p className="text-amber-200/40">No partner portals configured</p>
-            <p className="mt-1 text-xs text-amber-200/30">Click &ldquo;Add Partner&rdquo; to set up a new partner integration</p>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader><TableRow className="border-amber-900/30 hover:bg-transparent"><TableHead className="text-amber-200/60">Partner</TableHead><TableHead className="text-amber-200/60">Type</TableHead><TableHead className="text-amber-200/60">Status</TableHead><TableHead className="text-amber-200/60">Contact</TableHead><TableHead className="text-amber-200/60">Commission</TableHead><TableHead className="text-amber-200/60">Verified</TableHead><TableHead className="text-right text-amber-200/60">Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {partners.map(p => (
+                    <TableRow key={p.id} className="border-amber-900/20 hover:bg-amber-900/10 cursor-pointer" onClick={() => setViewPartner(p)}>
+                      <TableCell><div className="flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-600/20 text-amber-400"><Building2 className="h-4 w-4" /></div><div><p className="text-sm font-medium text-amber-100">{p.name}</p>{p.address && <p className="text-[10px] text-amber-200/40">{p.address.city}, {p.address.state}</p>}</div></div></TableCell>
+                      <TableCell><Badge className={typeColor(p.type)}>{p.type}</Badge></TableCell>
+                      <TableCell><Badge className={statusColor(p.status)}>{p.status}</Badge></TableCell>
+                      <TableCell><div className="text-xs text-amber-200/60">{p.contactPerson && <p>{p.contactPerson}</p>}{p.email && <p className="flex items-center gap-1"><Mail className="h-3 w-3" />{p.email}</p>}</div></TableCell>
+                      <TableCell className="text-sm text-amber-100">{p.commission ? `${p.commission}%` : '—'}</TableCell>
+                      <TableCell>{p.isVerified ? <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Verified</Badge> : <Badge className={defCls}>Unverified</Badge>}</TableCell>
+                      <TableCell className="text-right"><div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}><Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-200/40 hover:text-amber-400" onClick={() => { setEditPartner(p); setShowForm(true) }}><Pencil className="h-3.5 w-3.5" /></Button>{p.website && <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-amber-200/40 hover:text-amber-400" asChild><a href={p.website} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a></Button>}<Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400/40 hover:text-red-400" onClick={() => { if (confirm('Delete this partner?')) deleteMut.mutate(p.id) }}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {partners.map((p: any, i: number) => (
-            <motion.div key={p.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <Card className={`${cardCls} transition-all hover:border-amber-600/30`}>
-                <CardContent className="p-4">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${platformIcon(p.slug)}`}>
-                        {p.logo ? (
-                          <img src={p.logo} alt={p.name} className="h-6 w-6 rounded object-contain" />
-                        ) : (
-                          <Globe className="h-5 w-5" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-amber-100">{p.name}</p>
-                        <p className="text-[10px] text-amber-200/40 max-w-[140px] truncate">{p.baseUrl}</p>
-                      </div>
-                    </div>
-                    <Badge className={statusColor(p.isActive ? 'active' : 'inactive')}>
-                      {p.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="mb-3 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-amber-200/40">Products</span>
-                      <span className="text-amber-100 font-medium">{p.productCount ?? 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-amber-200/40">Sync Status</span>
-                      <Badge className={`${statusColor(p.syncStatus || 'idle')} text-[9px] px-1.5 py-0`}>
-                        {p.syncStatus === 'syncing' && <Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin inline" />}
-                        {p.syncStatus || 'idle'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-amber-200/40">Last Synced</span>
-                      <span className="text-amber-100">{fmtDateTime(p.lastSyncedAt)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-amber-200/40">Commission</span>
-                      <span className="text-amber-100">{p.commission || 0}%</span>
-                    </div>
-                  </div>
-
-                  {/* Categories */}
-                  {p.categories && p.categories.length > 0 && (
-                    <div className="mb-3 flex flex-wrap gap-1">
-                      {p.categories.slice(0, 3).map((c: string, ci: number) => (
-                        <Badge key={ci} className="bg-stone-700/30 text-stone-300 border-stone-600/30 text-[8px] px-1.5 py-0">
-                          {c}
-                        </Badge>
-                      ))}
-                      {p.categories.length > 3 && (
-                        <Badge className="bg-stone-700/30 text-stone-300 border-stone-600/30 text-[8px] px-1.5 py-0">
-                          +{p.categories.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Sync Error */}
-                  {p.lastSyncError && (
-                    <div className="mb-3 rounded-md bg-red-600/10 p-2 text-[10px] text-red-400 flex items-start gap-1">
-                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                      <span className="line-clamp-2">{p.lastSyncError}</span>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <Separator className="bg-amber-900/20 mb-3" />
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={`${btnOutline} h-7 text-[10px] px-2`}
-                      onClick={() => syncMut.mutate(p.id)}
-                      disabled={p.syncStatus === 'syncing' || !p.isActive}
-                    >
-                      {p.syncStatus === 'syncing' ? <Loader2 className="mr-0.5 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-0.5 h-3 w-3" />}
-                      Sync
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={`${btnOutline} h-7 text-[10px] px-2`}
-                      onClick={() => { setEditPartner(p); setShowForm(true) }}
-                    >
-                      <Pencil className="mr-0.5 h-3 w-3" /> Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className={`${btnOutline} h-7 text-[10px] px-2`}
-                      onClick={() => setShowCategoryMaps(p.id)}
-                    >
-                      <Link2 className="mr-0.5 h-3 w-3" /> Maps
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-red-400/40 hover:text-red-400"
-                      onClick={() => setShowDelete(p)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
       )}
 
-      {/* Sync Progress Dialog */}
-      <Dialog open={!!showSyncDialog} onOpenChange={() => setShowSyncDialog(null)}>
-        <DialogContent className="border-amber-900/30 bg-stone-950 sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-amber-100 flex items-center gap-2">
-              <RefreshCw className="h-4 w-4" /> Sync Progress
-            </DialogTitle>
-          </DialogHeader>
-          {showSyncDialog && <SyncProgressDialog partnerId={showSyncDialog} token={token} onClose={() => setShowSyncDialog(null)} />}
-        </DialogContent>
-      </Dialog>
+      {pagination && pagination.pages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2"><Button variant="outline" className={btnOutline} size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button><span className="text-xs text-amber-200/50">Page {page} of {pagination.pages}</span><Button variant="outline" className={btnOutline} size="sm" disabled={page >= pagination.pages} onClick={() => setPage(p => p + 1)}>Next</Button></div>
+      )}
 
-      {/* Add/Edit Partner Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-amber-900/30 bg-stone-950 sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-amber-100">{editPartner ? 'Edit Partner' : 'Add Partner'}</DialogTitle>
-          </DialogHeader>
-          <PartnerForm
-            token={token}
-            partner={editPartner}
-            onClose={() => { setShowForm(false); setEditPartner(null) }}
-            onSaved={() => { qc.invalidateQueries({ queryKey: ['partners'] }); onMutate(); setShowForm(false); setEditPartner(null) }}
-          />
+        <DialogContent className="border-amber-900/40 bg-stone-950 text-amber-100 max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-amber-100"><Handshake className="h-5 w-5 text-amber-400" />{editPartner ? 'Edit Partner' : 'Add New Partner'}</DialogTitle></DialogHeader>
+          <PartnerForm initial={editPartner} token={token} onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); qc.invalidateQueries({ queryKey: ['admin-partners'] }); onMutate() }} />
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!showDelete} onOpenChange={() => setShowDelete(null)}>
-        <DialogContent className="border-amber-900/30 bg-stone-950 sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-amber-100">Delete Partner</DialogTitle>
-          </DialogHeader>
-          {showDelete && (
-            <DeletePartnerConfirm
-              partner={showDelete}
-              onConfirm={(removeProducts) => deleteMut.mutate({ id: showDelete.id, removeProducts })}
-              isPending={deleteMut.isPending}
-              onCancel={() => setShowDelete(null)}
-            />
+      <Dialog open={!!viewPartner} onOpenChange={() => setViewPartner(null)}>
+        <DialogContent className="border-amber-900/40 bg-stone-950 text-amber-100 max-w-2xl">
+          <DialogHeader><DialogTitle className="text-amber-100">{viewPartner?.name}</DialogTitle></DialogHeader>
+          {viewPartner && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2"><Badge className={typeColor(viewPartner.type)}>{viewPartner.type}</Badge><Badge className={statusColor(viewPartner.status)}>{viewPartner.status}</Badge>{viewPartner.isVerified && <Badge className="bg-green-600/20 text-green-400 border-green-600/30">Verified</Badge>}</div>
+              {viewPartner.description && <div><p className="text-xs text-amber-200/50">Description</p><p className="text-sm text-amber-100">{viewPartner.description}</p></div>}
+              <div className="grid grid-cols-2 gap-4">
+                <div><p className="text-xs text-amber-200/50">Contact Person</p><p className="text-sm text-amber-100">{viewPartner.contactPerson || '—'}</p></div>
+                <div><p className="text-xs text-amber-200/50">Email</p><p className="text-sm text-amber-100">{viewPartner.email || '—'}</p></div>
+                <div><p className="text-xs text-amber-200/50">Phone</p><p className="text-sm text-amber-100">{viewPartner.phone || '—'}</p></div>
+                <div><p className="text-xs text-amber-200/50">Commission</p><p className="text-sm text-amber-100">{viewPartner.commission ? `${viewPartner.commission}%` : '—'}</p></div>
+              </div>
+              {viewPartner.website && <div><p className="text-xs text-amber-200/50">Website</p><a href={viewPartner.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-amber-400 hover:underline"><Globe className="h-3 w-3" /> {viewPartner.website}</a></div>}
+              {viewPartner.address && <div><p className="text-xs text-amber-200/50">Address</p><p className="text-sm text-amber-100">{[viewPartner.address.city, viewPartner.address.state, viewPartner.address.country].filter(Boolean).join(', ')}</p></div>}
+              {viewPartner.stats && (
+                <div className="grid grid-cols-3 gap-3 rounded-lg border border-amber-900/30 bg-stone-800/30 p-3">
+                  <div className="text-center"><p className="text-lg font-bold text-amber-100">{viewPartner.stats.totalOrders || 0}</p><p className="text-[10px] text-amber-200/50">Orders</p></div>
+                  <div className="text-center"><p className="text-lg font-bold text-amber-100">₹{viewPartner.stats.totalRevenue?.toLocaleString('en-IN') || 0}</p><p className="text-[10px] text-amber-200/50">Revenue</p></div>
+                  <div className="text-center"><p className="text-lg font-bold text-amber-100">{viewPartner.stats.rating?.toFixed(1) || '—'}</p><p className="text-[10px] text-amber-200/50">Rating</p></div>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2 border-t border-amber-900/30 pt-3">
+                <p className="text-xs text-amber-200/50 mr-2">Quick Actions:</p>
+                {viewPartner.status === 'pending' && <Button size="sm" className="bg-green-600 text-white hover:bg-green-500" onClick={() => { statusMut.mutate({ id: viewPartner.id, status: 'active' }); setViewPartner(null) }}>Approve</Button>}
+                {viewPartner.status === 'active' && <Button size="sm" variant="outline" className="border-yellow-900/40 text-yellow-400 hover:bg-yellow-900/20" onClick={() => { statusMut.mutate({ id: viewPartner.id, status: 'suspended' }); setViewPartner(null) }}>Suspend</Button>}
+                {viewPartner.status === 'suspended' && <Button size="sm" className="bg-green-600 text-white hover:bg-green-500" onClick={() => { statusMut.mutate({ id: viewPartner.id, status: 'active' }); setViewPartner(null) }}>Reactivate</Button>}
+                {!viewPartner.isVerified && <Button size="sm" variant="outline" className="border-blue-900/40 text-blue-400 hover:bg-blue-900/20" onClick={() => { verifyMut.mutate({ id: viewPartner.id, isVerified: true }); setViewPartner(null) }}>Verify</Button>}
+                <Button size="sm" variant="outline" className={btnOutline} onClick={() => { setViewPartner(null); setEditPartner(viewPartner); setShowForm(true) }}><Pencil className="mr-1 h-3 w-3" /> Edit</Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Category Maps Dialog */}
-      <Dialog open={!!showCategoryMaps} onOpenChange={() => setShowCategoryMaps(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto border-amber-900/30 bg-stone-950 sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="text-amber-100 flex items-center gap-2">
-              <Link2 className="h-4 w-4" /> Category Maps
-            </DialogTitle>
-          </DialogHeader>
-          {showCategoryMaps && <CategoryMapsDialog partnerId={showCategoryMaps} token={token} onClose={() => setShowCategoryMaps(null)} />}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
 
-/* ════════════════════════════════════════════
-   AFFILIATE STATS CARD
-   ════════════════════════════════════════════ */
-function AffiliateStatsCard({ stats }: { stats: any }) {
-  const totalClicks = stats?.totalClicks || 0
-  const clicksByPlatform = stats?.clicksByPlatform || []
-  const estimatedCommission = stats?.estimatedCommission || 0
-  const maxClicks = Math.max(...clicksByPlatform.map((c: any) => c.clicks), 1)
-
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      {/* Total Clicks */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-600/10">
-                <Eye className="h-5 w-5 text-amber-400" />
-              </div>
-              <div>
-                <p className={lblCls}>Total Clicks</p>
-                <p className="text-lg font-bold text-amber-100">{totalClicks.toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Clicks by Platform */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <p className={`${lblCls} mb-2`}>Clicks by Platform</p>
-            {clicksByPlatform.length === 0 ? (
-              <p className="text-xs text-amber-200/30">No clicks yet</p>
-            ) : (
-              <div className="space-y-1.5 max-h-24 overflow-y-auto">
-                {clicksByPlatform.map((c: any) => (
-                  <div key={c.platform} className="flex items-center gap-2 text-xs">
-                    <span className="text-amber-200/40 w-20 truncate">{c.platform}</span>
-                    <div className="flex-1 h-2 rounded-full bg-stone-800/50 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-amber-600/60 transition-all"
-                        style={{ width: `${(c.clicks / maxClicks) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-amber-100 w-8 text-right">{c.clicks}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Estimated Commission */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card className={cardCls}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600/10">
-                <TrendingUp className="h-5 w-5 text-green-400" />
-              </div>
-              <div>
-                <p className={lblCls}>Est. Commission</p>
-                <p className="text-lg font-bold text-green-400">{fmt(estimatedCommission)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   PARTNER FORM (Add/Edit)
-   ════════════════════════════════════════════ */
-function PartnerForm({ token, partner, onClose, onSaved }: { token: string | null; partner: any; onClose: () => void; onSaved: () => void }) {
-  const [form, setForm] = useState({
-    name: '',
-    slug: '',
-    baseUrl: '',
-    logo: '',
-    isActive: true,
-    autoSync: true,
-    syncInterval: 3600,
-    categories: [] as string[],
-    affiliateTag: '',
-    commission: '',
-    maxProducts: '500',
-  })
-  const [tagInput, setTagInput] = useState('')
+function PartnerForm({ initial, token, onClose, onSaved }: { initial: Partner | null; token: string | null; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({ name: initial?.name || '', type: initial?.type || '', status: initial?.status || 'pending', email: initial?.email || '', phone: initial?.phone || '', website: initial?.website || '', contactPerson: initial?.contactPerson || '', description: initial?.description || '', commission: initial?.commission ? String(initial.commission) : '', isVerified: initial?.isVerified ?? false, city: initial?.address?.city || '', state: initial?.address?.state || '', country: initial?.address?.country || 'India' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [showQuickAdd, setShowQuickAdd] = useState(true)
-
-  useEffect(() => {
-    if (partner) {
-      setForm({
-        name: partner.name || '',
-        slug: partner.slug || '',
-        baseUrl: partner.baseUrl || '',
-        logo: partner.logo || '',
-        isActive: partner.isActive !== undefined ? partner.isActive : true,
-        autoSync: partner.autoSync !== undefined ? partner.autoSync : true,
-        syncInterval: partner.syncInterval || 3600,
-        categories: Array.isArray(partner.categories) ? partner.categories : [],
-        affiliateTag: partner.affiliateTag || '',
-        commission: String(partner.commission ?? ''),
-        maxProducts: String(partner.maxProducts ?? '500'),
-      })
-      setShowQuickAdd(false)
-    }
-  }, [partner])
-
-  const handleNameChange = (name: string) => {
-    setForm(f => ({
-      ...f,
-      name,
-      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-    }))
-  }
-
-  const handleQuickAdd = (suggestion: typeof QUICK_ADD_SUGGESTIONS[0]) => {
-    setForm(f => ({
-      ...f,
-      name: suggestion.name,
-      slug: suggestion.slug,
-      baseUrl: suggestion.baseUrl,
-      categories: suggestion.categories,
-      commission: String(suggestion.commission),
-    }))
-    setShowQuickAdd(false)
-  }
-
-  const addCategory = () => {
-    const tag = tagInput.trim().toLowerCase()
-    if (tag && !form.categories.includes(tag)) {
-      setForm(f => ({ ...f, categories: [...f.categories, tag] }))
-    }
-    setTagInput('')
-  }
-
-  const removeCategory = (cat: string) => {
-    setForm(f => ({ ...f, categories: f.categories.filter(c => c !== cat) }))
-  }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.slug || !form.baseUrl) {
-      setError('Name, slug, and base URL are required')
-      return
-    }
-    setSaving(true)
-    setError('')
+    if (!form.name || !form.type) { setError('Name and type are required'); return }
+    setSaving(true); setError('')
     try {
-      const body = {
-        ...form,
-        commission: form.commission ? parseFloat(form.commission) : 0,
-        maxProducts: parseInt(form.maxProducts) || 500,
-      }
-      if (partner) {
-        await apiFetch(`/api/partners/${partner.id}`, { method: 'PUT', body: JSON.stringify(body) }, token)
-      } else {
-        await apiFetch('/api/partners', { method: 'POST', body: JSON.stringify(body) }, token)
-      }
+      const body = { name: form.name, type: form.type, status: form.status, email: form.email || null, phone: form.phone || null, website: form.website || null, contactPerson: form.contactPerson || null, description: form.description || null, commission: form.commission ? parseFloat(form.commission) : null, isVerified: form.isVerified, address: { city: form.city || null, state: form.state || null, country: form.country || null } }
+      if (initial) { await apiFetch(`/api/admin/partners/${initial.id}`, { method: 'PUT', body: JSON.stringify(body) }, token) }
+      else { await apiFetch('/api/admin/partners', { method: 'POST', body: JSON.stringify(body) }, token) }
       onSaved()
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setSaving(false)
-    }
+    } catch (e: any) { setError(e.message) } finally { setSaving(false) }
   }
 
   return (
     <div className="space-y-4">
       {error && <div className="rounded-md bg-red-600/10 p-3 text-sm text-red-400">{error}</div>}
-
-      {/* Quick Add Suggestions */}
-      {!partner && showQuickAdd && (
-        <div>
-          <Label className={lblCls}>Quick Add — Popular Platforms</Label>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {QUICK_ADD_SUGGESTIONS.map(s => (
-              <button
-                key={s.slug}
-                type="button"
-                className="rounded-lg border border-amber-900/30 bg-stone-800/30 p-2 text-left transition-colors hover:border-amber-600/40 hover:bg-stone-800/60"
-                onClick={() => handleQuickAdd(s)}
-              >
-                <p className="text-xs font-medium text-amber-100">{s.name}</p>
-                <p className="text-[10px] text-amber-200/30">{s.type}</p>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            className="mt-2 text-[10px] text-amber-200/30 hover:text-amber-400"
-            onClick={() => setShowQuickAdd(false)}
-          >
-            Or fill in manually...
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <Label className={lblCls}>Name *</Label>
-          <Input className={`${inputCls} mt-1`} placeholder="e.g. CaratLane" value={form.name} onChange={e => handleNameChange(e.target.value)} />
-        </div>
-        <div>
-          <Label className={lblCls}>Slug *</Label>
-          <Input className={`${inputCls} mt-1`} placeholder="auto-generated" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
-        </div>
-        <div className="sm:col-span-2">
-          <Label className={lblCls}>Base URL *</Label>
-          <Input className={`${inputCls} mt-1`} placeholder="https://www.example.com" value={form.baseUrl} onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))} />
-        </div>
-        <div className="sm:col-span-2">
-          <Label className={lblCls}>Logo URL</Label>
-          <Input className={`${inputCls} mt-1`} placeholder="https://..." value={form.logo} onChange={e => setForm(f => ({ ...f, logo: e.target.value }))} />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Switch checked={form.isActive} onCheckedChange={v => setForm(f => ({ ...f, isActive: v }))} />
-          <Label className={lblCls}>Active</Label>
-        </div>
-        <div className="flex items-center gap-3">
-          <Switch checked={form.autoSync} onCheckedChange={v => setForm(f => ({ ...f, autoSync: v }))} />
-          <Label className={lblCls}>Auto Sync</Label>
-        </div>
-
-        <div>
-          <Label className={lblCls}>Sync Interval</Label>
-          <Select value={String(form.syncInterval)} onValueChange={v => setForm(f => ({ ...f, syncInterval: parseInt(v) }))}>
-            <SelectTrigger className={`${selCls} mt-1`}><SelectValue /></SelectTrigger>
-            <SelectContent className={selContentCls}>
-              {SYNC_INTERVALS.map(si => (
-                <SelectItem key={si.value} value={String(si.value)}>{si.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className={lblCls}>Affiliate Tag</Label>
-          <Input className={`${inputCls} mt-1`} placeholder="aff_3boxes" value={form.affiliateTag} onChange={e => setForm(f => ({ ...f, affiliateTag: e.target.value }))} />
-        </div>
-
-        <div>
-          <Label className={lblCls}>Commission %</Label>
-          <Input type="number" className={`${inputCls} mt-1`} placeholder="5" value={form.commission} onChange={e => setForm(f => ({ ...f, commission: e.target.value }))} />
-        </div>
-        <div>
-          <Label className={lblCls}>Max Products</Label>
-          <Input type="number" className={`${inputCls} mt-1`} placeholder="500" value={form.maxProducts} onChange={e => setForm(f => ({ ...f, maxProducts: e.target.value }))} />
-        </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><Label className={lblCls}>Name *</Label><Input className={`${inputCls} mt-1`} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Partner name" /></div>
+        <div><Label className={lblCls}>Type *</Label><Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}><SelectTrigger className={`${selCls} mt-1`}><SelectValue placeholder="Select type" /></SelectTrigger><SelectContent className={selContentCls}><SelectItem value="supplier">Supplier</SelectItem><SelectItem value="manufacturer">Manufacturer</SelectItem><SelectItem value="distributor">Distributor</SelectItem><SelectItem value="logistics">Logistics</SelectItem><SelectItem value="marketing">Marketing</SelectItem><SelectItem value="technology">Technology</SelectItem></SelectContent></Select></div>
       </div>
-
-      {/* Categories Multi-Tag Input */}
-      <div>
-        <Label className={lblCls}>Categories to Import</Label>
-        <div className="mt-1 flex items-center gap-2">
-          <Input
-            className={inputCls}
-            placeholder="e.g. rings, necklaces"
-            value={tagInput}
-            onChange={e => setTagInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCategory() } }}
-          />
-          <Button type="button" size="sm" className={btnPrimary} onClick={addCategory}>
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
-        {form.categories.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {form.categories.map(cat => (
-              <Badge key={cat} className="bg-amber-600/20 text-amber-400 border-amber-600/30 text-xs pr-1">
-                {cat}
-                <button type="button" className="ml-1 hover:text-red-400" onClick={() => removeCategory(cat)}>
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        {/* Quick category suggestions */}
-        <div className="mt-2 flex flex-wrap gap-1">
-          {['rings', 'necklaces', 'earrings', 'bracelets', 'sarees', 'kurtas', 'bangles', 'pendants', 'dresses', 'tops']
-            .filter(c => !form.categories.includes(c))
-            .map(c => (
-              <button
-                key={c}
-                type="button"
-                className="rounded border border-amber-900/20 px-1.5 py-0.5 text-[10px] text-amber-200/30 hover:border-amber-600/40 hover:text-amber-400"
-                onClick={() => setForm(f => ({ ...f, categories: [...f.categories, c] }))}
-              >
-                + {c}
-              </button>
-            ))}
-        </div>
+      <div><Label className={lblCls}>Description</Label><Textarea className={`${inputCls} mt-1`} rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of the partner..." /></div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><Label className={lblCls}>Contact Person</Label><Input className={`${inputCls} mt-1`} value={form.contactPerson} onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} placeholder="Primary contact" /></div>
+        <div><Label className={lblCls}>Email</Label><Input className={`${inputCls} mt-1`} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="partner@example.com" /></div>
       </div>
-
+      <div className="grid grid-cols-2 gap-4">
+        <div><Label className={lblCls}>Phone</Label><Input className={`${inputCls} mt-1`} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+91 98765 43210" /></div>
+        <div><Label className={lblCls}>Website</Label><Input className={`${inputCls} mt-1`} value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://example.com" /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div><Label className={lblCls}>Commission (%)</Label><Input className={`${inputCls} mt-1`} type="number" value={form.commission} onChange={e => setForm(f => ({ ...f, commission: e.target.value }))} placeholder="e.g. 10" /></div>
+        <div><Label className={lblCls}>Status</Label><Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}><SelectTrigger className={`${selCls} mt-1`}><SelectValue /></SelectTrigger><SelectContent className={selContentCls}><SelectItem value="pending">Pending</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem><SelectItem value="suspended">Suspended</SelectItem></SelectContent></Select></div>
+      </div>
+      <div className="border-t border-amber-900/30 pt-3"><p className="text-xs text-amber-200/50 mb-2">Address</p><div className="grid grid-cols-3 gap-3"><div><Label className={lblCls}>City</Label><Input className={`${inputCls} mt-1`} value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="City" /></div><div><Label className={lblCls}>State</Label><Input className={`${inputCls} mt-1`} value={form.state} onChange={e => setForm(f => ({ ...f, state: e.target.value }))} placeholder="State" /></div><div><Label className={lblCls}>Country</Label><Input className={`${inputCls} mt-1`} value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} placeholder="Country" /></div></div></div>
+      {initial && <div className="flex items-center gap-3"><Label className={lblCls}>Verified</Label><Switch checked={form.isVerified} onCheckedChange={v => setForm(f => ({ ...f, isVerified: v }))} /></div>}
       <div className="flex justify-end gap-2 pt-2">
         <Button variant="outline" className={btnOutline} onClick={onClose}>Cancel</Button>
-        <Button className={btnPrimary} onClick={handleSubmit} disabled={saving}>
-          {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-          {partner ? 'Update' : 'Create'} Partner
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   SYNC PROGRESS DIALOG
-   ════════════════════════════════════════════ */
-function SyncProgressDialog({ partnerId, token, onClose }: { partnerId: string; token: string | null; onClose: () => void }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['partner-detail', partnerId],
-    queryFn: () => apiFetch(`/api/partners/${partnerId}`, undefined, token),
-    refetchInterval: 3000,
-  })
-
-  const partner = data
-  const syncLogs = partner?.syncLogs || []
-  const isSyncing = partner?.syncStatus === 'syncing'
-
-  return (
-    <div className="space-y-4">
-      {isLoading ? (
-        <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-amber-400" /></div>
-      ) : (
-        <>
-          {/* Status */}
-          <div className="flex items-center gap-3">
-            {isSyncing ? (
-              <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-            ) : partner?.syncStatus === 'error' ? (
-              <AlertTriangle className="h-5 w-5 text-red-400" />
-            ) : (
-              <Check className="h-5 w-5 text-green-400" />
-            )}
-            <div>
-              <p className="text-sm font-medium text-amber-100">
-                {isSyncing ? 'Syncing...' : partner?.syncStatus === 'error' ? 'Sync Failed' : 'Sync Complete'}
-              </p>
-              <p className="text-xs text-amber-200/40">
-                {isSyncing ? 'Polling for updates every 3 seconds...' : `Last synced: ${fmtDateTime(partner?.lastSyncedAt)}`}
-              </p>
-            </div>
-          </div>
-
-          {/* Error */}
-          {partner?.lastSyncError && (
-            <div className="rounded-md bg-red-600/10 p-3 text-sm text-red-400 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>{partner.lastSyncError}</span>
-            </div>
-          )}
-
-          {/* Sync Logs */}
-          {syncLogs.length > 0 && (
-            <div>
-              <Label className={lblCls}>Sync History</Label>
-              <div className="mt-2 max-h-64 overflow-y-auto space-y-2">
-                {syncLogs.map((log: any) => (
-                  <div key={log.id} className="rounded-lg border border-amber-900/20 bg-stone-800/30 p-3">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <Badge className={`${statusColor(log.status)} text-[9px] px-1.5 py-0`}>
-                          {log.status}
-                        </Badge>
-                        <span className="text-[10px] text-amber-200/40">{fmtDateTime(log.startedAt)}</span>
-                      </div>
-                      {log.completedAt && (
-                        <span className="text-[10px] text-amber-200/30">{fmtDateTime(log.completedAt)}</span>
-                      )}
-                    </div>
-                    <div className="flex gap-4 text-[10px] text-amber-200/50">
-                      {log.productsFound !== null && <span>Found: {log.productsFound}</span>}
-                      {log.productsAdded !== null && <span>Added: {log.productsAdded}</span>}
-                      {log.productsUpdated !== null && <span>Updated: {log.productsUpdated}</span>}
-                    </div>
-                    {log.error && (
-                      <p className="mt-1 text-[10px] text-red-400">{log.error}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Close button */}
-          {!isSyncing && (
-            <div className="flex justify-end">
-              <Button className={btnPrimary} onClick={onClose}>Close</Button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   DELETE PARTNER CONFIRM
-   ════════════════════════════════════════════ */
-function DeletePartnerConfirm({ partner, onConfirm, isPending, onCancel }: {
-  partner: any; onConfirm: (removeProducts: boolean) => void; isPending: boolean; onCancel: () => void
-}) {
-  const [removeProducts, setRemoveProducts] = useState(false)
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-amber-200/60">
-        Are you sure you want to delete <strong className="text-amber-100">{partner?.name}</strong>?
-      </p>
-
-      {partner?.productCount > 0 && (
-        <div className="rounded-lg border border-amber-900/20 bg-stone-800/30 p-3">
-          <p className="text-xs text-amber-200/60 mb-2">
-            This partner has <strong className="text-amber-100">{partner.productCount}</strong> imported products.
-          </p>
-          <div className="flex items-center gap-2">
-            <Switch checked={removeProducts} onCheckedChange={setRemoveProducts} />
-            <Label className={lblCls}>Delete imported products too</Label>
-          </div>
-          <p className="mt-1 text-[10px] text-amber-200/30">
-            {removeProducts ? 'Products will be permanently deleted.' : 'Products will be marked as "removed" but kept in the database.'}
-          </p>
-        </div>
-      )}
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" className={btnOutline} onClick={onCancel}>Cancel</Button>
-        <Button className="bg-red-600 text-white hover:bg-red-500" onClick={() => onConfirm(removeProducts)} disabled={isPending}>
-          {isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Delete
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-/* ════════════════════════════════════════════
-   CATEGORY MAPS DIALOG
-   ════════════════════════════════════════════ */
-function CategoryMapsDialog({ partnerId, token, onClose }: { partnerId: string; token: string | null; onClose: () => void }) {
-  const qc = useQueryClient()
-  const [maps, setMaps] = useState<any[]>([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const { data: partnerData } = useQuery({
-    queryKey: ['partner-detail', partnerId],
-    queryFn: () => apiFetch(`/api/partners/${partnerId}`, undefined, token),
-  })
-
-  const { data: categoriesData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => apiFetch('/api/categories', undefined, token),
-  })
-
-  const localCategories = categoriesData?.categories || []
-  const partnerCategories: string[] = partnerData?.categories || []
-  const existingMaps: any[] = partnerData?.categoryMaps || []
-
-  // Initialize maps from existing + all partner categories
-  useEffect(() => {
-    if (partnerData && existingMaps.length >= 0) {
-      const initialized = partnerCategories.map(cat => {
-        const existingMap = existingMaps.find((m: any) => m.partnerCatSlug === cat.toLowerCase().replace(/[^a-z0-9]+/g, '-'))
-        return {
-          partnerCatName: cat,
-          partnerCatSlug: cat.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          localCatId: existingMap?.localCatId || '',
-        }
-      })
-      setMaps(initialized)
-    }
-  }, [partnerData, existingMaps.length, partnerCategories.length])
-
-  const handleMapChange = (partnerCatSlug: string, localCatId: string) => {
-    setMaps(prev => prev.map(m => m.partnerCatSlug === partnerCatSlug ? { ...m, localCatId } : m))
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    setError('')
-    try {
-      // Save each map
-      for (const map of maps) {
-        if (map.localCatId) {
-          await apiFetch(`/api/partners/${partnerId}/category-maps`, {
-            method: 'POST',
-            body: JSON.stringify({
-              partnerCatName: map.partnerCatName,
-              partnerCatSlug: map.partnerCatSlug,
-              localCatId: map.localCatId,
-            }),
-          }, token)
-        }
-      }
-      qc.invalidateQueries({ queryKey: ['partners'] })
-      qc.invalidateQueries({ queryKey: ['partner-detail', partnerId] })
-      onClose()
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      {error && <div className="rounded-md bg-red-600/10 p-3 text-sm text-red-400">{error}</div>}
-
-      <p className="text-xs text-amber-200/40">
-        Map partner categories to your local categories. Products imported from each partner category will be assigned to the corresponding local category.
-      </p>
-
-      {maps.length === 0 ? (
-        <p className="py-8 text-center text-amber-200/30 text-sm">No categories configured for this partner.</p>
-      ) : (
-        <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-          {maps.map(map => (
-            <div key={map.partnerCatSlug} className="flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-amber-100 truncate">{map.partnerCatName}</p>
-                <p className="text-[10px] text-amber-200/30">{map.partnerCatSlug}</p>
-              </div>
-              <ArrowUpRight className="h-3 w-3 text-amber-200/20 shrink-0" />
-              <div className="flex-1">
-                <Select value={map.localCatId} onValueChange={v => handleMapChange(map.partnerCatSlug, v)}>
-                  <SelectTrigger className={`${selCls} h-8 text-xs`}>
-                    <SelectValue placeholder="Select local category" />
-                  </SelectTrigger>
-                  <SelectContent className={selContentCls}>
-                    {localCategories.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="flex justify-end gap-2 pt-2">
-        <Button variant="outline" className={btnOutline} onClick={onClose}>Cancel</Button>
-        <Button className={btnPrimary} onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />} Save Maps
-        </Button>
+        <Button className={btnPrimary} onClick={handleSubmit} disabled={saving}>{saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{initial ? 'Update' : 'Add'} Partner</Button>
       </div>
     </div>
   )

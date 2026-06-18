@@ -8,7 +8,6 @@ import { useStore } from '@/lib/store';
 export function Footer() {
   const { t } = useTranslation();
   const setView = useStore((s) => s.setView);
-  const setCategory = useStore((s) => s.setCategory);
 
   const handleInstallApp = () => {
     // Try to trigger PWA install prompt
@@ -28,24 +27,20 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
           <div className="sm:col-span-2">
-            <button
-              onClick={() => { setView('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-              className="flex items-center gap-3 group"
-            >
-              <div className="relative flex h-24 w-24 items-center justify-center">
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-16 w-16 items-center justify-center">
                 <Image
                   src="/images/logo-uploaded.png"
                   alt="3 Boxes Luxury Logo"
-                  width={96}
-                  height={96}
-                  className="h-24 w-24 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)] group-hover:scale-105 transition-transform"
-                  priority
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 object-contain sepia-[0.8] hue-rotate-[10deg] saturate-[1.8] brightness-110 mix-blend-lighten drop-shadow-[0_0_14px_rgba(212,164,55,0.7)] drop-shadow-[0_0_6px_rgba(245,230,163,0.5)]"
                 />
               </div>
-              <h3 className="gold-shimmer text-lg font-bold tracking-widest group-hover:opacity-80 transition-opacity">
+              <h3 className="gold-shimmer text-lg font-bold tracking-widest">
                 3 BOXES LUXURY
               </h3>
-            </button>
+            </div>
             <p className="mt-2 text-sm text-amber-200/50">
               {t('footer.description')}
             </p>
@@ -84,21 +79,21 @@ export function Footer() {
             </h4>
             <ul className="mt-3 space-y-2">
               {[
-                { label: t('categories.watches'), slug: 'men-watches' },
-                { label: t('categories.jewelry'), slug: 'women-jewelry' },
-                { label: t('categories.leatherGoods'), slug: 'men-leather' },
-                { label: t('categories.fragrances'), slug: 'men-fragrances' },
-                { label: t('categories.fashion'), slug: 'women-fashion' },
-                { label: t('categories.homeLiving'), slug: 'home-living' },
-                { label: t('categories.sarees'), slug: 'women-sarees' },
-                { label: 'Kids Fashion', slug: 'kids-fashion' },
+                t('categories.watches'),
+                t('categories.jewelry'),
+                t('categories.leatherGoods'),
+                t('categories.fragrances'),
+                t('categories.fashion'),
+                t('categories.homeLiving'),
+                t('categories.sarees'),
+                'Kids Fashion',
               ].map((item, i) => (
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => { setCategory(item.slug); setView('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => setView('shop')}
                   >
-                    {item.label}
+                    {item}
                   </span>
                 </li>
               ))}
@@ -121,7 +116,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => setView(item.view)}
                   >
                     {item.label}
                   </span>
@@ -156,7 +151,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => setView(item.view)}
                   >
                     {item.label}
                   </span>
@@ -181,7 +176,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-200/50 transition-colors hover:text-amber-400 cursor-pointer"
-                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => setView(item.view)}
                   >
                     {item.label}
                   </span>
@@ -205,7 +200,7 @@ export function Footer() {
                 <li key={i}>
                   <span
                     className="text-sm text-amber-300/60 transition-colors hover:text-amber-400 cursor-pointer flex items-center gap-1.5"
-                    onClick={() => { setView(item.view); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => setView(item.view)}
                   >
                     <item.icon className="h-3.5 w-3.5" />
                     {item.label}

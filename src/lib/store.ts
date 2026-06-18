@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type View = 'home' | 'product' | 'cart' | 'checkout' | 'orders' | 'order-confirmation' | 'user-dashboard' | 'admin-dashboard' | 'agent-dashboard' | 'team-dashboard' | 'corporate-dashboard' | 'wiki' | 'downloads' | 'security-policy' | 'social-style' | '3box-curate' | 'family-shopping'
+export type View = 'home' | 'product' | 'cart' | 'checkout' | 'orders' | 'order-confirmation' | 'user-dashboard' | 'admin-dashboard' | 'agent-dashboard' | 'team-dashboard' | 'corporate-dashboard' | 'wiki' | 'downloads' | 'security-policy' | 'social-style' | '3box-curate' | 'family-shopping' | 'coming-soon'
 
 export interface AuthUser {
   id: string
@@ -164,7 +164,7 @@ export const useStore = create<AppState>((set, get) => ({
   setView: (view) => set({ view }),
   selectProduct: (productId) => set({ selectedProductId: productId, view: 'product' }),
   setSearch: (query) => set({ searchQuery: query }),
-  setCategory: (category) => set({ selectedCategory: category, view: 'home' }),
+  setCategory: (category) => set({ selectedCategory: category }),
   addItem: (item) =>
     set((state) => {
       const existing = state.cartItems.find((ci) => ci.productId === item.productId)

@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 const JWT_SECRET = process.env.JWT_SECRET || '3boxes-secret-key';
 
 // In-memory session cache for fast lookups
-const sessionCache = new Map<string, { userId: string; expiresAt: Date; id: string; email: string; name: string; role: string }>();
+const sessionCache = new Map<string, { userId: string; expiresAt: Date; id: string; email: string; name: string; role: string; gender: string | null }>();
 
 /**
  * Export the session cache for synchronous lookups (used by auth.ts verifyAuth).
@@ -31,6 +31,7 @@ export interface SessionUser {
   name: string;
   role: string;
   avatar: string | null;
+  gender: string | null;  // v16: persisted gender from OAuth providers
   isActive: boolean;
   approvalStatus: string;
   emailVerified: boolean;
@@ -57,7 +58,7 @@ export async function createSession(
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
   // Set in-memory cache FIRST so it's available even if DB write fails (critical for Vercel)
-  sessionCache.set(token, { userId: user.id, expiresAt, id: user.id, email: user.email, name: user.name, role: user.role });
+  sessionCache.set(token, { userId: user.id, expiresAt, id: user.id, email: user.email, name: user.name, role: user.role, gender: user.gender });
 
   // Try to persist to DB (non-blocking — may fail on serverless environments)
   try {
@@ -110,6 +111,7 @@ export async function getSessionAsync(
         name: user.name,
         role: user.role,
         avatar: user.avatar,
+        gender: user.gender,  // v16
         isActive: user.isActive,
         approvalStatus: user.approvalStatus,
         emailVerified: user.emailVerified,
@@ -124,6 +126,7 @@ export async function getSessionAsync(
         name: cached.name,
         role: cached.role,
         avatar: null,
+        gender: cached.gender || null,  // v16: return gender from cache if available
         isActive: true,
         approvalStatus: 'approved',
         emailVerified: true,
@@ -145,6 +148,7 @@ export async function getSessionAsync(
         name: (decoded.name as string) || '',
         role: (decoded.role as string) || 'user',
         avatar: null,
+        gender: (decoded.gender as string) || null,  // v16
         isActive: true,
         approvalStatus: 'approved',
         emailVerified: true,
@@ -182,6 +186,7 @@ export async function getSessionAsync(
       email: session.user.email,
       name: session.user.name,
       role: session.user.role,
+      gender: session.user.gender,  // v16
     });
 
     return {
@@ -190,6 +195,7 @@ export async function getSessionAsync(
       name: session.user.name,
       role: session.user.role,
       avatar: session.user.avatar,
+      gender: session.user.gender,  // v16
       isActive: session.user.isActive,
       approvalStatus: session.user.approvalStatus,
       emailVerified: session.user.emailVerified,
@@ -229,7 +235,7 @@ export function generateToken(): string {
  * without requiring DB lookups for verification.
  * Contains user identity embedded in the token payload.
  */
-export function generateSessionJWT(user: { id: string; email: string; name: string; role: string }): string {
+export function generateSessionJWT(user: { id: string; email: string; name: string; role: string; gender?: string | null }): string {
   return jwt.sign(
     {
       type: 'session',
@@ -237,6 +243,7 @@ export function generateSessionJWT(user: { id: string; email: string; name: stri
       email: user.email,
       name: user.name,
       role: user.role,
+      ...(user.gender ? { gender: user.gender } : {}),  // v16: include gender in JWT if available
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -266,6 +273,7 @@ export async function generateTokenPair(
       userId: user.id,
       email: user.email,
       role: user.role,
+      ...(user.gender ? { gender: user.gender } : {}),  // v16: include gender in access token
       permissions,
       type: 'access',
     },
@@ -328,6 +336,7 @@ export async function refreshAccessToken(
       name: user.name,
       role: user.role,
       avatar: user.avatar,
+      gender: user.gender,  // v16
       isActive: user.isActive,
       approvalStatus: user.approvalStatus,
       emailVerified: user.emailVerified,

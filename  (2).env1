@@ -1,8 +1,0 @@
-DATABASE_URL="postgresql://postgres.nybjhyqxbkokmdsgjoqi:Thumm%40220794@db.nybjhyqxbkokmdsgjoqi.supabase.com:5432/postgres"
-DIRECT_URL="postgresql://postgres.nybjhyqxbkokmdsgjoqi:Thumm%40220794@db.nybjhyqxbkokmdsgjoqi.supabase.com:5432/postgres"
-
-DATA_SOURCE=shopify
-
-SHOPIFY_STORE_DOMAIN=3boxesluxury-2.myshopify.com
-SHOPIFY_ADMIN_API_TOKEN=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
-SHOPIFY_ADMIN_TOKEN=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

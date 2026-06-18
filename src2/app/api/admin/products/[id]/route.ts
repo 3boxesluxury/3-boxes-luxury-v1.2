@@ -79,7 +79,73 @@ export async function PUT(
     if (body.costPrice !== undefined) updateData.costPrice = body.costPrice ? parseFloat(body.costPrice) : null;
     if (body.sku !== undefined) updateData.sku = body.sku;
     if (body.images !== undefined) updateData.images = JSON.stringify(body.images);
-    if (body.categoryId !== undefined) updateData.categoryId = body.categoryId;
+    if (body.categoryId !== undefined) {
+      // Resolve categoryId — may be a Shopify-style synthetic ID
+      let resolvedId = body.categoryId;
+      const directMatch = await db.category.findUnique({ where: { id: body.categoryId } });
+      if (!directMatch) {
+        let slugLookup: string | null = null;
+        if (body.categoryId.startsWith('shopify-parent-')) {
+          slugLookup = body.categoryId.replace('shopify-parent-', '');
+        } else if (body.categoryId.startsWith('shopify-cat-')) {
+          slugLookup = body.categoryId.replace('shopify-cat-', '');
+        } else if (body.categoryId.startsWith('shopify-col-')) {
+          slugLookup = body.categoryId.replace('shopify-col-', '');
+        } else {
+          slugLookup = body.categoryId;
+        }
+        if (slugLookup) {
+          const bySlug = await db.category.findUnique({ where: { slug: slugLookup } });
+          if (bySlug) {
+            resolvedId = bySlug.id;
+          } else {
+            const allCats = await db.category.findMany();
+            const fuzzy = allCats.find(c => {
+              const cs = c.slug.toLowerCase().replace(/[^a-z0-9]/g, '');
+              const ls = slugLookup!.toLowerCase().replace(/[^a-z0-9]/g, '');
+              return cs === ls || cs.includes(ls) || ls.includes(cs);
+            });
+            if (fuzzy) resolvedId = fuzzy.id;
+          }
+        }
+      }
+      updateData.categoryId = resolvedId;
+    }
+    if (body.subCategoryId !== undefined) {
+      // Resolve subCategoryId — may be a Shopify-style synthetic ID
+      let resolvedSubId = body.subCategoryId || null;
+      if (resolvedSubId && resolvedSubId !== 'none') {
+        const directSubMatch = await db.category.findUnique({ where: { id: resolvedSubId } });
+        if (!directSubMatch) {
+          let subSlugLookup: string | null = null;
+          if (resolvedSubId.startsWith('shopify-cat-')) {
+            subSlugLookup = resolvedSubId.replace('shopify-cat-', '');
+          } else if (resolvedSubId.startsWith('shopify-col-')) {
+            subSlugLookup = resolvedSubId.replace('shopify-col-', '');
+          } else if (resolvedSubId.startsWith('shopify-parent-')) {
+            subSlugLookup = resolvedSubId.replace('shopify-parent-', '');
+          } else {
+            subSlugLookup = resolvedSubId;
+          }
+          if (subSlugLookup) {
+            const bySlug = await db.category.findUnique({ where: { slug: subSlugLookup } });
+            if (bySlug) {
+              resolvedSubId = bySlug.id;
+            } else {
+              const allCats = await db.category.findMany();
+              const fuzzy = allCats.find(c => {
+                const cs = c.slug.toLowerCase().replace(/[^a-z0-9]/g, '');
+                const ls = subSlugLookup!.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return cs === ls || cs.includes(ls) || ls.includes(cs);
+              });
+              if (fuzzy) resolvedSubId = fuzzy.id;
+              else resolvedSubId = null;
+            }
+          }
+        }
+      }
+      updateData.subCategoryId = resolvedSubId;
+    }
     if (body.stock !== undefined) updateData.stock = parseInt(body.stock);
     if (body.reorderLevel !== undefined) updateData.reorderLevel = parseInt(body.reorderLevel);
     if (body.featured !== undefined) updateData.featured = body.featured;

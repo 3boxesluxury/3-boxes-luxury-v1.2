@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
             role: dbUser.role,
             avatar: dbUser.avatar,
             phone: dbUser.phone,
+            gender: dbUser.gender,  // v16: persisted gender from OAuth
             isActive: dbUser.isActive,
             emailVerified: dbUser.emailVerified,
             phoneVerified: dbUser.phoneVerified,
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
         role: user.role,
         avatar: user.avatar,
         phone: null,
+        gender: user.gender || null,  // v16
         isActive: true,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,

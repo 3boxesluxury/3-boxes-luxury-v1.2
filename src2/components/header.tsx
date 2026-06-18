@@ -5,7 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Search, ShoppingCart, Package, Menu, X, LogIn, LogOut, User, Shield, Gift, Sparkles, Download, Heart, UserCircle, Baby, Home, Briefcase, ChevronDown, Building2, Sun, Moon, Palette, Users, Zap } from 'lucide-react';
+import { Search, ShoppingCart, Package, Menu, X, LogIn, LogOut, User, Shield, Gift, Sparkles, Download, Heart, UserCircle, Baby, Home, Briefcase, ChevronDown, Building2, Sun, Moon, Users, Crown } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -24,6 +24,7 @@ interface CategoryNavItem {
   slug: string;
   icon: LucideIcon;
   children: CategoryChild[];
+  scrollToId?: string; // If set, clicking scrolls to this section ID on the home page
 }
 
 const CATEGORY_NAV: CategoryNavItem[] = [
@@ -97,10 +98,38 @@ const CATEGORY_NAV: CategoryNavItem[] = [
     icon: Sparkles,
     children: [],
   },
+  {
+    name: 'Family Packs',
+    slug: 'family-packs',
+    icon: Package,
+    children: [],
+    scrollToId: 'family-pack-section',
+  },
+  {
+    name: 'Social',
+    slug: 'social-connections',
+    icon: Users,
+    children: [],
+    scrollToId: 'social-connections-section',
+  },
+  {
+    name: 'Curate',
+    slug: '3boxes-curate',
+    icon: Crown,
+    children: [],
+    scrollToId: '3boxes-curate-section',
+  },
+  {
+    name: 'Gallery',
+    slug: 'ai-style-gallery',
+    icon: Sparkles,
+    children: [],
+    scrollToId: 'ai-style-gallery',
+  },
 ];
 
 export function Header() {
-  const { searchQuery, setSearch, setView, currentView, cartItems, setCategory, selectedCategory, authUser, setAuthView, clearAuth, toggleGiftBuilder, appTheme, setAppTheme, scrollToProducts } = useStore();
+  const { searchQuery, setSearch, setView, cartItems, setCategory, selectedCategory, authUser, setAuthView, clearAuth, toggleGiftBuilder, appTheme, setAppTheme, scrollToProducts } = useStore();
   const { t } = useTranslation();
   const { canInstall, promptInstall } = usePWAInstall();
   const [localSearch, setLocalSearch] = useState(searchQuery);
@@ -450,43 +479,70 @@ export function Header() {
                     <Sparkles className="h-3 w-3 text-amber-400/60" />
                   </button>
                   <div className="border-t border-amber-900/20 my-1" />
-                  <p className="text-[10px] uppercase tracking-wider text-amber-500/50 px-4 pt-1">Features</p>
-                  <button
-                    onClick={() => {
-                      setCategory(null);
-                      setView('social-style');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="rounded-md px-4 py-2 text-left text-amber-400/90 transition-colors hover:bg-amber-900/20 hover:text-amber-300 flex items-center gap-2"
-                  >
-                    <Palette className="h-4 w-4" />
-                    Social Style
-                    <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">NEW</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCategory(null);
-                      setView('3box-curate');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="rounded-md px-4 py-2 text-left text-amber-400/90 transition-colors hover:bg-amber-900/20 hover:text-amber-300 flex items-center gap-2"
-                  >
-                    <Zap className="h-4 w-4" />
-                    3Box Curate
-                    <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">NEW</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCategory(null);
-                      setView('family-shopping');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="rounded-md px-4 py-2 text-left text-amber-400/90 transition-colors hover:bg-amber-900/20 hover:text-amber-300 flex items-center gap-2"
-                  >
-                    <Users className="h-4 w-4" />
-                    Family Shop
-                    <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400">NEW</span>
-                  </button>
+                  {/* Quick section links */}
+                  <div className="my-3 border-t border-amber-900/20 pt-3">
+                    <p className="px-4 mb-2 text-[10px] font-semibold uppercase tracking-widest text-amber-400/50">Explore</p>
+                    <button
+                      onClick={() => {
+                        setView('home');
+                        setCategory(null);
+                        setMobileMenuOpen(false);
+                        setTimeout(() => {
+                          const el = document.getElementById('family-pack-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                      }}
+                      className="rounded-md px-4 py-2 w-full text-left text-amber-200/80 transition-colors hover:bg-amber-900/20 hover:text-amber-400 flex items-center gap-2"
+                    >
+                      <Package className="h-4 w-4" />
+                      Family Packs
+                    </button>
+                    <button
+                      onClick={() => {
+                        setView('home');
+                        setCategory(null);
+                        setMobileMenuOpen(false);
+                        setTimeout(() => {
+                          const el = document.getElementById('social-connections-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                      }}
+                      className="rounded-md px-4 py-2 w-full text-left text-amber-200/80 transition-colors hover:bg-amber-900/20 hover:text-amber-400 flex items-center gap-2"
+                    >
+                      <Users className="h-4 w-4" />
+                      Social Connections
+                    </button>
+                    <button
+                      onClick={() => {
+                        setView('home');
+                        setCategory(null);
+                        setMobileMenuOpen(false);
+                        setTimeout(() => {
+                          const el = document.getElementById('3boxes-curate-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                      }}
+                      className="rounded-md px-4 py-2 w-full text-left text-amber-200/80 transition-colors hover:bg-amber-900/20 hover:text-amber-400 flex items-center gap-2"
+                    >
+                      <Crown className="h-4 w-4" />
+                      3BOXES Curate
+                    </button>
+                    <button
+                      onClick={() => {
+                        setView('home');
+                        setCategory(null);
+                        setMobileMenuOpen(false);
+                        setTimeout(() => {
+                          const el = document.getElementById('ai-style-gallery');
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                      }}
+                      className="rounded-md px-4 py-2 w-full text-left text-amber-200/80 transition-colors hover:bg-amber-900/20 hover:text-amber-400 flex items-center gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      AI Style Gallery
+                    </button>
+                  </div>
                   <button
                     onClick={() => {
                       if (canInstall) {
@@ -516,29 +572,54 @@ export function Header() {
       <div className="border-t border-amber-900/20 bg-stone-950/90">
         <div className="container mx-auto px-4">
           {/* Desktop: horizontal row with hover/click dropdowns */}
-          <nav className="hidden md:flex items-center gap-0 flex-nowrap" aria-label="Category navigation">
+          <nav className="hidden md:flex items-center gap-0.5" aria-label="Category navigation">
             {CATEGORY_NAV.map((cat) => {
               const Icon = cat.icon;
               const hasChildren = cat.children.length > 0;
               const isActive = selectedCategory === cat.slug || cat.children.some((c) => c.slug === selectedCategory);
 
+              // Helper: handle nav item click — either scroll to section or set category
+              const handleNavClick = () => {
+                if (cat.scrollToId) {
+                  // Scroll to section on home page
+                  setView('home');
+                  setCategory(null);
+                  // Use setTimeout to ensure the home view is rendered before scrolling
+                  setTimeout(() => {
+                    const el = document.getElementById(cat.scrollToId!);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 100);
+                } else {
+                  setCategory(cat.slug);
+                }
+              };
+
               if (!hasChildren) {
-                // No subcategories — click directly sets filter
+                // No subcategories — click directly sets filter or scrolls to section
                 return (
                   <button
                     key={cat.slug}
-                    onClick={() => { setCategory(cat.slug); }}
-                    className={`flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
+                    onClick={handleNavClick}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors rounded-md ${
                       isActive
                         ? 'bg-amber-900/30 text-amber-300'
                         : 'text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300'
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-4 w-4" />
                     {cat.name}
-                    <span className="ml-0.5 rounded bg-amber-600/20 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-400">
-                      New
-                    </span>
+                    {cat.scrollToId && (
+                      <span className="ml-1 rounded bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        New
+                      </span>
+                    )}
+                    {cat.slug === 'new-arrivals' && !cat.scrollToId && (
+                      <span className="ml-1 rounded bg-amber-600/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                        New
+                      </span>
+                    )}
                   </button>
                 );
               }
@@ -558,13 +639,13 @@ export function Header() {
                 >
                   <button
                     onClick={() => setCategory(cat.slug)}
-                    className={`flex items-center gap-1 px-2.5 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
+                    className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors rounded-md ${
                       isActive
                         ? 'bg-amber-900/30 text-amber-300'
                         : 'text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300'
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-4 w-4" />
                     {cat.name}
                     <ChevronDown className="h-3 w-3 text-amber-500/50 transition-transform group-hover:rotate-180" />
                   </button>
@@ -604,46 +685,6 @@ export function Header() {
                 </div>
               );
             })}
-
-            {/* Feature Navigation - Desktop */}
-            <div className="ml-1 border-l border-amber-900/30 pl-1 flex items-center gap-0 shrink-0">
-              <button
-                onClick={() => { setCategory(null); setView('social-style'); }}
-                className={`flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
-                  currentView === 'social-style'
-                    ? 'bg-amber-900/30 text-amber-300'
-                    : 'text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300'
-                }`}
-              >
-                <Palette className="h-3.5 w-3.5" />
-                Social Style
-                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
-              </button>
-              <button
-                onClick={() => { setCategory(null); setView('3box-curate'); }}
-                className={`flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
-                  currentView === '3box-curate'
-                    ? 'bg-amber-900/30 text-amber-300'
-                    : 'text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300'
-                }`}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                3Box Curate
-                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
-              </button>
-              <button
-                onClick={() => { setCategory(null); setView('family-shopping'); }}
-                className={`flex items-center gap-1 px-2 py-2 text-sm font-medium transition-colors rounded-md whitespace-nowrap ${
-                  currentView === 'family-shopping'
-                    ? 'bg-amber-900/30 text-amber-300'
-                    : 'text-amber-400/90 hover:bg-amber-900/20 hover:text-amber-300'
-                }`}
-              >
-                <Users className="h-3.5 w-3.5" />
-                Family Shop
-                <span className="rounded bg-emerald-600/20 px-1 py-0.5 text-[9px] font-bold text-emerald-400">New</span>
-              </button>
-            </div>
           </nav>
 
           {/* Mobile: horizontal scrollable row without dropdowns */}
@@ -651,10 +692,24 @@ export function Header() {
             {CATEGORY_NAV.map((cat) => {
               const Icon = cat.icon;
               const isActive = selectedCategory === cat.slug || cat.children.some((c) => c.slug === selectedCategory);
+              const handleMobileNavClick = () => {
+                if (cat.scrollToId) {
+                  setView('home');
+                  setCategory(null);
+                  setTimeout(() => {
+                    const el = document.getElementById(cat.scrollToId!);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }, 100);
+                } else {
+                  setCategory(cat.slug);
+                }
+              };
               return (
                 <button
                   key={cat.slug}
-                  onClick={() => setCategory(cat.slug)}
+                  onClick={handleMobileNavClick}
                   className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
                     isActive
                       ? 'bg-amber-900/30 text-amber-300'
@@ -666,40 +721,6 @@ export function Header() {
                 </button>
               );
             })}
-            {/* Feature Navigation - Mobile scroll */}
-            <button
-              onClick={() => { setCategory(null); setView('social-style'); }}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
-                currentView === 'social-style'
-                  ? 'bg-amber-900/30 text-amber-300'
-                  : 'text-amber-400/90 hover:bg-amber-900/20'
-              }`}
-            >
-              <Palette className="h-3.5 w-3.5" />
-              Social Style
-            </button>
-            <button
-              onClick={() => { setCategory(null); setView('3box-curate'); }}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
-                currentView === '3box-curate'
-                  ? 'bg-amber-900/30 text-amber-300'
-                  : 'text-amber-400/90 hover:bg-amber-900/20'
-              }`}
-            >
-              <Zap className="h-3.5 w-3.5" />
-              3Box Curate
-            </button>
-            <button
-              onClick={() => { setCategory(null); setView('family-shopping'); }}
-              className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors rounded-md whitespace-nowrap ${
-                currentView === 'family-shopping'
-                  ? 'bg-amber-900/30 text-amber-300'
-                  : 'text-amber-400/90 hover:bg-amber-900/20'
-              }`}
-            >
-              <Users className="h-3.5 w-3.5" />
-              Family Shop
-            </button>
           </nav>
         </div>
       </div>

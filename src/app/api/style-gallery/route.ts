@@ -1,10 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
+import { db, edb, getGalleryModel } from '@/lib/db'
 import { verifyAuth } from '@/lib/auth-api'
+import { supabase, STORAGE_BUCKET } from '@/lib/supabase'
+import { randomUUID } from 'crypto'
+
+// Next.js App Router route segment config (replaces deprecated Pages Router config)
+export const maxDuration = 60
+
+// Helper: upload base64 data URL to Supabase Storage and return the public URL
+async function uploadBase64ToSupabase(dataUrl: string, prefix: string): Promise<string> {
+  // Extract mime type and base64 data
+  const matches = dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/)
+  if (!matches) {
+    throw new Error('Invalid base64 image data URL')
+  }
+
+  const mimeType = matches[1]
+  const base64Data = matches[2]
+
+  // Determine file extension
+  const extMap: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+  }
+  const ext = extMap[mimeType] || 'png'
+
+  // Generate unique filename
+  const filename = `${prefix}-${randomUUID()}.${ext}`
+
+  // Convert base64 to buffer
+  const buffer = Buffer.from(base64Data, 'base64')
+
+  // Upload to Supabase Storage
+  const { data, error: uploadError } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(filename, buffer, {
+      contentType: mimeType,
+      upsert: false,
+    })
+
+  if (uploadError) {
+    console.error('[style-gallery] Supabase upload error:', uploadError)
+    throw new Error(`Upload failed: ${uploadError.message}`)
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from(STORAGE_BUCKET)
+    .getPublicUrl(data.path)
+
+  if (!urlData?.publicUrl) {
+    throw new Error('Failed to get public URL from Supabase')
+  }
+
+  console.log('[style-gallery] Uploaded image to Supabase:', urlData.publicUrl)
+  return urlData.publicUrl
+}
 
 // GET /api/style-gallery — list gallery images with filtering & pagination
 export async function GET(request: NextRequest) {
   try {
+    const galleryModel = getGalleryModel()
+    if (!galleryModel) {
+      console.error('[style-gallery] No gallery model found in Prisma client. Available models:', Object.keys(db).filter(k => !k.startsWith('_') && !k.startsWith('$')))
+      return NextResponse.json({ error: 'Gallery model not configured. Run: npx prisma generate' }, { status: 503 })
+    }
+
     const user = await verifyAuth(request)
 
     const { searchParams } = new URL(request.url)
@@ -38,7 +101,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [images, total] = await Promise.all([
-      db.customerPortfolio.findMany({
+      galleryModel.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
@@ -54,7 +117,7 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      db.customerPortfolio.count({ where }),
+      galleryModel.count({ where }),
     ])
 
     return NextResponse.json({
@@ -75,18 +138,27 @@ export async function GET(request: NextRequest) {
 // POST /api/style-gallery — create a new gallery image (user submission)
 export async function POST(request: NextRequest) {
   try {
+    const galleryModel = getGalleryModel()
+    if (!galleryModel) {
+      console.error('[style-gallery] No gallery model found in Prisma client. Available models:', Object.keys(db).filter(k => !k.startsWith('_') && !k.startsWith('$')))
+      return NextResponse.json({ error: 'Gallery model not configured. Run: npx prisma generate' }, { status: 503 })
+    }
+
     const user = await verifyAuth(request)
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
+    let body;
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body. Image may be too large.' }, { status: 400 })
+    }
+
     const { productId, userName, aiGeneratedImage, originalSelfie, rating, reviewTitle, reviewComment, consentGiven } = body
 
     // Validate required fields
-    if (!productId) {
-      return NextResponse.json({ error: 'productId is required' }, { status: 400 })
-    }
     if (!userName) {
       return NextResponse.json({ error: 'userName is required' }, { status: 400 })
     }
@@ -97,31 +169,61 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'consentGiven must be true to submit' }, { status: 400 })
     }
 
-    // Verify product exists
-    const product = await db.product.findUnique({ where: { id: productId } })
-    if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+    // Upload base64 image to Supabase Storage
+    let imageUrl = aiGeneratedImage
+    if (aiGeneratedImage.startsWith('data:')) {
+      try {
+        imageUrl = await uploadBase64ToSupabase(aiGeneratedImage, 'style-gallery')
+      } catch (uploadErr: any) {
+        console.error('[style-gallery] Supabase upload failed:', uploadErr?.message)
+        return NextResponse.json({ error: 'Failed to upload image. Please try again.' }, { status: 500 })
+      }
+    }
+
+    // Upload original selfie if provided
+    let selfieUrl = originalSelfie || null
+    if (originalSelfie && originalSelfie.startsWith('data:') && consentGiven) {
+      try {
+        selfieUrl = await uploadBase64ToSupabase(originalSelfie, 'selfie')
+      } catch {
+        selfieUrl = null // Don't fail the whole submission for selfie upload failure
+      }
+    }
+
+    // Validate productId — if provided, check if product exists
+    // If product doesn't exist, set to null (allows external/affiliate products)
+    let validatedProductId: string | null = productId || null
+    if (validatedProductId) {
+      try {
+        const product = await db.product.findUnique({ where: { id: validatedProductId } })
+        if (!product) {
+          console.log('[style-gallery] Product not found, saving without productId')
+          validatedProductId = null
+        }
+      } catch {
+        validatedProductId = null
+      }
     }
 
     // Validate rating if provided
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
+    const ratingNum = rating ?? 5
+    if (ratingNum < 1 || ratingNum > 5) {
       return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 })
     }
 
-    // Only store originalSelfie if consent is given
     const data: any = {
-      productId,
+      productId: validatedProductId,
       userId: user.id,
       userName,
-      aiGeneratedImage,
-      rating: rating ?? 5,
+      aiGeneratedImage: imageUrl,
+      rating: ratingNum,
       consentGiven: true,
       isApproved: false, // requires admin approval
       isActive: true,
     }
 
-    if (originalSelfie && consentGiven) {
-      data.originalSelfie = originalSelfie
+    if (selfieUrl && consentGiven) {
+      data.originalSelfie = selfieUrl
     }
     if (reviewTitle) {
       data.reviewTitle = reviewTitle
@@ -130,7 +232,7 @@ export async function POST(request: NextRequest) {
       data.reviewComment = reviewComment
     }
 
-    const image = await db.customerPortfolio.create({
+    const image = await galleryModel.create({
       data,
       include: {
         product: {
@@ -144,9 +246,20 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ image }, { status: 201 })
-  } catch (error) {
-    console.error('Style Gallery POST error:', error)
-    return NextResponse.json({ error: 'Failed to create gallery image' }, { status: 500 })
+    console.log(`[style-gallery] New submission: ${image.id} by ${userName} (status: pending)`)
+
+    return NextResponse.json({
+      image,
+      message: 'Your style has been submitted and is pending admin approval. It will appear in the gallery once approved.',
+    }, { status: 201 })
+  } catch (error: any) {
+    console.error('[style-gallery] POST error:', error?.message || error, error?.code, error?.meta)
+
+    // Table doesn't exist
+    if (error?.code === 'P2021') {
+      return NextResponse.json({ error: 'Gallery table does not exist. Add the model to prisma/schema.prisma and run: npx prisma db push && npx prisma generate' }, { status: 503 })
+    }
+
+    return NextResponse.json({ error: 'Failed to create gallery image. Please try again.' }, { status: 500 })
   }
 }

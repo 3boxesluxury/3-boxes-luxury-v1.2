@@ -3,12 +3,64 @@ import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth-helper'
 
 // GET /api/admin/categories - List all categories with product counts (admin only)
+// Always returns database categories with real cuid IDs, never Shopify synthetic IDs
 export async function GET(request: NextRequest) {
   try {
     const { error } = await requireAdmin(request)
     if (error) return error
 
+    // Fetch top-level categories (parentId is null) with their children for hierarchical display
     const categories = await db.category.findMany({
+      where: { parentId: null },
+      orderBy: { order: 'asc' },
+      include: {
+        _count: {
+          select: { products: true },
+        },
+        children: {
+          orderBy: { order: 'asc' },
+          include: {
+            _count: {
+              select: { products: true },
+            },
+          },
+        },
+      },
+    })
+
+    const transformed = categories.map((cat) => {
+      const totalProductCount =
+        cat._count.products +
+        cat.children.reduce((sum, child) => sum + child._count.products, 0)
+
+      return {
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        description: cat.description,
+        image: cat.image,
+        productCount: totalProductCount,
+        parentId: cat.parentId,
+        order: cat.order,
+        createdAt: cat.createdAt,
+        updatedAt: cat.updatedAt,
+        children: cat.children.map((child) => ({
+          id: child.id,
+          name: child.name,
+          slug: child.slug,
+          description: child.description,
+          image: child.image,
+          productCount: child._count.products,
+          parentId: child.parentId,
+          order: child.order,
+          createdAt: child.createdAt,
+          updatedAt: child.updatedAt,
+        })),
+      }
+    })
+
+    // Also return a flat list for convenience
+    const flatCategories = await db.category.findMany({
       orderBy: { name: 'asc' },
       include: {
         _count: {
@@ -17,18 +69,20 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const transformed = categories.map((cat) => ({
+    const flatTransformed = flatCategories.map((cat) => ({
       id: cat.id,
       name: cat.name,
       slug: cat.slug,
       description: cat.description,
       image: cat.image,
       productCount: cat._count.products,
+      parentId: cat.parentId,
+      order: cat.order,
       createdAt: cat.createdAt,
       updatedAt: cat.updatedAt,
     }))
 
-    return NextResponse.json({ categories: transformed })
+    return NextResponse.json({ categories: transformed, flatCategories: flatTransformed, source: 'database' })
   } catch (err) {
     console.error('Error fetching categories:', err)
     return NextResponse.json(
