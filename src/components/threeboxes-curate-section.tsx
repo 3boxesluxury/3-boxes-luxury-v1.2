@@ -214,7 +214,7 @@ export function ThreeboxesCurateSection() {
                 <Button
                   onClick={() => {
                     setCategory(null);
-                    setView('home');
+                    setView('coming-soon' as any);
                   }}
                   variant="outline"
                   className={`w-full gap-2 border-amber-500/30 bg-amber-600/10 text-amber-200 hover:bg-amber-600/20 hover:text-amber-100 hover:border-amber-500/50 transition-all duration-300`}

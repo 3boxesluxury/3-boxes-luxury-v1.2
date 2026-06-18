@@ -1894,7 +1894,7 @@ export function ProductDetail() {
             </div>
 
             {/* Image counter */}
-            {product.images.length > 1 && (
+                     {Array.isArray(product.images) && product.images.length > 1 && (
               <div className="absolute bottom-3 right-3 rounded-full bg-stone-950/70 px-2.5 py-1 text-[10px] font-medium text-amber-200/70 backdrop-blur-sm">
                 {selectedImage + 1} / {product.images.length}
               </div>
@@ -1995,7 +1995,7 @@ export function ProductDetail() {
           </p>
 
           {/* Tags */}
-          {product.tags.length > 0 && (
+                    {Array.isArray(product.tags) && product.tags.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {product.tags.map((tag) => (
                 <Badge

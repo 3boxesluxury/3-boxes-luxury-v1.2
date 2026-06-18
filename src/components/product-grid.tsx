@@ -3,19 +3,12 @@
 import { useStore } from '@/lib/store';
 import { useQuery } from '@tanstack/react-query';
 import { ProductCard } from './product-card';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { X, SlidersHorizontal, Sparkles } from 'lucide-react';
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useTranslation } from '@/hooks/useTranslation';
-import { motion } from 'framer-motion';
+import { Search, SlidersHorizontal, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface Product {
   id: string;
@@ -32,6 +25,10 @@ interface Product {
   reviewCount: number;
   featured: boolean;
   tags: string[];
+  occasions: string[];
+  recipientTypes: string[];
+  relationships: string[];
+  deliveryEstimate: string | null;
   isExternal?: boolean;
   platform?: string;
   sourceUrl?: string;
@@ -39,39 +36,19 @@ interface Product {
   platformLogo?: string;
 }
 
-// Platform chip dot colors
-const PLATFORM_DOT_COLORS: Record<string, string> = {
-  caratlane: 'bg-amber-500',
-  tanishq: 'bg-rose-500',
-  bluestone: 'bg-blue-500',
-  voylla: 'bg-purple-500',
-  myntra: 'bg-red-500',
-  nykaa: 'bg-pink-500',
-  amazon: 'bg-orange-500',
-  flipkart: 'bg-yellow-500',
-};
+const SORT_OPTIONS = [
+  { value: 'featured', label: 'Featured' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'rating', label: 'Top Rated' },
+];
 
-const PLATFORM_CHIP_ACTIVE_BG: Record<string, string> = {
-  caratlane: 'bg-amber-600/20 border-amber-500/50 text-amber-300',
-  tanishq: 'bg-rose-600/20 border-rose-500/50 text-rose-300',
-  bluestone: 'bg-blue-600/20 border-blue-500/50 text-blue-300',
-  voylla: 'bg-purple-600/20 border-purple-500/50 text-purple-300',
-  myntra: 'bg-red-600/20 border-red-500/50 text-red-300',
-  nykaa: 'bg-pink-600/20 border-pink-500/50 text-pink-300',
-  amazon: 'bg-orange-600/20 border-orange-500/50 text-orange-300',
-  flipkart: 'bg-yellow-600/20 border-yellow-500/50 text-yellow-300',
-};
-
-const PLATFORM_DISPLAY_NAMES: Record<string, string> = {
-  myntra: 'Myntra',
-  nykaa: 'Nykaa',
-  amazon: 'Amazon',
-  flipkart: 'Flipkart',
-  caratlane: 'CaratLane',
-  tanishq: 'Tanishq',
-  bluestone: 'BlueStone',
-  voylla: 'Voylla',
-};
+const SOURCE_OPTIONS = [
+  { value: 'all', label: 'All Sources' },
+  { value: 'own', label: '3 Boxes Luxury' },
+  { value: 'external', label: 'External Partners' },
+];
 
 const PLATFORM_OPTIONS = [
   { value: 'myntra', label: 'Myntra' },
@@ -89,90 +66,56 @@ const OCCASION_OPTIONS = [
   { value: 'anniversary', label: 'Anniversary' },
   { value: 'wedding', label: 'Wedding' },
   { value: 'diwali', label: 'Diwali' },
-  { value: 'christmas', label: 'Christmas' },
   { value: 'valentines', label: "Valentine's" },
   { value: 'housewarming', label: 'Housewarming' },
-  { value: 'thank-you', label: 'Thank You' },
-  { value: 'congratulations', label: 'Congratulations' },
-  { value: 'just-because', label: 'Just Because' },
 ];
 
 const RECIPIENT_OPTIONS = [
-  { value: 'him', label: 'Him' },
-  { value: 'her', label: 'Her' },
-  { value: 'couple', label: 'Couple' },
-  { value: 'kids', label: 'Kids' },
-  { value: 'parents', label: 'Parents' },
-  { value: 'friend', label: 'Friend' },
-  { value: 'colleague', label: 'Colleague' },
+  { value: 'him', label: 'For Him' },
+  { value: 'her', label: 'For Her' },
+  { value: 'couple', label: 'For Couple' },
+  { value: 'kids', label: 'For Kids' },
+  { value: 'parents', label: 'For Parents' },
 ];
 
 const RELATIONSHIP_OPTIONS = [
-  { value: 'spouse', label: 'Spouse/Partner' },
-  { value: 'parent', label: 'Parent' },
-  { value: 'sibling', label: 'Sibling' },
+  { value: 'husband', label: 'Husband' },
+  { value: 'wife', label: 'Wife' },
+  { value: 'boyfriend', label: 'Boyfriend' },
+  { value: 'girlfriend', label: 'Girlfriend' },
+  { value: 'brother', label: 'Brother' },
+  { value: 'sister', label: 'Sister' },
   { value: 'friend', label: 'Friend' },
-  { value: 'colleague', label: 'Colleague' },
-  { value: 'boss', label: 'Boss' },
 ];
 
 const PRICE_RANGE_OPTIONS = [
-  { value: 'under-50', label: 'Under $50', min: 0, max: 50 },
-  { value: '50-100', label: '$50 - $100', min: 50, max: 100 },
-  { value: '100-250', label: '$100 - $250', min: 100, max: 250 },
-  { value: '250-500', label: '$250 - $500', min: 250, max: 500 },
-  { value: '500+', label: '$500+', min: 500, max: null },
+  { value: 'all', label: 'All Prices', min: null, max: null },
+  { value: 'under-1000', label: 'Under ₹1,000', min: null, max: 1000 },
+  { value: '1000-5000', label: '₹1,000 - ₹5,000', min: 1000, max: 5000 },
+  { value: '5000-10000', label: '₹5,000 - ₹10,000', min: 5000, max: 10000 },
+  { value: 'over-10000', label: 'Over ₹10,000', min: 10000, max: null },
 ];
-
-// Proper display names for category slugs (avoids "Men Tshirts" etc.)
-const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
-  'couple': 'Couple',
-  'couple-friendly': 'Couple Friendly',
-  'men': 'Men',
-  'men-accessories': 'Men Accessories',
-  'men-shirts': 'Men Shirts',
-  'men-tshirts': 'Men T-Shirts & Polos',
-  'men-fragrances': 'Men Fragrances',
-  'men-watches': 'Men Watches',
-  'men-leather': 'Men Leather Goods',
-  'women': 'Women',
-  'women-jewelry': 'Women Jewelry',
-  'women-sarees': 'Women Sarees',
-  'women-fashion': 'Women Fashion',
-  'women-fragrances': 'Women Fragrances',
-  'women-accessories': 'Women Accessories',
-  'kids': 'Kids',
-  'kids-toys': 'Kids Toys & Games',
-  'kids-fashion': 'Kids Fashion',
-  'kids-shirts': 'Kids Shirts',
-  'kids-dresses': 'Kids Dresses',
-  'home': 'Home',
-  'home-decor': 'Home Décor',
-  'home-candles': 'Home Candles & Fragrances',
-  'home-living': 'Home Living',
-  'office': 'Office',
-  'office-corporate-gifts': 'Office Corporate Gifts',
-  'office-desk': 'Office Desk Accessories',
-  'office-stationery': 'Office Stationery',
-  'new-arrivals': 'New Arrivals',
-};
-
-function getCategoryDisplayName(slug: string): string {
-  return CATEGORY_DISPLAY_NAMES[slug] || slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-}
 
 export function ProductGrid() {
   const { searchQuery, selectedCategory, setCategory, _scrollToProducts } = useStore();
-  const { t } = useTranslation();
-  const sectionRef = useRef<HTMLElement>(null);
+  const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [platformFilter, setPlatformFilter] = useState('all');
+  const [occasionFilter, setOccasionFilter] = useState('all');
+  const [recipientFilter, setRecipientFilter] = useState('all');
+  const [relationshipFilter, setRelationshipFilter] = useState('all');
+  const [priceRangeFilter, setPriceRangeFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
-  const [sourceFilter, setSourceFilter] = useState<string>('all');
-  const [platformFilter, setPlatformFilter] = useState<string>('all');
-  const [occasionFilter, setOccasionFilter] = useState<string>('all');
-  const [recipientFilter, setRecipientFilter] = useState<string>('all');
-  const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
-  const [priceRangeFilter, setPriceRangeFilter] = useState<string>('all');
+
+  useEffect(() => {
+    setSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedCategory, sort, sourceFilter, platformFilter, occasionFilter, recipientFilter, relationshipFilter, priceRangeFilter]);
 
   const priceRange = PRICE_RANGE_OPTIONS.find((o) => o.value === priceRangeFilter);
 
@@ -195,11 +138,14 @@ export function ProductGrid() {
       }
       return fetch(`/api/products?${params}`).then((r) => r.json());
     },
+    // Performance: cache results for 5 minutes so repeated category clicks are instant
+    staleTime: 5 * 60 * 1000,    // 5 min — data stays fresh
+    cacheTime: 10 * 60 * 1000,   // 10 min — cache kept in memory
+    refetchOnWindowFocus: false,  // don't refetch when switching tabs
   });
 
   const products: Product[] = data?.products ?? [];
 
-  // Compute which platforms have products in current results
   const availablePlatforms = useMemo(() => {
     const prods = data?.products;
     if (!prods) return [];
@@ -225,258 +171,123 @@ export function ProductGrid() {
 
   const hasActiveFilters = selectedCategory || searchQuery || sourceFilter !== 'all' || platformFilter !== 'all' || occasionFilter !== 'all' || recipientFilter !== 'all' || relationshipFilter !== 'all' || priceRangeFilter !== 'all';
 
-  // Scroll to this section when category changes, search is performed, or Shop Now is clicked
-  // Uses window.scrollTo with header offset calculation instead of scrollIntoView
-  // so the "Search Results" heading is not hidden behind the sticky header
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    if (!(selectedCategory || searchQuery || _scrollToProducts > 0)) return;
-
-    // Delay to allow React to render the content first
-    const timer = setTimeout(() => {
-      if (!sectionRef.current) return;
-      const rect = sectionRef.current.getBoundingClientRect();
-      const currentScrollY = window.scrollY;
-      // Calculate sticky header height: main header (~56px mobile, ~96px desktop)
-      // + category nav bar (~40px) + small buffer
-      const headerHeight = 140;
-      const targetScrollY = Math.max(0, currentScrollY + rect.top - headerHeight);
-      window.scrollTo({ top: targetScrollY, behavior: 'smooth' });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [selectedCategory, searchQuery, _scrollToProducts]);
-
   return (
-    <section id="product-grid-section" ref={sectionRef} className="relative py-6">
-      {/* Subtle background decoration */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-0 top-0 h-32 w-full bg-gradient-to-b from-amber-900/[0.03] to-transparent" />
-      </div>
-
-      <div className="relative">
-        {/* Header */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <section id="products" className="scroll-mt-20 py-8">
+      <div className="mb-6 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            {selectedCategory === 'new-arrivals' ? (
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/20 text-rose-400">
-                  <Sparkles className="h-4 w-4" />
-                </span>
-                <div>
-                  <h2 className="text-lg font-bold text-amber-100 sm:text-xl flex items-center gap-2">
-                    New Arrivals
-                    <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-300 uppercase tracking-wider">
-                      Just In
-                    </span>
-                  </h2>
-                  {!isLoading && (
-                    <p className="mt-0.5 text-xs text-amber-200/40">
-                      {data?.total ?? 0} {t('categories.items')} — Fresh picks just landed
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-lg font-bold text-amber-100 sm:text-xl">
-                  {searchQuery
-                    ? t('products.resultsFor', { query: searchQuery })
-                    : selectedCategory
-                    ? getCategoryDisplayName(selectedCategory)
-                    : t('products.allProducts')}
-                </h2>
-                {!isLoading && (
-                  <p className="mt-0.5 text-xs text-amber-200/40">
-                    {data?.total ?? 0} {t('categories.items')}
-                  </p>
-                )}
-              </>
-            )}
+            <h2 className="text-2xl font-bold text-amber-100">
+              {searchQuery ? `Search Results for "${searchQuery}"` : selectedCategory ? selectedCategory.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'All Products'}
+            </h2>
+            <p className="mt-1 text-sm text-amber-200/50">
+              {data?.total ?? 0} products found
+            </p>
           </div>
-
           <div className="flex items-center gap-2">
-            {/* Clear button */}
-            {hasActiveFilters && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFilters}
-                className="border-amber-900/30 text-amber-200/60 hover:border-amber-600/40 hover:text-amber-400 h-8 text-xs"
-              >
-                <X className="mr-1 h-3 w-3" />
-                {t('common.clear')}
-              </Button>
-            )}
-
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className="border-amber-900/30 text-amber-200/60 hover:border-amber-600/40 hover:text-amber-400 sm:hidden h-8"
+              className="border-amber-900/40 bg-stone-900/50 text-amber-200/70 hover:bg-amber-900/20 hover:text-amber-300"
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Filters
             </Button>
-
-            {/* Sort */}
             <Select value={sort} onValueChange={setSort}>
-              <SelectTrigger className="w-[140px] border-amber-900/30 bg-stone-900/50 text-amber-200/70 text-xs h-8">
+              <SelectTrigger className="w-[160px] border-amber-900/40 bg-stone-900/50 text-amber-200/70">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent className="border-amber-900/30 bg-stone-900">
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price-asc">Price: Low to High</SelectItem>
-                <SelectItem value="price-desc">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
+              <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
+                {SORT_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Compact Filters Row */}
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          {/* Source Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-amber-200/40 uppercase tracking-wider">Source</span>
+        {showFilters && (
+          <div className="flex flex-wrap gap-2 rounded-lg border border-amber-900/20 bg-stone-900/50 p-3">
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[120px] border-amber-900/30 bg-stone-900/50 text-amber-200/70 text-xs h-7">
-                <SelectValue placeholder="All Sources" />
-              </SelectTrigger>
-              <SelectContent className="border-amber-900/30 bg-stone-900">
-                <SelectItem value="all">All Products</SelectItem>
-                <SelectItem value="own">Our Collection</SelectItem>
-                <SelectItem value="external">External Platforms</SelectItem>
+              <SelectTrigger className="w-[140px] border-amber-900/40 bg-stone-900/50 text-amber-200/70"><SelectValue placeholder="Source" /></SelectTrigger>
+              <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
+                {SOURCE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Occasion Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-amber-200/40 uppercase tracking-wider">Occasion</span>
+            {availablePlatforms.length > 0 && (
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-[140px] border-amber-900/40 bg-stone-900/50 text-amber-200/70"><SelectValue placeholder="Platform" /></SelectTrigger>
+                <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
+                  <SelectItem value="all">All Platforms</SelectItem>
+                  {availablePlatforms.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={occasionFilter} onValueChange={setOccasionFilter}>
-              <SelectTrigger className="w-[120px] border-amber-900/30 bg-stone-900/50 text-amber-200/70 text-xs h-7">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent className="border-amber-900/30 bg-stone-900">
+              <SelectTrigger className="w-[140px] border-amber-900/40 bg-stone-900/50 text-amber-200/70"><SelectValue placeholder="Occasion" /></SelectTrigger>
+              <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
                 <SelectItem value="all">All Occasions</SelectItem>
-                {OCCASION_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
+                {OCCASION_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Recipient Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-amber-200/40 uppercase tracking-wider">For</span>
             <Select value={recipientFilter} onValueChange={setRecipientFilter}>
-              <SelectTrigger className="w-[100px] border-amber-900/30 bg-stone-900/50 text-amber-200/70 text-xs h-7">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent className="border-amber-900/30 bg-stone-900">
-                <SelectItem value="all">All</SelectItem>
-                {RECIPIENT_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
+              <SelectTrigger className="w-[140px] border-amber-900/40 bg-stone-900/50 text-amber-200/70"><SelectValue placeholder="Recipient" /></SelectTrigger>
+              <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
+                <SelectItem value="all">All Recipients</SelectItem>
+                {RECIPIENT_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Price Range Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-amber-200/40 uppercase tracking-wider">Price</span>
+            <Select value={relationshipFilter} onValueChange={setRelationshipFilter}>
+              <SelectTrigger className="w-[140px] border-amber-900/40 bg-stone-900/50 text-amber-200/70"><SelectValue placeholder="Relationship" /></SelectTrigger>
+              <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
+                <SelectItem value="all">All Relationships</SelectItem>
+                {RELATIONSHIP_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={priceRangeFilter} onValueChange={setPriceRangeFilter}>
-              <SelectTrigger className="w-[110px] border-amber-900/30 bg-stone-900/50 text-amber-200/70 text-xs h-7">
-                <SelectValue placeholder="Any" />
-              </SelectTrigger>
-              <SelectContent className="border-amber-900/30 bg-stone-900">
-                <SelectItem value="all">Any Price</SelectItem>
-                {PRICE_RANGE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                ))}
+              <SelectTrigger className="w-[140px] border-amber-900/40 bg-stone-900/50 text-amber-200/70"><SelectValue placeholder="Price Range" /></SelectTrigger>
+              <SelectContent className="border-amber-900/40 bg-stone-950 text-amber-100">
+                {PRICE_RANGE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-amber-300/70 hover:bg-amber-900/20 hover:text-amber-200">
+                <X className="mr-1 h-4 w-4" /> Clear
+              </Button>
+            )}
           </div>
-        </div>
-
-        {/* Platform Filter Chips */}
-        {availablePlatforms.length > 0 && (
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <span className="text-[10px] text-amber-200/40 uppercase tracking-wider mr-1">Platform</span>
-            <button
-              onClick={() => setPlatformFilter('all')}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                platformFilter === 'all'
-                  ? 'border-amber-500/50 bg-amber-600/20 text-amber-300'
-                  : 'border-amber-900/20 bg-stone-900/40 text-amber-200/50 hover:border-amber-600/30 hover:text-amber-200/70'
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-amber-400" />
-              All
-            </button>
-            {availablePlatforms.map((p) => {
-              const slug = p.value;
-              const isActive = platformFilter === slug;
-              return (
-                <button
-                  key={slug}
-                  onClick={() => setPlatformFilter(isActive ? 'all' : slug)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                    isActive
-                      ? PLATFORM_CHIP_ACTIVE_BG[slug] || 'bg-emerald-600/20 border-emerald-500/50 text-emerald-300'
-                      : 'border-amber-900/20 bg-stone-900/40 text-amber-200/50 hover:border-amber-600/30 hover:text-amber-200/70'
-                  }`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${PLATFORM_DOT_COLORS[slug] || 'bg-emerald-500'}`} />
-                  {p.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="overflow-hidden rounded-xl border border-amber-900/15 bg-stone-900/40">
-                <Skeleton className="aspect-square bg-stone-800/60" />
-                <div className="p-3 space-y-2">
-                  <Skeleton className="h-3 w-16 bg-stone-800/60" />
-                  <Skeleton className="h-4 w-3/4 bg-stone-800/60" />
-                  <Skeleton className="h-5 w-20 bg-stone-800/60" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <span className="text-4xl">🔍</span>
-            <h3 className="mt-4 text-lg font-semibold text-amber-100">{t('products.noProductsFound')}</h3>
-            <p className="mt-2 text-sm text-amber-200/40">
-              {t('products.tryAdjusting')}
-            </p>
-            <Button
-              onClick={clearFilters}
-              variant="outline"
-              className="mt-4 border-amber-900/30 text-amber-200/60 hover:border-amber-600/40 hover:text-amber-400"
-            >
-              {t('products.viewAllProducts')}
-            </Button>
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </motion.div>
         )}
       </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-xl border border-amber-900/15 bg-stone-900/40">
+              <Skeleton className="aspect-square bg-stone-800/60" />
+              <div className="p-3 space-y-2">
+                <Skeleton className="h-3 w-16 bg-stone-800/60" />
+                <Skeleton className="h-4 w-3/4 bg-stone-800/60" />
+                <Skeleton className="h-5 w-20 bg-stone-800/60" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <span className="text-4xl">🔍</span>
+          <h3 className="mt-4 text-lg font-semibold text-amber-100">No products found</h3>
+          <p className="mt-2 text-sm text-amber-200/40">Try adjusting your search or filters.</p>
+          <Button onClick={clearFilters} className="mt-6 bg-amber-600 text-stone-950 hover:bg-amber-500">
+            Clear Filters
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {products.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

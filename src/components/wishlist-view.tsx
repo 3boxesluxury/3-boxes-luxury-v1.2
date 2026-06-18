@@ -22,31 +22,34 @@ interface WishlistProduct {
 }
 
 export function WishlistView() {
-  const { user, setView, selectProduct, addItem, setShowAuthDialog, setAuthMode } = useStore();
+  // FIX 1: Use correct store variable names (authUser, authToken, setAuthView)
+  const { authUser, authToken, setView, selectProduct, addItem, setAuthView } = useStore();
   const [items, setItems] = useState<WishlistProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const fetchWishlist = useCallback(async () => {
-    if (!user) {
+    if (!authUser || !authToken) {
       setLoading(false);
       return;
     }
     try {
-      const token = localStorage.getItem('3bl-auth-token');
+      // FIX 2: Use authToken from store, not localStorage
       const res = await fetch('/api/wishlist', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${authToken}` },
       });
       if (res.ok) {
         const data = await res.json();
-        setItems(data.items);
+        // FIX 4: API returns { wishlist: [...] }, not { items: [...] }
+        const wishlistItems = Array.isArray(data?.wishlist) ? data.wishlist : (Array.isArray(data?.items) ? data.items : []);
+        setItems(wishlistItems);
       }
     } catch (err) {
       console.error('Failed to fetch wishlist:', err);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [authUser, authToken]);
 
   useEffect(() => {
     fetchWishlist();
@@ -55,12 +58,11 @@ export function WishlistView() {
   const handleRemove = async (productId: string) => {
     setRemovingId(productId);
     try {
-      const token = localStorage.getItem('3bl-auth-token');
       const res = await fetch('/api/wishlist', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({ productId }),
       });
@@ -94,7 +96,8 @@ export function WishlistView() {
     });
   };
 
-  if (!user) {
+  // FIX 1: Use authUser, not user. Use setAuthView, not setAuthMode/setShowAuthDialog
+  if (!authUser) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -107,10 +110,7 @@ export function WishlistView() {
           Save your favorite luxury items and access them anytime
         </p>
         <Button
-          onClick={() => {
-            setAuthMode('login');
-            setShowAuthDialog(true);
-          }}
+          onClick={() => setAuthView('login')}
           className="mt-8 bg-amber-600 text-stone-950 hover:bg-amber-500 hover:shadow-lg hover:shadow-amber-600/25"
           size="lg"
         >
@@ -135,7 +135,7 @@ export function WishlistView() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-4 md:py-8">
-      {/* Mobile top bar: back arrow + "My Wishlist" + cart button (Issue 2) */}
+      {/* Mobile top bar */}
       <div className="md:hidden sticky top-0 -mx-4 mb-4 flex items-center gap-3 border-b border-amber-900/20 bg-stone-950/95 backdrop-blur-md px-4 py-3 z-10">
         <button
           onClick={() => setView('home')}
@@ -148,21 +148,9 @@ export function WishlistView() {
           <Heart className="h-4 w-4 text-amber-500 fill-amber-500" />
           My Wishlist
           {items.length > 0 && (
-            <span className="text-xs font-normal text-amber-200/50">
-              ({items.length})
-            </span>
+            <span className="text-xs font-normal text-amber-200/50">({items.length})</span>
           )}
         </h2>
-        {/* Wishlist button — current view (highlighted to indicate active) */}
-        <button
-          onClick={() => setView('user-dashboard')}
-          aria-label="Wishlist"
-          aria-current="page"
-          className="relative flex h-9 w-9 items-center justify-center rounded-full text-amber-300 bg-amber-900/30 transition-colors"
-        >
-          <Heart className="h-5 w-5" />
-        </button>
-        {/* Cart button — jumps to shopping cart */}
         <button
           onClick={() => setView('cart')}
           aria-label="Cart"
@@ -172,7 +160,7 @@ export function WishlistView() {
         </button>
       </div>
 
-      {/* Desktop: original heading layout */}
+      {/* Desktop heading */}
       <div className="hidden md:block">
         <Button
           variant="ghost"
@@ -182,7 +170,6 @@ export function WishlistView() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Continue Shopping
         </Button>
-
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-amber-100 flex items-center gap-3">
@@ -205,7 +192,6 @@ export function WishlistView() {
         </div>
       </div>
 
-      {/* Mobile: floating "Add All to Cart" button (since the heading block is hidden) */}
       {items.length > 0 && (
         <div className="md:hidden mb-4 flex justify-end">
           <Button
@@ -255,7 +241,6 @@ export function WishlistView() {
               >
                 <Card className="group border-amber-900/20 bg-stone-900/60 overflow-hidden hover:border-amber-700/40 transition-all duration-300 hover:shadow-lg hover:shadow-amber-900/10">
                   <CardContent className="p-0">
-                    {/* Image */}
                     <div
                       className="relative aspect-square cursor-pointer overflow-hidden bg-stone-800"
                       onClick={() => selectProduct(item.productId)}
@@ -266,11 +251,7 @@ export function WishlistView() {
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
                       />
-                      {/* Remove button overlay */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -286,22 +267,7 @@ export function WishlistView() {
                           <Trash2 className="h-4 w-4" />
                         )}
                       </button>
-                      {/* Category badge */}
-                      <div className="absolute bottom-3 left-3">
-                        <span className="rounded-full bg-stone-950/70 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-amber-300 backdrop-blur-sm">
-                          {item.category}
-                        </span>
-                      </div>
-                      {item.stock === 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-stone-950/60">
-                          <span className="rounded-md bg-red-900/80 px-3 py-1.5 text-xs font-semibold text-red-200">
-                            Out of Stock
-                          </span>
-                        </div>
-                      )}
                     </div>
-
-                    {/* Info */}
                     <div className="p-4 space-y-3">
                       <h3
                         className="text-sm font-semibold text-amber-100 line-clamp-2 cursor-pointer hover:text-amber-300 transition-colors"
@@ -309,26 +275,18 @@ export function WishlistView() {
                       >
                         {item.name}
                       </h3>
-
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold text-amber-400">
                           ${item.price.toLocaleString()}
                         </span>
-                        {item.rating > 0 && (
-                          <span className="text-xs text-amber-200/40">
-                            ★ {item.rating.toFixed(1)}
-                          </span>
-                        )}
                       </div>
-
                       <Button
                         onClick={() => handleAddToCart(item)}
-                        disabled={item.stock === 0}
-                        className="w-full bg-amber-600/90 text-stone-950 hover:bg-amber-500 hover:shadow-md hover:shadow-amber-600/20 disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                        className="w-full bg-amber-600/90 text-stone-950 hover:bg-amber-500 hover:shadow-md hover:shadow-amber-600/20 text-xs"
                         size="sm"
                       >
                         <ShoppingCart className="mr-1.5 h-3.5 w-3.5" />
-                        {item.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                        Add to Cart
                       </Button>
                     </div>
                   </CardContent>

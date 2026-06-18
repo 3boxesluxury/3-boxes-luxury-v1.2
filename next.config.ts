@@ -9,4 +9,4 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
 };
 
-export default nextConfig;
+export default nextConfig;// Force rebuild 532727692

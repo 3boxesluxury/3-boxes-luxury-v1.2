@@ -44,7 +44,7 @@ export function CartView() {
         </h2>
         {/* Wishlist button — jumps to user dashboard wishlist section */}
         <button
-          onClick={() => setView('user-dashboard')}
+                    onClick={() => setView('wishlist')}
           aria-label="Wishlist"
           className="relative flex h-9 w-9 items-center justify-center rounded-full text-amber-200/80 transition-colors hover:bg-amber-900/30 hover:text-amber-300"
         >

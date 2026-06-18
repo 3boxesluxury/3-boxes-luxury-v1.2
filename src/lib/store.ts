@@ -38,6 +38,7 @@ interface AppState {
   searchQuery: string
   selectedCategory: string | null
   cartItems: CartItem[]
+  wishlistItems: string[]
   lastOrderId: string | null
   authUser: AuthUser | null
   authToken: string | null

@@ -1,4 +1,5 @@
 'use client';
+export const dynamic = 'force-dynamic';
 
 import { useStore, type View } from '@/lib/store';
 import { QueryProvider } from '@/lib/query-provider';
@@ -9,6 +10,7 @@ import { CategoryGrid } from '@/components/category-grid';
 import { ProductGrid } from '@/components/product-grid';
 import { ProductDetail } from '@/components/product-detail';
 import { CartView } from '@/components/cart-view';
+import { WishlistView } from '@/components/wishlist-view';
 import { CheckoutView } from '@/components/checkout-view';
 import { OrderConfirmation } from '@/components/order-confirmation';
 import { OrderHistory } from '@/components/order-history';
@@ -102,11 +104,11 @@ function AppContent() {
     const params = new URLSearchParams(window.location.search)
     const viewParam = params.get('view')
     if (viewParam) {
-      const validViews: View[] = [
+           const validViews: View[] = [
         'home', 'product', 'cart', 'checkout', 'orders', 'order-confirmation',
         'user-dashboard', 'admin-dashboard', 'agent-dashboard', 'team-dashboard',
         'corporate-dashboard', 'wiki', 'downloads', 'security-policy',
-        'social-style', '3box-curate', 'family-shopping', 'coming-soon',
+        'social-style', '3box-curate', 'family-shopping', 'coming-soon', 'wishlist',
       ]
       if (validViews.includes(viewParam as View) && viewParam !== view) {
         setView(viewParam as View)
@@ -201,8 +203,10 @@ function AppContent() {
         return <FamilyShoppingWrapper />;
       case 'wiki':
         return <WikiSection />;
-      case 'coming-soon':
+            case 'coming-soon':
         return <ComingSoon />;
+      case 'wishlist':
+        return <WishlistView />;
       default:
         return (
           <>

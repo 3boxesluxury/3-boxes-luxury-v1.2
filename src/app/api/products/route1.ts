@@ -19,70 +19,66 @@ const PLATFORM_LOGO_MAP: Record<string, string> = {
 }
 
 // ─── Category slug aliases ───
-// Maps header sub-menu slugs → actual DB category slugs.
-// NO FALLBACKS: if a category has no matching DB slug, the array is empty
-// and the API will return "No products found" (honest behavior).
+// The local DB seed uses certain slugs (e.g. "mens-shirts") while the Shopify
+// product-type mapping produces different ones (e.g. "mens-shirts-t-shirts").
+// This map normalises category slugs so that a request using either variant
+// resolves to the same set of products.
+//
+// Header sub-menu slugs (men-accessories, women-jewelry, etc.) MUST map to
+// the actual Shopify/DB category slugs so clicking sub-menus shows products.
 const CATEGORY_SLUG_ALIASES: Record<string, string[]> = {
-  // ─── Men sub-categories → DB slugs ───
-  'men-accessories':   ['men-gift-hamper'],     // leather goods, wallets, belts → men-gift-hamper
-  'men-shirts':        [],                       // no shirts in DB → no products
-  'men-tshirts':       [],                       // no t-shirts in DB → no products
-  'men-fragrances':    ['fragrances'],           // perfumes
-  'men-watches':       [],                       // no watches in DB → no products
-  'men-leather':       ['men-gift-hamper'],      // leather goods → men-gift-hamper
-
-  // ─── Women sub-categories → DB slugs ───
+  // ─── Men sub-categories → actual DB slugs ───
+  'men-accessories':   ['men-gift-hamper', 'men-grooming-kit'],
+  'men-shirts':        ['men-gift-hamper'],
+  'men-tshirts':       ['men-gift-hamper'],
+  'men-fragrances':    ['fragrances'],
+  'men-watches':       ['men-gift-hamper'],
+  'men-leather':       ['men-gift-hamper'],
+  // ─── Women sub-categories → actual DB slugs ───
   'women-jewelry':     ['jewellery'],
-  'women-sarees':      [],                       // no sarees in DB
-  'women-fashion':     [],                       // no women fashion in DB
+  'women-sarees':      ['gift-sets'],           // no sarees; show gift sets instead
+  'women-fashion':     ['beauty', 'gift-sets'],
   'women-fragrances':  ['fragrances'],
-  'women-accessories': [],                       // no women accessories in DB
-
-  // ─── Kids sub-categories → DB slugs ───
-  'kids-toys':         [],                       // no kids toys in DB
-  'kids-fashion':      [],                       // no kids fashion in DB
-  'kids-shirts':       [],                       // no kids shirts in DB
-  'kids-dresses':      [],                       // no kids dresses in DB
-
-  // ─── Home sub-categories → DB slugs ───
+  'women-accessories': ['jewellery', 'beauty'],
+  // ─── Kids sub-categories → actual DB slugs ───
+  'kids-toys':         ['gift-sets'],            // no toys; show gift sets
+  'kids-fashion':      ['gift-sets'],
+  'kids-shirts':       ['gift-sets'],
+  'kids-dresses':      ['gift-sets'],
+  // ─── Home sub-categories → actual DB slugs ───
   'home-decor':        ['home-decor'],
   'home-candles':      ['scented-candles', 'fragrances'],
   'home-living':       ['home-decor', 'scented-candles'],
-
-  // ─── Couple sub-categories → DB slugs ───
+  // ─── Couple sub-categories → actual DB slugs ───
   'couple-friendly':   ['romantic-gifts'],
-
-  // ─── Office sub-categories → DB slugs ───
+  // ─── Office sub-categories → actual DB slugs ───
   'office-corporate-gifts': ['corporate-gifts'],
   'office-desk':       ['corporate-gifts'],
   'office-stationery': ['corporate-gifts'],
-
   // ─── Legacy/alternate mappings (back-compat) ───
   'romantic-gifts':    ['romantic-gifts'],
   'corporate-gifts':   ['corporate-gifts'],
+  'mens-shirts-t-shirts': ['men-gift-hamper'],
+  'leather-goods':     ['men-gift-hamper'],
+  'fashion':           ['gift-sets', 'beauty'],
+  'watches':           ['men-gift-hamper'],
+  'toys':              ['gift-sets'],
+  'sarees':            ['gift-sets'],
   'fragrances':        ['fragrances'],
-  'jewellery':         ['jewellery'],
   'jewelry':           ['jewellery'],
-  'scented-candles':   ['scented-candles'],
-  'beauty':            ['beauty'],
-  'gift-sets':         ['gift-sets'],
-  'birthday-gifts':    ['birthday-gifts'],
-  'travel-products':   ['travel-products'],
-  'men-gift-hamper':   ['men-gift-hamper'],
-  'men-grooming-kit':  ['men-grooming-kit'],
+  'jewellery':         ['jewellery'],
 }
-
 // v1.2: Parent category → child category slug mapping
-// When a parent category is selected, show products from all its subcategories.
-// Only ACTUAL DB slugs are included (no fallbacks).
+// When a parent category is selected, show products from all its subcategories
+// Includes BOTH header sub-menu slugs AND Shopify/DB slugs so all paths work
 const PARENT_CATEGORY_CHILDREN: Record<string, string[]> = {
-  'couple':       ['couple-friendly', 'romantic-gifts'],
-  'men':          ['men-accessories', 'men-fragrances', 'men-leather', 'men-gift-hamper', 'men-grooming-kit', 'fragrances'],
-  'women':        ['women-jewelry', 'women-fragrances', 'jewellery', 'fragrances'],
-  'kids':         ['kids-toys', 'kids-fashion', 'kids-shirts', 'kids-dresses'],  // all empty → 0 products
-  'home':         ['home-decor', 'home-candles', 'home-living', 'scented-candles', 'fragrances'],
-  'office':       ['office-corporate-gifts', 'office-desk', 'office-stationery', 'corporate-gifts'],
-  'new-arrivals': [],  // Special: handled by createdAt filter (30 days)
+  'couple': ['couple-friendly', 'romantic-gifts'],
+  'men':    ['men-accessories', 'men-shirts', 'men-tshirts', 'men-fragrances', 'men-watches', 'men-leather', 'men-gift-hamper', 'men-grooming-kit', 'fragrances'],
+  'women':  ['women-jewelry', 'women-sarees', 'women-fashion', 'women-fragrances', 'women-accessories', 'jewellery', 'fragrances', 'beauty', 'gift-sets'],
+  'kids':   ['kids-toys', 'kids-fashion', 'kids-shirts', 'kids-dresses', 'gift-sets'],
+  'home':   ['home-decor', 'home-candles', 'home-living', 'scented-candles', 'fragrances'],
+  'office': ['office-corporate-gifts', 'office-desk', 'office-stationery', 'corporate-gifts'],
+  'new-arrivals': [], // Special: no child slugs, uses tag/featured filter
 }
 
 /**
@@ -1244,7 +1240,6 @@ export async function GET(request: NextRequest) {
       source: 'static',
     })
   }
-  // Kids categories also serve static products directly (no Shopify/DB data)
   const kidsCategorySlugs = ['kids', 'kids-shirts', 'kids-dresses', 'kids-fashion', 'kids-toys']
   if (category && kidsCategorySlugs.includes(category) && !search) {
     const kidsSlugs = resolveCategorySlugs(category)
@@ -1259,7 +1254,7 @@ export async function GET(request: NextRequest) {
   }
   */
 
-  // ─── Shopify-only path (no DB, no duplication) ───
+    // ─── Shopify-only path (no DB, no duplication) ───
   if (preferShopify) {
     try {
       let shopifyProducts: ShopifyProductTransformed[]
@@ -1341,24 +1336,26 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = {}
 
     if (category) {
-      // ─── NEW ARRIVALS: products created within the last 30 days ───
+      // Special handling for "new-arrivals" — show exclusive products only (no duplicates from other categories)
       if (category === 'new-arrivals') {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        where.createdAt = { gte: thirtyDaysAgo }
-      }
-      // ─── PARENT CATEGORIES: query all sub-category slugs at once ───
-      else if (PARENT_CATEGORY_CHILDREN[category]) {
-        const childSlugs = resolveCategorySlugs(category).filter(s => s !== category)
+        // Only show products in the new-arrivals category (exclusive products, not duplicates)
+        where.category = { slug: 'new-arrivals' }
+      } else if (category === 'couple' || category === 'men' || category === 'women' || category === 'kids' || category === 'home' || category === 'office') {
+        // Parent category: show products from all subcategories
+        const subcategories = await db.category.findMany({
+          where: { parentId: { not: null } },
+          include: { parent: true },
+        })
+        const childSlugs = subcategories
+          .filter(c => c.parent?.slug === category)
+          .map(c => c.slug)
         if (childSlugs.length > 0) {
-          where.category = { slug: { in: childSlugs } }
+          where.category = { slug: { in: [...childSlugs, category] } }
         } else {
-          // No sub-categories → no products
           where.category = { slug: category }
         }
-      }
-      // ─── LEAF CATEGORIES: resolve aliases and query ───
-      else {
+      } else {
+        // Resolve category slug aliases so Shopify slugs also match DB categories
         const categorySlugs = resolveCategorySlugs(category)
         if (categorySlugs.length === 1) {
           where.category = { slug: category }
