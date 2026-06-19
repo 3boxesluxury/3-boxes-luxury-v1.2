@@ -184,7 +184,8 @@ export function AuthDialog() {
             setSuccess(`A 6-digit verification code has been sent to ${data.email || 'your email'}. Please check your inbox.`)
             // In demo/dev mode, show the OTP via toast for testing
             if (data._otp) {
-              showToast('info', `🔐 Your verification code: ${data._otp}`)
+              setTwoFACode(data._otp)  // AUTO-FILL the input field
+                showToast('info', `🔐 Your verification code: ${data._otp}`)
             }
           } else {
             setSuccess('Please enter the verification code from your authenticator app.')
@@ -627,6 +628,7 @@ export function AuthDialog() {
                           })
                           const data = await res.json()
                           if (data._otp) {
+                            setTwoFACode(data._otp)  // AUTO-FILL the input field
                             showToast('info', `🔐 Your new verification code: ${data._otp}`)
                           }
                           if (data.success) {

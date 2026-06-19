@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useStore } from '@/lib/store'
 import type { AuthUser } from '@/lib/store'
+
 import {
   Dialog,
   DialogContent,
@@ -437,65 +438,27 @@ export function AuthDialog() {
   )
 
   const handleSocialLogin = useCallback(
-    async (provider: string) => {
+    (provider: string) => {
       setError(null)
       setSuccess(null)
 
-      // Google → real OAuth redirect
-      if (provider === 'Google') {
-        const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '1057307558914-69t9cargikv5di9giaqk83vpc0t1e5vf.apps.googleusercontent.com'
-        const redirectUri = `${window.location.origin}/api/auth/google/callback`
-        const scope = 'openid email profile'
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`
-        window.location.href = googleAuthUrl
+      // Capture current page so OAuth can redirect back here after login
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/'
+
+      // All 3 providers use real server-side OAuth redirect (like LinkedIn)
+      if (provider === 'LinkedIn') {
+        window.location.href = `/api/auth/linkedin?returnTo=${encodeURIComponent(currentPath)}`
         return
       }
 
-      // Facebook → real OAuth redirect
       if (provider === 'Facebook') {
-        const appId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || '1638724140532761'
-        const redirectUri = `${window.location.origin}/api/auth/facebook/callback`
-        const scope = 'public_profile,email'
-        const fbAuthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code`
-        window.location.href = fbAuthUrl
+        window.location.href = `/api/auth/facebook?returnTo=${encodeURIComponent(currentPath)}`
         return
       }
 
-      // LinkedIn → simulated
-      setLoading(true)
-      try {
-        const res = await fetch('/api/auth/social', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: 'linkedin',
-            name: 'LinkedIn User',
-            socialId: `linkedin_${Date.now()}`,
-            email: `user_${Date.now()}@linkedin.com`,
-          }),
-        })
-
-        const data = await res.json()
-
-        if (!res.ok) {
-          setError(data.error || data.message || 'Social login failed. Please try again.')
-          return
-        }
-
-        if (data.user && data.token) {
-          const user: AuthUser = {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.name,
-            role: data.user.role || 'USER',
-          }
-          setAuth(user, data.token)
-          showToast('success', `Welcome, ${user.name}! Successfully signed in.`)
-        }
-      } catch {
-        setError('Social login failed. Please try again later.')
-      } finally {
-        setLoading(false)
+      if (provider === 'Google') {
+        window.location.href = `/api/auth/google?returnTo=${encodeURIComponent(currentPath)}`
+        return
       }
     },
     [setAuth]
@@ -523,7 +486,7 @@ export function AuthDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
-        className={`border-amber-900/30 bg-stone-950 text-amber-50 max-h-[90vh] overflow-y-auto ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
+        className={`border-amber-900/30 bg-stone-950 text-amber-50 max-h-[90vh] flex flex-col ${needsWideDialog ? 'sm:max-w-lg' : 'sm:max-w-md'} [&>button]:text-amber-200/60 [&>button]:hover:text-amber-200`}
         onOpenAutoFocus={handleDialogMount}
       >
         {/* 2FA Verification Step */}
@@ -536,7 +499,7 @@ export function AuthDialog() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <DialogHeader className="mb-4">
+              <DialogHeader className="mb-4 shrink-0">
                 <DialogTitle className="gold-shimmer text-2xl font-bold tracking-wide">
                   Two-Factor Authentication
                 </DialogTitle>
@@ -718,7 +681,7 @@ export function AuthDialog() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <DialogHeader className="mb-2">
+              <DialogHeader className="mb-2 shrink-0">
                 <DialogTitle className="gold-shimmer text-2xl font-bold tracking-wide text-center">
                   3 BOXES LUXURY
                 </DialogTitle>
@@ -733,7 +696,7 @@ export function AuthDialog() {
 
               {/* Step 0: Role Selection */}
               {!selectedLoginRole && (
-                <div className="space-y-4">
+                <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
                   <div className="text-center mb-4">
                     <h3 className="text-lg font-semibold text-amber-100">Choose Your Account Type</h3>
                     <p className="text-xs text-amber-200/40">Select how you'd like to continue</p>
@@ -795,7 +758,7 @@ export function AuthDialog() {
 
               {/* Step 1: Login/Register Form */}
               {selectedLoginRole && (
-              <>
+              <div className="overflow-y-auto flex-1 min-h-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1433,7 +1396,7 @@ export function AuthDialog() {
                   )}
                 </TabsContent>
               </Tabs>
-              </>
+              </div>
               )}
             </motion.div>
           )}
