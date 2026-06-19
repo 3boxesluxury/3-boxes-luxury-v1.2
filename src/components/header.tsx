@@ -80,7 +80,6 @@ const CATEGORY_NAV: CategoryNavItem[] = [
     slug: 'home',
     icon: Home,
     children: [
-      { name: 'Home Décor', slug: 'home-decor' },
       { name: 'Candles & Fragrances', slug: 'home-candles' },
       { name: 'Living', slug: 'home-living' },
     ],

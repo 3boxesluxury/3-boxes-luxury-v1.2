@@ -132,8 +132,8 @@ export function ProductGrid() {
       if (occasionFilter && occasionFilter !== 'all') params.set('occasion', occasionFilter);
       if (recipientFilter && recipientFilter !== 'all') params.set('recipient', recipientFilter);
       if (relationshipFilter && relationshipFilter !== 'all') params.set('relationship', relationshipFilter);
-      if (priceRange) {
-        params.set('priceMin', String(priceRange.min));
+            if (priceRange) {
+        if (priceRange.min !== null) params.set('priceMin', String(priceRange.min));
         if (priceRange.max !== null) params.set('priceMax', String(priceRange.max));
       }
       return fetch(`/api/products?${params}`).then((r) => r.json());

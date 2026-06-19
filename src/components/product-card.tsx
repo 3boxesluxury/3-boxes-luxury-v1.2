@@ -5,6 +5,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAffiliateClick } from '@/hooks/useAffiliateClick';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { ShoppingCart, Star, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { getProxiedImageUrl } from '@/lib/image-utils';
@@ -136,13 +137,13 @@ export function ProductCard({ product }: { product: Product }) {
     >
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden bg-stone-800">
-        <img
+                <Image
           src={imageError ? '/images/placeholder.jpg' : currentImage}
           alt={product.name}
-          loading="lazy"
-          decoding="async"
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-110"
           onError={() => setImageError(true)}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
 
         {/* Badges */}
