@@ -1,0 +1,58 @@
+const { PrismaClient } = require('@prisma/client');
+
+const OLD_DIRECT = 'postgresql://postgres:Thumm@220794@db.nybjhyqxbkokmdsgjoqi.supabase.co:5432/postgres';
+const NEW_DIRECT = 'postgresql://postgres:Thumm@220794@db.spsupygtyinsgjchbdbc.supabase.co:5432/postgres';
+
+const SKIP = ['_prisma_migrations', '_export_data', 'Session', 'AuditLog', 'AffiliateClick', 'SyncLog'];
+
+async function migrate() {
+  console.log('Connecting to OLD (Sydney) and NEW (Mumbai)...\n');
+  const oldDb = new PrismaClient({ datasources: { db: { url: OLD_DIRECT } } });
+  const newDb = new PrismaClient({ datasources: { db: { url: NEW_DIRECT } } });
+
+  const tables = await oldDb.$queryRawUnsafe(`
+    SELECT table_name FROM information_schema.tables 
+    WHERE table_schema='public' AND table_type='BASE TABLE' 
+    AND table_name NOT IN (${SKIP.map(t => `'${t}'`).join(',')})
+    ORDER BY table_name
+  `);
+
+  let totalMoved = 0;
+
+  for (const { table_name } of tables) {
+    const [{ c: count }] = await oldDb.$queryRawUnsafe(`SELECT count(*)::int AS c FROM "${table_name}"`);
+    if (count === 0) { console.log(`⏭  ${table_name} — empty`); continue; }
+
+    console.log(`📦 ${table_name} (${count} rows)...`);
+    const rows = await oldDb.$queryRawUnsafe(`SELECT * FROM "${table_name}"`);
+    if (rows.length === 0) continue;
+
+    const columns = Object.keys(rows[0]);
+    const cols = columns.map(c => `"${c}"`).join(', ');
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+    let ok = 0, fail = 0;
+
+    for (const row of rows) {
+      const values = columns.map(c => row[c]);
+      try {
+        await newDb.$queryRawUnsafe(`INSERT INTO "${table_name}" (${cols}) VALUES (${placeholders})`, ...values);
+        ok++;
+      } catch (e) {
+        if (e.message.includes('duplicate key') || e.message.includes('unique constraint')) {
+          // skip duplicates silently
+        } else {
+          fail++;
+          if (fail <= 2) console.error(`    ❌ ${e.message.slice(0, 100)}`);
+        }
+      }
+    }
+    console.log(`    ✅ ${ok} inserted` + (fail > 0 ? `, ${fail} failed` : ''));
+    totalMoved += ok;
+  }
+
+  await oldDb.$disconnect();
+  await newDb.$disconnect();
+  console.log(`\n🎉 Done! ${totalMoved} total rows migrated.`);
+}
+
+migrate().catch(e => { console.error(e); process.exit(1); });

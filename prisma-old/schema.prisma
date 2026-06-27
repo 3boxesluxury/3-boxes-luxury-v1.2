@@ -1,0 +1,604 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ════════════════════════════════════════════
+// USER & AUTH MODELS (from your current schema)
+// ════════════════════════════════════════════
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  name              String
+  password          String?
+  role              String   @default("user")
+  avatar            String?
+  phone             String?
+  gender            String?  // v16: "male" | "female" | null — persisted from OAuth providers
+  isActive          Boolean  @default(true)
+  approvalStatus    String   @default("pending")
+  emailVerified     Boolean  @default(false)
+  phoneVerified     Boolean  @default(false)
+  twoFactorEnabled  Boolean  @default(false)
+  twoFactorRequired Boolean  @default(false)
+  twoFactorSecret   String?
+  socialProvider    String?
+  socialId          String?
+  // v22: Instagram Graph API fields — stored when user connects via Facebook OAuth with Instagram scopes
+  instagramId       String?  // Instagram Business Account ID (from Graph API)
+  instagramUsername String?  // Instagram username (e.g., "manoj_royal")
+  instagramToken    String?  // Long-lived Instagram access token (for API calls)
+  corporateRole     String?
+  adminRole         String?
+  otpCode           String?
+  otpExpiry         DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  emailVerifyToken  String?
+  emailVerifyExpiry DateTime?
+  phoneVerifyCode   String?
+  phoneVerifyExpiry DateTime?
+  failedLoginAttempts Int?   @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
+  lastLoginDevice   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  permissions       UserPermission[]
+  sessions          Session[]
+  auditLogs         AuditLog[]
+  corporateAccount  CorporateAccount?
+  wishlistItems     WishlistItem[]
+}
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  permission String   // e.g. "products.manage", "orders.manage", "accounting.view"
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  token        String   @unique
+  userId       String
+  expiresAt    DateTime
+  ipAddress    String?
+  userAgent    String?
+  deviceInfo   String?
+  lastActivity DateTime? @default(now())
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String   // login_success, login_failed, register, logout, etc.
+  entity    String   // user, order, product, etc.
+  entityId  String?
+  details   String?  // JSON string with additional info
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+}
+
+// ════════════════════════════════════════════
+// CORPORATE MODELS (from your current schema)
+// ════════════════════════════════════════════
+
+model CorporateAccount {
+  id              String   @id @default(cuid())
+  companyName     String
+  slug            String   @unique
+  industry        String?
+  website         String?
+  gstNumber       String?
+  panNumber       String?
+  billingAddress  String?
+  billingCity     String?
+  billingState    String?
+  billingZipCode  String?
+  billingCountry  String?  @default("India")
+  contactName     String
+  contactEmail    String
+  contactPhone    String?
+  userId          String   @unique
+  approvalStatus  String   @default("pending")
+  isActive        Boolean  @default(true)
+  creditLimit     Float?
+  creditUsed      Float?
+  discountPercent Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members  CorporateMember[]
+  branding CorporateBranding?
+}
+
+model CorporateMember {
+  id          String    @id @default(cuid())
+  corporateId String
+  userId      String?
+  email       String
+  name        String?
+  role        String    @default("member")
+  status      String    @default("pending")
+  invitedAt   DateTime?
+  joinedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  corporate CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+
+  @@unique([corporateId, email])
+  @@index([corporateId])
+}
+
+model CorporateBranding {
+  id             String  @id @default(cuid())
+  corporateId    String  @unique
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
+  customMessage  String?
+  packagingType  String  @default("standard")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  corporate CorporateAccount @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+}
+
+// ════════════════════════════════════════════
+// PRODUCT & CATEGORY MODELS (from v1.2 + subCategoryId)
+// ════════════════════════════════════════════
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  image       String?
+  order       Int      @default(0)
+  parentId    String?  // for sub-categories
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  products    Product[]
+
+  @@index([parentId, order])
+}
+
+model Product {
+  id             String    @id @default(cuid())
+  productNumber  String    @unique
+  name           String
+  slug           String    @unique
+  description    String
+  price          Float
+  compareAtPrice Float?
+  costPrice      Float?
+  sku            String?
+  images         String    // JSON array of image URLs
+  categoryId     String
+  category       Category  @relation(fields: [categoryId], references: [id])
+  subCategoryId  String?   // sub-category ID
+  stock          Int       @default(0)
+  reorderLevel   Int       @default(5)
+  rating         Float     @default(0)
+  reviewCount    Int       @default(0)
+  featured       Boolean   @default(false)
+  tags           String?   // JSON array of tags
+
+  // ───────────────────────────────────────────────────────────────────────
+  // v17 — Gift metadata fields (REQUIRED by /api/products route)
+  // These 4 columns MUST exist on the Product table for the products API
+  // to query successfully. Without them, Prisma throws an error and the
+  // route silently falls back to Shopify products.
+  //
+  // Run this SQL in Supabase SQL Editor to add them to your DB:
+  //   ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "occasions"        TEXT NOT NULL DEFAULT '[]';
+  //   ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "recipientTypes"   TEXT NOT NULL DEFAULT '[]';
+  //   ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "relationships"    TEXT NOT NULL DEFAULT '[]';
+  //   ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "deliveryEstimate" TEXT;
+  //
+  // After adding them, run: npx prisma generate && npx prisma db seed
+  // ───────────────────────────────────────────────────────────────────────
+  occasions        String  @default("[]")   // JSON array: ['birthday','anniversary','wedding','diwali','valentines','housewarming']
+  recipientTypes   String  @default("[]")   // JSON array: ['him','her','couple','kids','parents']
+  relationships    String  @default("[]")   // JSON array: ['husband','wife','boyfriend','girlfriend','brother','sister','friend','spouse','parent','colleague']
+  deliveryEstimate String?                  // e.g. '3-5 business days' — shown on product cards
+
+  vendorId       String?
+  vendor         Vendor?   @relation(fields: [vendorId], references: [id])
+  sourceUrl      String?
+  platform       String?   // myntra, nykaa, amazon, caratlane, tanishq, bluestone, voylla, flipkart, etc.
+  affiliateUrl   String?   // affiliate/tracking link for external products
+  affiliateId    String?   // affiliate network ID
+  commission     Float?    // commission percentage
+  externalId     String?   // product ID on the source platform
+  lastSyncedAt   DateTime? // when the product was last synced from source
+  syncStatus     String    @default("active") // active, paused, error, removed
+  isExternal     Boolean   @default(false) // true = product lives on another platform
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  inventoryLogs  InventoryLog[]
+  wishlistItems  WishlistItem[]
+  portfolioItems CustomerPortfolio[]
+  reviews         Review[]
+}
+
+model PlatformIntegration {
+  id              String    @id @default(cuid())
+  name            String    @unique  // e.g. "Myntra", "Nykaa", "CaratLane"
+  slug            String    @unique  // e.g. "myntra", "nykaa", "caratlane"
+  baseUrl         String    // e.g. "https://www.myntra.com"
+  logo            String?   // URL to platform logo
+  isActive        Boolean   @default(true)
+  autoSync        Boolean   @default(true) // automatically sync products
+  syncInterval    Int       @default(3600) // sync interval in seconds (1 hour default)
+  lastSyncedAt    DateTime?
+  syncStatus      String    @default("idle") // idle, syncing, error
+  lastSyncError   String?
+  categories      String    @default("[]") // JSON array of categories to import
+  affiliateTag    String?   // affiliate tracking tag
+  commission      Float?    @default(0) // default commission %
+  maxProducts     Int       @default(500) // max products to keep from this platform
+  productCount    Int       @default(0) // current number of products from this platform
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  syncLogs        SyncLog[]
+  categoryMaps    PartnerCategoryMap[]
+}
+
+model SyncLog {
+  id              String    @id @default(cuid())
+  integrationId   String
+  integration     PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  type            String    // full, incremental, category
+  status          String    // started, completed, failed
+  productsFound   Int       @default(0)
+  productsAdded   Int       @default(0)
+  productsUpdated Int       @default(0)
+  productsRemoved Int       @default(0)
+  error           String?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+}
+
+// ════════════════════════════════════════════
+// CART & ORDER MODELS
+// ════════════════════════════════════════════
+
+model Cart {
+  id        String     @id @default(cuid())
+  sessionId String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  email         String
+  firstName     String
+  lastName      String
+  address       String
+  city          String
+  state         String
+  zipCode       String
+  country       String
+  phone         String?
+  subtotal      Float
+  shipping      Float
+  tax           Float
+  total         Float
+  status        String      @default("pending") // pending, processing, shipped, delivered, cancelled
+  paymentMethod String      @default("card")
+  paymentStatus String      @default("pending") // pending, paid, failed, refunded
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
+  reviews Review[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  price     Float
+  quantity  Int
+  image     String?
+}
+
+// ════════════════════════════════════════════
+// VENDOR & INVOICE MODELS
+// ════════════════════════════════════════════
+
+model Vendor {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  gstNumber   String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+  invoices    Invoice[]
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  invoiceNumber  String       @unique
+  vendorId       String?
+  vendor         Vendor?      @relation(fields: [vendorId], references: [id])
+  orderId        String?
+  amount         Float
+  tax            Float        @default(0)
+  total          Float
+  status         String       @default("draft") // draft, sent, paid, cancelled
+  dueDate        DateTime?
+  paidDate       DateTime?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  items          InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Float
+  amount      Float
+}
+
+// ════════════════════════════════════════════
+// ACCOUNTING & INVENTORY MODELS
+// ════════════════════════════════════════════
+
+model AccountEntry {
+  id          String   @id @default(cuid())
+  entryNumber String   @unique
+  type        String   // debit, credit
+  category    String   // sales, purchase, expense, refund, tax, other
+  amount      Float
+  description String
+  reference   String?  // order number, invoice number, etc.
+  createdAt   DateTime @default(now())
+}
+
+model InventoryLog {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  type      String   // in, out, adjustment, return
+  quantity  Int
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// ════════════════════════════════════════════
+// WISHLIST & PAYMENT MODELS
+// ════════════════════════════════════════════
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model PaymentMethod {
+  id           String   @id @default(cuid())
+  type         String   // card, upi, netbanking, wallet
+  provider     String?
+  last4        String?
+  isDefault    Boolean  @default(false)
+  userId       String?
+  createdAt    DateTime @default(now())
+}
+
+// ════════════════════════════════════════════
+// OFFERS & DISCOUNTS
+// ════════════════════════════════════════════
+
+model Offer {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  code        String    @unique
+  type        String    // percentage, fixed
+  value       Float
+  minOrder    Float?
+  maxDiscount Float?
+  validFrom   DateTime
+  validTo     DateTime
+  isActive    Boolean   @default(true)
+  usageLimit  Int?
+  usedCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ════════════════════════════════════════════
+// WIKI / DOCUMENTATION
+// ════════════════════════════════════════════
+
+model WikiDocument {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  category  String?
+  slug      String?
+  version   String?  @default("1.0")
+  accessRoles String?
+  isPublished Boolean  @default(false)
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AgentDocShare {
+  id         String   @id @default(cuid())
+  agentId    String
+  docId      String
+  sharedBy   String
+  canDownload Boolean @default(true)
+  canShare    Boolean @default(false)
+  message    String?
+  createdAt  DateTime @default(now())
+}
+
+// ════════════════════════════════════════════
+// SUPPORT TICKETS
+// ════════════════════════════════════════════
+
+model SupportTicket {
+  id        String                  @id @default(cuid())
+  subject   String
+  status    String                  @default("open") // open, in_progress, resolved, closed
+  priority  String                  @default("medium") // low, medium, high, urgent
+  userId    String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  messages  SupportTicketMessage[]
+}
+
+model SupportTicketMessage {
+  id        String         @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId  String?
+  message   String
+  createdAt DateTime       @default(now())
+}
+
+// ════════════════════════════════════════════
+// AFFILIATE & PARTNER
+// ════════════════════════════════════════════
+
+model AffiliateClick {
+  id           String   @id @default(cuid())
+  productId    String
+  platform     String   // which platform the click was for
+  sourceUrl    String?  // the external URL clicked
+  referralCode String?  // affiliate referral code used
+  ipAddress    String?
+  userAgent    String?
+  clickedAt    DateTime @default(now())
+}
+
+model PartnerCategoryMap {
+  id             String   @id @default(cuid())
+  integrationId  String
+  integration    PlatformIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  partnerCatName String   // category name on partner site (e.g. "Rings", "Necklaces")
+  partnerCatSlug String   // category slug on partner site
+  localCatId     String?  // map to our category (nullable = create new)
+  createdAt      DateTime @default(now())
+
+  @@unique([integrationId, partnerCatSlug])
+}
+
+// ════════════════════════════════════════════
+// AI STYLE GALLERY — Customer Portfolio
+// ════════════════════════════════════════════
+
+model CustomerPortfolio {
+  id               String   @id @default(cuid())
+  productId        String?
+  userId           String?
+  userName         String
+  aiGeneratedImage String
+  originalSelfie   String?
+  rating           Int      @default(5)
+  reviewTitle      String?
+  reviewComment    String?
+  consentGiven     Boolean  @default(false)
+  isApproved       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([userId])
+  @@index([isApproved, isActive])
+  @@map("customer_portfolio")
+}
+
+
+// ════════════════════════════════════════════
+// REVIEWS
+// ════════════════════════════════════════════
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userName  String
+  rating    Int
+  title     String?
+  comment   String
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([orderId])
+}

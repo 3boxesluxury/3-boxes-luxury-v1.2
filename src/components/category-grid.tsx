@@ -125,7 +125,7 @@ const HARDCODED_SUBCATEGORIES: Record<string, { name: string; slug: string }[]> 
     { name: 'Leather Goods', slug: 'men-leather' },
   ],
   women: [
-    { name: 'Jewelry', slug: 'women-jewelry' },
+    { name: 'Jewellery', slug: 'women-jewelry' },
     { name: 'Sarees', slug: 'women-sarees' },
     { name: 'Fashion', slug: 'women-fashion' },
     { name: 'Fragrances', slug: 'women-fragrances' },
@@ -149,11 +149,72 @@ const HARDCODED_SUBCATEGORIES: Record<string, { name: string; slug: string }[]> 
   ],
 };
 
+// ─── Slug → i18n key mapping (for sub-categories) ───
+// Maps the sub-category slug (which is unique per sub-category) to the
+// corresponding translation key under header.subCategories.*
+// If a slug isn't in this map, the original (English) name from the DB
+// is used as the fallback.
+const SUBCATEGORY_SLUG_TO_I18N_KEY: Record<string, string> = {
+  'couple-friendly':         'header.subCategories.coupleGifts',
+  'men-accessories':         'header.subCategories.accessories',
+  'men-shirts':              'header.subCategories.shirts',
+  'men-tshirts':             'header.subCategories.tshirts',
+  'men-fragrances':          'header.subCategories.fragrances',
+  'men-watches':             'header.subCategories.watches',
+  'men-leather':             'header.subCategories.leatherGoods',
+  'women-jewelry':           'header.subCategories.jewelry',
+  'women-sarees':            'header.subCategories.sarees',
+  'women-fashion':           'header.subCategories.accessories',
+  'women-fragrances':        'header.subCategories.fragrances',
+  'women-accessories':       'header.subCategories.accessories',
+  'kids-toys':               'header.subCategories.toysGames',
+  'kids-fashion':            'header.subCategories.kidsFashion',
+  'kids-shirts':             'header.subCategories.kidsShirts',
+  'kids-dresses':            'header.subCategories.kidsDresses',
+  'home-decor':              'header.subCategories.homeDecor',
+  'home-candles':            'header.subCategories.candlesFragrances',
+  'home-living':             'header.subCategories.living',
+  'office-corporate-gifts':  'header.subCategories.corporateGifts',
+  'office-desk':             'header.subCategories.deskAccessories',
+  'office-stationery':       'header.subCategories.stationery',
+};
+
+// ─── Parent slug → i18n key mapping (for top-level categories) ───
+const PARENT_SLUG_TO_I18N_KEY: Record<string, string> = {
+  'couple':        'header.couple',
+  'men':           'header.men',
+  'women':         'header.women',
+  'kids':          'header.kids',
+  'home':          'header.home',
+  'office':        'header.office',
+  'new-arrivals':  'header.newArrivals',
+};
+
 // ─── Component ───
 
 export function CategoryGrid() {
   const { selectedCategory, setCategory } = useStore();
   const { t } = useTranslation();
+
+  // Translate a sub-category by its slug. Falls back to the original name.
+  const translateSubName = (slug: string, fallbackName: string): string => {
+    const key = SUBCATEGORY_SLUG_TO_I18N_KEY[slug];
+    if (key) {
+      const translated = t(key);
+      if (translated && translated !== key) return translated;
+    }
+    return fallbackName;
+  };
+
+  // Translate a parent (top-level) category by its slug. Falls back to the original name.
+  const translateParentName = (slug: string, fallbackName: string): string => {
+    const key = PARENT_SLUG_TO_I18N_KEY[slug];
+    if (key) {
+      const translated = t(key);
+      if (translated && translated !== key) return translated;
+    }
+    return fallbackName;
+  };
 
   const { data } = useQuery<{ categories: Category[] }>({
     queryKey: ['categories'],
@@ -221,17 +282,17 @@ export function CategoryGrid() {
             </div>
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-amber-100">
-                {activeParent.name}
+                {translateParentName(activeParent.slug, activeParent.name)}
               </h3>
               <p className="text-[11px] text-amber-200/40">
-                Browse subcategories
+                {t('categoryGrid.browseSubcategories')}
               </p>
             </div>
             <button
               onClick={() => setCategory(null)}
               className="text-[11px] text-amber-200/40 hover:text-amber-200/70 transition-colors"
             >
-              Clear
+              {t('categoryGrid.clear')}
             </button>
           </div>
 
@@ -251,7 +312,7 @@ export function CategoryGrid() {
               `}
             >
               <LayoutGrid className="h-3 w-3" />
-              All {activeParent.name}
+              {t('common.all')} {translateParentName(activeParent.slug, activeParent.name)}
             </button>
 
             {/* Individual subcategory chips */}
@@ -277,7 +338,7 @@ export function CategoryGrid() {
                   `}
                 >
                   <SubIcon className="h-3 w-3" />
-                  {sub.name}
+                  {translateSubName(sub.slug, sub.name)}
                 </motion.button>
               );
             })}

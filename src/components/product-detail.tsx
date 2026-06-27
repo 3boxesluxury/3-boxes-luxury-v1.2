@@ -5,7 +5,7 @@
 import { useStore } from '@/lib/store';
 import { useCurrency } from '@/lib/currency';
 import { useTranslation } from '@/hooks/useTranslation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -27,6 +27,13 @@ import { Camera, Loader2, RotateCcw, Download, ImageIcon, AlertCircle, Crown, Ex
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAffiliateClick } from '@/hooks/useAffiliateClick';
 import { AIInfluencerSection } from '@/components/ai-influencer-section';
+import { showToast } from '@/hooks/use-toast-notification';
+
+interface ProductTranslation {
+  locale: string;
+  name: string | null;
+  description: string | null;
+}
 
 interface ProductDetail {
   id: string;
@@ -49,6 +56,7 @@ interface ProductDetail {
   sourceUrl?: string;
   affiliateUrl?: string;
   platformLogo?: string;
+  translations?: ProductTranslation[];
 }
 
 interface Review {
@@ -464,6 +472,7 @@ function TryOnDialog({
   const generatingStartRef = useRef<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const eduScrollRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation();
 
   // Disclaimer & camera & moderation state
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
@@ -540,7 +549,7 @@ function TryOnDialog({
           });
           const modData = await modRes.json();
           if (!modData.appropriate) {
-            setError(modData.reason || 'Image does not meet our guidelines. Please upload a clean, clear selfie.');
+            setError(modData.reason || t('productDetail.guidelinesError'));
             setSelfiePreview(null);
             setSelfieData(null);
             setStep('upload');
@@ -556,7 +565,7 @@ function TryOnDialog({
         setStep('preview');
       } catch {
         setIsModerating(false);
-        setError('Failed to process image. Please try another photo.');
+        setError(t('productDetail.processImageError'));
       }
     },
     []
@@ -577,7 +586,7 @@ function TryOnDialog({
         }
       }, 100);
     } catch {
-      setError('Camera access denied. Please allow camera access or upload a photo instead.');
+      setError(t('productDetail.cameraDenied'));
     }
   }, []);
 
@@ -1049,8 +1058,8 @@ function TryOnDialog({
         onOpenChange(isOpen);
       }}
     >
-      <DialogContent className="max-w-lg border-amber-900/30 bg-stone-950 p-0 overflow-hidden sm:max-w-xl max-h-[90vh] overflow-y-auto">
-        <div className="relative bg-gradient-to-r from-amber-900/40 via-rose-900/30 to-amber-900/40 px-6 pt-6 pb-4">
+      <DialogContent className="max-w-lg border-amber-900/30 bg-stone-950 p-0 sm:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 relative bg-gradient-to-r from-amber-900/40 via-rose-900/30 to-amber-900/40 px-6 pt-6 pb-4">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-amber-100">
               <Sparkles className="h-5 w-5 text-amber-400" />
@@ -1063,7 +1072,7 @@ function TryOnDialog({
           </DialogHeader>
         </div>
 
-        <div className="px-6 pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
           {/* ── Disclaimer Dialog ──────────────────────────────────────── */}
           {showDisclaimer && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4">
@@ -1075,12 +1084,12 @@ function TryOnDialog({
               >
                 <div className="mb-4 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-teal-400" />
-                  <h3 className="text-lg font-bold text-amber-100">Selfie Upload Guidelines</h3>
+                  <h3 className="text-lg font-bold text-amber-100">{t("productDetail.selfieGuidelines")}</h3>
                 </div>
 
                 <div className="mb-5 space-y-3 text-sm">
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-400/70">Accepted</p>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-400/70">{t("productDetail.accepted")}</p>
                     <ul className="space-y-1.5">
                       <li className="flex items-start gap-2 text-amber-200/70">
                         <span className="mt-0.5 text-emerald-500">✅</span>
@@ -1098,7 +1107,7 @@ function TryOnDialog({
                   </div>
 
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-red-400/70">Not Accepted</p>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-red-400/70">{t("productDetail.notAccepted")}</p>
                     <ul className="space-y-1.5">
                       <li className="flex items-start gap-2 text-amber-200/70">
                         <span className="mt-0.5 text-red-500">❌</span>
@@ -1123,7 +1132,7 @@ function TryOnDialog({
                     className="mt-0.5 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                   />
                   <span className="text-xs leading-relaxed text-amber-200/60">
-                    I confirm this is my own selfie and it meets the above guidelines
+                    {t('productDetail.disclaimerConfirm')}
                   </span>
                 </label>
 
@@ -1133,14 +1142,14 @@ function TryOnDialog({
                     onClick={handleDisclaimerCancel}
                     className="flex-1 border-amber-900/30 text-amber-200/60 hover:border-amber-600/40 hover:text-amber-400"
                   >
-                    Cancel
+                    {t('productDetail.cancel')}
                   </Button>
                   <Button
                     onClick={handleDisclaimerAccept}
                     disabled={!disclaimerChecked}
                     className="flex-1 bg-teal-600 text-white hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    I Understand &amp; Agree
+                    {t('productDetail.iUnderstand')}
                   </Button>
                 </div>
               </motion.div>
@@ -1161,7 +1170,7 @@ function TryOnDialog({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-amber-100">{productName}</p>
-                  <p className="text-xs text-amber-200/40">Selected for style preview</p>
+                  <p className="text-xs text-amber-200/40">{t("productDetail.selectedForPreview")}</p>
                 </div>
               </div>
 
@@ -1173,11 +1182,11 @@ function TryOnDialog({
                 <div className="mb-3 rounded-full bg-amber-900/20 p-4 transition-colors group-hover:bg-amber-900/30">
                   <Camera className="h-8 w-8 text-amber-400/60 transition-colors group-hover:text-amber-400" />
                 </div>
-                <p className="text-sm font-medium text-amber-200/70">Upload your selfie</p>
-                <p className="mt-1 text-xs text-amber-200/30">Click to browse or drag & drop</p>
-                <p className="mt-2 text-[10px] text-amber-200/20">JPG, PNG, or WebP · Max 10MB</p>
+                <p className="text-sm font-medium text-amber-200/70">{t("productDetail.uploadSelfie")}</p>
+                <p className="mt-1 text-xs text-amber-200/30">{t("productDetail.clickBrowse")}</p>
+                <p className="mt-2 text-[10px] text-amber-200/20">{t("productDetail.fileFormat")}</p>
                 <div className="mt-4 rounded-lg border border-amber-900/15 bg-amber-950/20 px-3 py-2 text-left">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/60 mb-1.5">Tips for best results</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-400/60 mb-1.5">{t("productDetail.tipsBestResults")}</p>
                   <ul className="space-y-1">
                     <li className="flex items-start gap-1.5 text-[10px] text-amber-200/40">
                       <span className="text-emerald-500/60 mt-0.5">✓</span>
@@ -1212,7 +1221,7 @@ function TryOnDialog({
               {/* Or take a photo divider */}
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-amber-900/20" />
-                <span className="text-xs text-amber-200/30">or</span>
+                <span className="text-xs text-amber-200/30">{t("productDetail.or")}</span>
                 <div className="h-px flex-1 bg-amber-900/20" />
               </div>
 
@@ -1226,8 +1235,8 @@ function TryOnDialog({
                     <Video className="h-5 w-5 text-teal-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-teal-300/80">📸 Take a live selfie</p>
-                    <p className="text-xs text-teal-400/40">We&apos;ll verify it&apos;s really you!</p>
+                    <p className="text-sm font-medium text-teal-300/80">{t("productDetail.takeLiveSelfie")}</p>
+                    <p className="text-xs text-teal-400/40">{t('productDetail.verifyReallyYou')}</p>
                   </div>
                 </button>
               )}
@@ -1235,7 +1244,7 @@ function TryOnDialog({
               {/* Camera view */}
               {cameraOpen && (
                 <div className="space-y-3 rounded-xl border border-teal-900/30 bg-stone-900/60 p-3">
-                  <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-stone-800">
+                  <div className="relative max-h-[45vh] aspect-[3/4] overflow-hidden rounded-lg bg-stone-800 mx-auto w-full">
                     <video
                       ref={cameraVideoRef}
                       autoPlay
@@ -1290,18 +1299,18 @@ function TryOnDialog({
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-stone-950/80 rounded-xl">
                   <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-teal-400" />
-                    <p className="text-sm font-medium text-teal-300">Verifying image...</p>
-                    <p className="text-xs text-amber-200/40">Checking content safety</p>
+                    <p className="text-sm font-medium text-teal-300">{t("productDetail.verifyingImage")}</p>
+                    <p className="text-xs text-amber-200/40">{t("productDetail.checkingSafety")}</p>
                   </div>
                 </div>
               )}
 
               <div className="flex items-start gap-4">
                 <div className="relative flex-1">
-                  <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-amber-900/20 bg-stone-900/60">
+                  <div className="relative max-h-[40vh] aspect-[3/4] overflow-hidden rounded-xl border border-amber-900/20 bg-stone-900/60 mx-auto w-full">
                     <img
                       src={selfiePreview}
-                      alt="Your selfie"
+                      alt={t("productDetail.yourSelfie")}
                       className="h-full w-full object-cover"
                     />
                   </div>
@@ -1396,8 +1405,8 @@ function TryOnDialog({
                   className="h-3 bg-stone-800/80 border border-amber-900/20 [&>[data-slot=progress-indicator]]:bg-gradient-to-r [&>[data-slot=progress-indicator]]:from-amber-600 [&>[data-slot=progress-indicator]]:via-amber-400 [&>[data-slot=progress-indicator]]:to-amber-300 [&>[data-slot=progress-indicator]]:transition-all [&>[data-slot=progress-indicator]]:duration-700"
                 />
                 <div className="flex justify-between">
-                  <span className="text-[10px] text-amber-200/30">Processing...</span>
-                  <span className="text-[10px] text-amber-200/30">Complete</span>
+                  <span className="text-[10px] text-amber-200/30">{t("productDetail.processing")}</span>
+                  <span className="text-[10px] text-amber-200/30">{t("productDetail.complete")}</span>
                 </div>
               </div>
 
@@ -1506,7 +1515,7 @@ function TryOnDialog({
             <div className="space-y-4">
               {/* Style Preview image */}
               <div className="space-y-1.5">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-amber-600/30 bg-stone-900/60">
+                <div className="relative max-h-[45vh] aspect-[3/4] overflow-hidden rounded-lg border border-amber-600/30 bg-stone-900/60 mx-auto w-full">
                   <img
                     src={watermarkedResult}
                     alt={`Style preview: ${productName}`}
@@ -1515,22 +1524,22 @@ function TryOnDialog({
                   {/* 3 BOXES badge */}
                   <div className="absolute left-1.5 top-1.5 rounded-full bg-stone-900/80 border border-amber-500/40 px-2 py-0.5 flex items-center gap-1 shadow-lg">
                     <Sparkles className="h-2.5 w-2.5 text-amber-400" />
-                    <span className="text-[8px] font-bold text-amber-400">3 BOXES</span>
+                    <span className="text-[8px] font-bold text-amber-400">{t("productDetail.brandBadge")}</span>
                   </div>
                   {/* Style Preview badge */}
                   <div className="absolute right-1.5 top-1.5 rounded-full bg-amber-600/90 px-2 py-0.5 shadow-lg">
-                    <span className="text-[8px] font-bold text-stone-950">Style Preview</span>
+                    <span className="text-[8px] font-bold text-stone-950">{t("productDetail.stylePreview")}</span>
                   </div>
                   {/* AI GENERATED overlay badge at bottom */}
                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-stone-950/80 via-stone-950/50 to-transparent px-3 py-4">
                     <div className="flex items-center gap-1.5">
                       <AlertTriangle className="h-3 w-3 text-amber-400 flex-shrink-0" />
-                      <span className="text-[10px] font-bold text-amber-300 tracking-wide uppercase">AI Generated Preview</span>
+                      <span className="text-[10px] font-bold text-amber-300 tracking-wide uppercase">{t("productDetail.aiGeneratedPreview")}</span>
                     </div>
-                    <p className="text-[8px] text-amber-200/50 mt-0.5">Not an actual photo — may differ from real product</p>
+                    <p className="text-[8px] text-amber-200/50 mt-0.5">{t("productDetail.notActualPhoto")}</p>
                   </div>
                 </div>
-                <p className="text-center text-[10px] font-medium text-amber-400">Style Preview</p>
+                <p className="text-center text-[10px] font-medium text-amber-400">{t("productDetail.stylePreview")}</p>
               </div>
 
               {/* AI Generated Disclaimer — Enhanced with specified format */}
@@ -1538,7 +1547,7 @@ function TryOnDialog({
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-amber-300">AI-Generated Image</p>
+                    <p className="text-xs font-medium text-amber-300">{t("productDetail.aiGeneratedImage")}</p>
                     <p className="text-[11px] text-amber-200/50 mt-0.5">
                       This is an AI-generated style preview. Actual product appearance may vary slightly. 
                       Colors and details are approximated and there might be minor mismatches that can be 
@@ -1579,16 +1588,16 @@ function TryOnDialog({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-medium text-amber-200/70 truncate">{productName}</p>
-                  <p className="text-[10px] text-amber-200/30">Product used in preview</p>
+                  <p className="text-[10px] text-amber-200/30">{t("productDetail.productUsedInPreview")}</p>
                 </div>
-                <span className="text-[10px] text-amber-200/30">&#10003; Applied</span>
+                <span className="text-[10px] text-amber-200/30">&#10003; {t('productDetail.applied')}</span>
               </div>
 
               {/* 3 BOXES GIFTS — Style Preview info card */}
               <div className="rounded-lg border border-amber-500/20 bg-gradient-to-r from-amber-950/30 to-stone-900/40 p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="h-3.5 w-3.5 text-amber-400" />
-                  <p className="text-[10px] font-bold text-amber-300">3 BOXES GIFTS — AI Style Preview</p>
+                  <p className="text-[10px] font-bold text-amber-300">{t("productDetail.brandAiPreview")}</p>
                 </div>
                 <p className="text-[10px] text-amber-200/40">
                   AI generates a virtual try-on preview using multiple strategies for the best match. 
@@ -1602,7 +1611,7 @@ function TryOnDialog({
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-3 w-3 text-amber-400/70" />
                     <p className="text-[10px] font-semibold text-amber-200/60">
-                      Complete the Look — AI Style Suggestions
+                      {t('productDetail.completeTheLook')}
                     </p>
                   </div>
                   <div className="flex gap-2 overflow-x-auto pb-1">
@@ -1683,10 +1692,11 @@ function TryOnDialog({
 
 // ── Product Detail Component ───────────────────────────────────
 export function ProductDetail() {
-  const { selectedProductId, setView, addItem, setCategory, authUser, authToken } = useStore();
+  const { selectedProductId, setView, addItem, setCategory, authUser, authToken, setAuthView } = useStore();
   const { trackClick } = useAffiliateClick();
   const { format } = useCurrency();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
@@ -1766,7 +1776,10 @@ export function ProductDetail() {
   };
 
   const handleSubmitReview = async () => {
-    if (!selectedProductId || !reviewForm.name || !reviewForm.comment) return;
+    if (!selectedProductId || !reviewForm.name || !reviewForm.comment) {
+      showToast('error', 'Please fill in your name and review comment.');
+      return;
+    }
     setReviewSubmitting(true);
     try {
       const res = await fetch('/api/reviews', {
@@ -1781,11 +1794,20 @@ export function ProductDetail() {
         }),
       });
       if (res.ok) {
+        const data = await res.json();
+        console.log('Review submitted successfully:', data);
+        queryClient.invalidateQueries({ queryKey: ['reviews', selectedProductId] });
         setReviewDialogOpen(false);
         setReviewForm({ rating: 5, title: '', comment: '', name: '' });
+        showToast('success', 'Review submitted successfully!');
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error('Review submission failed:', res.status, errorData);
+        showToast('error', `Failed to submit review: ${errorData.error || res.statusText}`);
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('Review submission error:', err);
+      showToast('error', 'Failed to submit review. Please check your connection.');
     } finally {
       setReviewSubmitting(false);
     }
@@ -1795,15 +1817,20 @@ export function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    // Require login before adding to cart
+    if (!authUser) { setAuthView('login'); return; }
     setIsAdding(true);
-    for (let i = 0; i < quantity; i++) {
-      addItem({
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        image: getProxiedImageUrl(product.images[0] || '/images/placeholder.jpg', product.platform),
-      });
-    }
+    // Pass the selected quantity directly to addItem
+    addItem({
+      productId: product.id,
+      name: translation?.name || product.name,
+      price: product.price,
+      image: getProxiedImageUrl(product.images[0] || '/images/placeholder.jpg', product.platform),
+      quantity: quantity, // Pass the selected quantity
+      translations: product.translations, // Keep translations for cart display
+    });
+    // Increment the quantity selector on the page to reflect the additions
+    setQuantity(prev => prev + 1);
     setTimeout(() => setIsAdding(false), 800);
   };
 
@@ -1835,13 +1862,16 @@ export function ProductDetail() {
   if (!product) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-amber-200/60">Product not found</p>
+        <p className="text-amber-200/60">{t('productDetail.productNotFound')}</p>
         <Button onClick={() => setView('home')} className="mt-4 bg-amber-600 text-stone-950 hover:bg-amber-500">
-          Back to Products
+          {t('productDetail.backToProducts')}
         </Button>
       </div>
     );
   }
+
+  // Use translated name/description if available
+  const translation = product.translations?.find(tr => tr.locale === locale);
 
   const discount = product.compareAtPrice
     ? Math.round(((product.compareAtPrice - product.price) / product.compareAtPrice) * 100)
@@ -1861,7 +1891,7 @@ export function ProductDetail() {
         className="mb-6 text-amber-200/60 hover:bg-amber-900/20 hover:text-amber-400"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Products
+        {t('productDetail.backToProducts')}
       </Button>
 
       <div className="grid gap-8 md:grid-cols-2">
@@ -1875,7 +1905,7 @@ export function ProductDetail() {
             ) : (
               <img
                 src={getProxiedImageUrl(product.images[selectedImage] || '/images/hero.png', product.platform)}
-                alt={product.name}
+                alt={translation?.name || product.name}
                 className="absolute inset-0 h-full w-full object-cover"
                 onError={() => {
                   setImageErrors((prev) => new Set(prev).add(selectedImage));
@@ -1886,7 +1916,7 @@ export function ProductDetail() {
             {/* Badges */}
             <div className="absolute left-3 top-3 flex flex-col gap-1">
               {product.featured && (
-                <Badge className="bg-amber-600 text-stone-950">Featured</Badge>
+                <Badge className="bg-amber-600 text-stone-950">{t('productDetail.featured')}</Badge>
               )}
               {discount > 0 && (
                 <Badge className="bg-emerald-600 text-white">-{discount}%</Badge>
@@ -1916,7 +1946,7 @@ export function ProductDetail() {
                 {!imageErrors.has(i) ? (
                   <img
                     src={getProxiedImageUrl(img, product.platform)}
-                    alt={`${product.name} ${i + 1}`}
+                    alt={`${translation?.name || product.name} ${i + 1}`}
                     className="absolute inset-0 h-full w-full object-cover"
                     onError={() => {
                       setImageErrors((prev) => new Set(prev).add(i));
@@ -1949,7 +1979,7 @@ export function ProductDetail() {
               )}
             </div>
             <h1 className="mt-2 text-2xl font-bold text-amber-100 sm:text-3xl">
-              {product.name}
+              {translation?.name || product.name}
             </h1>
           </div>
 
@@ -1968,7 +1998,7 @@ export function ProductDetail() {
               ))}
             </div>
             <span className="text-sm text-amber-200/50">
-              {product.rating} ({product.reviewCount} reviews)
+              {product.rating} ({product.reviewCount} {t('productDetail.reviews')})
             </span>
           </div>
 
@@ -1984,14 +2014,14 @@ export function ProductDetail() {
             )}
             {discount > 0 && (
               <Badge variant="outline" className="border-amber-600/50 text-amber-400">
-                Save {format(product.compareAtPrice! - product.price)}
+                {t('productDetail.save', { amount: format(product.compareAtPrice! - product.price) })}
               </Badge>
             )}
           </div>
 
           {/* Description */}
           <p className="text-sm leading-relaxed text-amber-200/60">
-            {product.description}
+            {translation?.description || product.description}
           </p>
 
           {/* Tags */}
@@ -2013,8 +2043,8 @@ export function ProductDetail() {
           {product.isExternal && product.platform ? (
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-emerald-400" />
-              <span className="text-sm text-emerald-400 font-medium">Available</span>
-              <span className="text-xs text-amber-200/30">on {PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform}</span>
+              <span className="text-sm text-emerald-400 font-medium">{t('productDetail.available')}</span>
+              <span className="text-xs text-amber-200/30">{t("productDetail.availableOn", { platform: PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform })}</span>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -2026,11 +2056,11 @@ export function ProductDetail() {
                   }`}
                 >
                   {product.stock <= 5
-                    ? `Only ${product.stock} left in stock`
-                    : 'In Stock'}
+                    ? t('productDetail.onlyLeft', { count: product.stock })
+                    : t('productDetail.inStock')}
                 </span>
               ) : (
-                <span className="text-sm text-red-400">Out of Stock</span>
+                <span className="text-sm text-red-400">{t('productDetail.outOfStock')}</span>
               )}
             </div>
           )}
@@ -2039,7 +2069,7 @@ export function ProductDetail() {
           <div className="flex items-center gap-2">
             <Truck className="h-4 w-4 text-amber-400/60" />
             <span className="text-sm text-amber-200/50">
-              Estimated delivery: {product.deliveryEstimate || '3-5 business days'}
+              {t("productDetail.estimatedDelivery", { estimate: product.deliveryEstimate || t("productDetail.defaultDelivery") })}
             </span>
           </div>
 
@@ -2057,8 +2087,8 @@ export function ProductDetail() {
                 <Crown className="h-5 w-5 text-amber-400" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-sm font-semibold text-amber-100">Style Preview</p>
-                <p className="text-xs text-amber-200/40">See how it looks on you with 3 BOXES</p>
+                <p className="text-sm font-semibold text-amber-100">{t("productDetail.stylePreview")}</p>
+                <p className="text-xs text-amber-200/40">{t("productDetail.stylePreviewDesc")}</p>
               </div>
               <Sparkles className="h-4 w-4 text-amber-400/50 transition-colors group-hover:text-amber-400" />
             </button>
@@ -2070,11 +2100,11 @@ export function ProductDetail() {
               <div className="flex items-center gap-2">
                 <Globe className="h-4 w-4 text-amber-400/60" />
                 <p className="text-sm font-medium text-amber-200/70">
-                  Available on {PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform}
+                  {t('productDetail.availableOn', { platform: PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform })}
                 </p>
               </div>
               <p className="text-xs text-amber-200/40 italic">
-                This product is sold by our partner {PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform}. You'll be redirected to their site to complete your purchase.
+                {t("productDetail.soldByPartner", { platform: PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform })}
               </p>
               {product.sourceUrl && (
                 <a
@@ -2085,7 +2115,7 @@ export function ProductDetail() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="h-3 w-3" />
-                  View original listing
+                  {t('productDetail.viewOriginalListing')}
                 </a>
               )}
             </div>
@@ -2105,7 +2135,7 @@ export function ProductDetail() {
                 className={`w-full transition-all duration-300 text-stone-950 hover:shadow-lg hover:shadow-amber-600/25 h-12 text-base font-semibold gap-2 ${PLATFORM_BUTTON_COLORS[product.platform.toLowerCase()] || 'bg-amber-600 hover:bg-amber-500'}`}
               >
                 <ExternalLink className="h-5 w-5" />
-                Shop on {PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform}
+                {t("productDetail.shopOn", { platform: PLATFORM_DISPLAY_NAMES[product.platform.toLowerCase()] || product.platform })}
               </Button>
             </div>
           ) : (
@@ -2139,12 +2169,12 @@ export function ProductDetail() {
                 {isAdding ? (
                   <>
                     <ShoppingCart className="mr-2 h-4 w-4" />
-                    Added!
+                    {t('productDetail.added')}
                   </>
                 ) : product.stock === 0 ? (
-                  'Out of Stock'
+                  t('productDetail.outOfStock')
                 ) : (
-                  `Add to Cart - ${format(product.price * quantity)}`
+                  t("productDetail.addToCartPrice", { price: format(product.price * quantity) })
                 )}
               </Button>
               <Button
@@ -2157,7 +2187,7 @@ export function ProductDetail() {
                     ? 'bg-red-600/20 border-red-500/50 text-red-400 hover:bg-red-600/30'
                     : 'text-amber-200/40 hover:text-red-400 hover:border-red-500/30'
                 }`}
-                title={authToken ? (isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist') : 'Sign in to add to wishlist'}
+                title={authToken ? (isWishlisted ? t('productDetail.removeFromWishlist') : t('productDetail.addToWishlist')) : t('productDetail.signInToAddWishlist')}
               >
                 <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
               </Button>
@@ -2172,7 +2202,7 @@ export function ProductDetail() {
           <div className="flex items-center gap-3">
             <MessageSquare className="h-5 w-5 text-amber-400" />
             <h3 className="text-lg font-semibold text-amber-100">
-              Reviews ({reviews.length})
+              {t('productDetail.reviews')} ({reviews.length})
             </h3>
             <div className="flex items-center gap-1">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -2190,7 +2220,7 @@ export function ProductDetail() {
             onClick={() => setReviewDialogOpen(true)}
             className="bg-amber-600 text-stone-950 hover:bg-amber-500"
           >
-            Write a Review
+            {t('productDetail.writeReview')}
           </Button>
         </div>
 
@@ -2201,7 +2231,7 @@ export function ProductDetail() {
         ) : reviews.length === 0 ? (
           <div className="rounded-lg border border-amber-900/20 bg-stone-900/60 p-8 text-center">
             <MessageSquare className="mx-auto mb-3 h-8 w-8 text-amber-200/20" />
-            <p className="text-sm text-amber-200/40">No reviews yet. Be the first to share your thoughts!</p>
+            <p className="text-sm text-amber-200/40">{t("productDetail.noReviews")}</p>
           </div>
         ) : (
           <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -2216,7 +2246,7 @@ export function ProductDetail() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-amber-100">{review.userName}</span>
                         {review.verified && (
-                          <Badge className="bg-emerald-600/20 text-emerald-400 text-[10px] border-emerald-600/30">Verified</Badge>
+                          <Badge className="bg-emerald-600/20 text-emerald-400 text-[10px] border-emerald-600/30">{t("productDetail.verified")}</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
@@ -2250,7 +2280,7 @@ export function ProductDetail() {
         <div id="ai-influencer-section">
           <AIInfluencerSection
             productId={product.id}
-            productName={product.name}
+            productName={translation?.name || product.name}
             initialShareImage={influencerShareImage}
             onShareComplete={() => setInfluencerShareImage(null)}
           />
@@ -2261,13 +2291,13 @@ export function ProductDetail() {
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
         <DialogContent className="border-amber-900/30 bg-stone-950 sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-amber-100">Write a Review</DialogTitle>
-            <DialogDescription className="text-amber-200/50">Share your experience with this product</DialogDescription>
+            <DialogTitle className="text-amber-100">{t("productDetail.writeReview")}</DialogTitle>
+            <DialogDescription className="text-amber-200/50">{t("productDetail.shareExperience")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             {/* Star Picker */}
             <div>
-              <Label className="text-sm text-amber-200/60">Rating</Label>
+              <Label className="text-sm text-amber-200/60">{t("productDetail.rating")}</Label>
               <div className="flex items-center gap-1 mt-1">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <button
@@ -2286,32 +2316,32 @@ export function ProductDetail() {
               </div>
             </div>
             <div>
-              <Label htmlFor="review-name" className="text-sm text-amber-200/60">Your Name</Label>
+              <Label htmlFor="review-name" className="text-sm text-amber-200/60">{t("productDetail.yourName")}</Label>
               <Input
                 id="review-name"
                 value={reviewForm.name}
                 onChange={(e) => setReviewForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter your name"
+                placeholder={t("productDetail.enterName")}
                 className="mt-1 border-amber-900/40 bg-stone-800/50 text-amber-50 placeholder:text-amber-200/20"
               />
             </div>
             <div>
-              <Label htmlFor="review-title" className="text-sm text-amber-200/60">Title (optional)</Label>
+              <Label htmlFor="review-title" className="text-sm text-amber-200/60">{t("productDetail.titleOptional")}</Label>
               <Input
                 id="review-title"
                 value={reviewForm.title}
                 onChange={(e) => setReviewForm((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="Summary of your review"
+                placeholder={t("productDetail.reviewSummary")}
                 className="mt-1 border-amber-900/40 bg-stone-800/50 text-amber-50 placeholder:text-amber-200/20"
               />
             </div>
             <div>
-              <Label htmlFor="review-comment" className="text-sm text-amber-200/60">Your Review</Label>
+              <Label htmlFor="review-comment" className="text-sm text-amber-200/60">{t("productDetail.yourReview")}</Label>
               <textarea
                 id="review-comment"
                 value={reviewForm.comment}
                 onChange={(e) => setReviewForm((prev) => ({ ...prev, comment: e.target.value }))}
-                placeholder="What did you like or dislike?"
+                placeholder={t("productDetail.reviewPlaceholder")}
                 rows={4}
                 className="mt-1 w-full rounded-md border border-amber-900/40 bg-stone-800/50 px-3 py-2 text-sm text-amber-50 placeholder:text-amber-200/20 focus:outline-none focus:ring-1 focus:ring-amber-600 resize-none"
               />
@@ -2338,7 +2368,7 @@ export function ProductDetail() {
           open={tryOnOpen}
           onOpenChange={setTryOnOpen}
           productId={product.id}
-          productName={product.name}
+          productName={translation?.name || product.name}
           productImage={getProxiedImageUrl(product.images[0] || '/images/hero.png', product.platform)}
           rawProductImage={product.images[0] || '/images/hero.png'}
           categorySlug={product.categorySlug}
